@@ -40,24 +40,27 @@ fn tokenize_string_literal() {
 
 #[test]
 fn tokenize_integer() {
-    let actual = tao::tokenize("123 456 789 1_000");
+    let actual = tao::tokenize("123 456 789 1_000 -321 -456");
     let expected = vec![
         tao::Token::Integer(Integer::from(123)),
         tao::Token::Integer(Integer::from(456)),
         tao::Token::Integer(Integer::from(789)),
         tao::Token::Integer(Integer::from(1000)),
+        tao::Token::Integer(Integer::from(-321)),
+        tao::Token::Integer(Integer::from(-456)),
     ];
     assert_eq!(actual, expected);
 }
 
 #[test]
 fn tokenize_float() {
-    let actual = tao::tokenize("1.23 4.56 7.89 1_000.0");
+    let actual = tao::tokenize("1.23 4.56 7.89 1_000.0 -3.23");
     let expected = vec![
         tao::Token::Float(tao::string_to_float("1.23")),
         tao::Token::Float(tao::string_to_float("4.56")),
         tao::Token::Float(tao::string_to_float("7.89")),
         tao::Token::Float(tao::string_to_float("1000.0")),
+        tao::Token::Float(tao::string_to_float("-3.23")),
     ];
     assert_eq!(actual, expected);
 }

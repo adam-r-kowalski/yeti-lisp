@@ -1,4 +1,6 @@
 use std::fmt;
+use std::iter::Peekable;
+use std::str::Chars;
 use rug::{Integer, Float};
 
 fn decimal_digits_to_bits(decimal_digits: usize) -> u32 {
@@ -11,7 +13,8 @@ fn bits_to_decimal_digits(bits: u32) -> usize {
 }
 
 pub fn string_to_float(number: &str) -> Float {
-    let digits = number.len() - 1;
+    let offset = if number.starts_with("-") { 2 } else { 1 };
+    let digits = number.len() - offset;
     let bits = decimal_digits_to_bits(digits);
     let parsed = Float::parse(number).unwrap();
     Float::with_val(bits, parsed)
@@ -55,6 +58,60 @@ impl fmt::Debug for Token {
     }
 }
 
+fn tokenize_string(chars: &mut Peekable<Chars>) -> Token {
+    chars.next();
+    let string: String = chars
+        .by_ref()
+        .take_while(|&c| c != '"')
+        .collect();
+    chars.next();
+    Token::String(string)
+}
+
+fn tokenize_keyword(chars: &mut Peekable<Chars>) -> Token {
+    let keyword: String = chars
+        .by_ref()
+        .take_while(|&c| !c.is_whitespace())
+        .collect();
+    Token::Keyword(keyword)
+}
+
+#[derive(PartialEq)]
+enum Negative {
+    Yes,
+    No,
+}
+
+fn tokenize_number(chars: &mut Peekable<Chars>, negative: Negative) -> Token {
+    let mut is_float = false;
+    let mut number: String = chars
+        .by_ref()
+        .take_while(|&c| {
+            if c == '.' {
+                is_float = true;
+            }
+            c.is_digit(10) || c == '_' || c == '.'
+        })
+        .filter(|&c| c != '_')
+        .collect();
+    if negative == Negative::Yes {
+        number = format!("-{}", number);
+    }
+    if is_float {
+        Token::Float(string_to_float(&number))
+    } else {
+        Token::Integer(number.parse().unwrap())
+    }
+}
+
+fn tokenize_symbol(chars: &mut Peekable<Chars>) -> Token {
+    let symbol: String = chars
+        .by_ref()
+        .take_while(|&c| !c.is_whitespace())
+        .collect();
+    Token::Symbol(symbol)
+}
+
 pub fn tokenize(input: &str) -> Vec<Token> {
     let mut tokens = Vec::new();
     let mut chars = input.chars().peekable();
@@ -66,48 +123,20 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             '}' => { chars.next(); tokens.push(Token::RightBrace); },
             '[' => { chars.next(); tokens.push(Token::LeftBracket); },
             ']' => { chars.next(); tokens.push(Token::RightBracket); },
-            '"' => {
+            '"' => { tokens.push(tokenize_string(&mut chars)); },
+            ':' => { tokens.push(tokenize_keyword(&mut chars)); },
+            '-' => {
                 chars.next();
-                let string: String = chars
-                    .by_ref()
-                    .take_while(|&c| c != '"')
-                    .collect();
-                chars.next();
-                tokens.push(Token::String(string));
-            },
-            ':' => {
-                let keyword: String = chars
-                    .by_ref()
-                    .take_while(|&c| !c.is_whitespace())
-                    .collect();
-                tokens.push(Token::Keyword(keyword));
-            },
-            _ if c.is_whitespace() => { chars.next(); },
-            _ if c.is_digit(10) => {
-                let mut is_float = false;
-                let number: String = chars
-                    .by_ref()
-                    .take_while(|&c| {
-                        if c == '.' {
-                            is_float = true;
-                        }
-                        c.is_digit(10) || c == '_' || c == '.'
-                    })
-                    .filter(|&c| c != '_')
-                    .collect();
-                if is_float {
-                    tokens.push(Token::Float(string_to_float(&number)));
-                } else {
-                    tokens.push(Token::Integer(number.parse().unwrap()));
+                match chars.peek() {
+                    Some(&c) if c.is_digit(10) => {
+                        tokens.push(tokenize_number(&mut chars, Negative::Yes)); 
+                    },
+                    _ => { tokens.push(Token::Symbol("-".to_string())); },
                 }
             },
-            _ => {
-                let symbol: String = chars
-                    .by_ref()
-                    .take_while(|&c| !c.is_whitespace())
-                    .collect();
-                tokens.push(Token::Symbol(symbol));
-            }
+            _ if c.is_whitespace() => { chars.next(); },
+            _ if c.is_digit(10) => { tokens.push(tokenize_number(&mut chars, Negative::No)); },
+            _ => { tokens.push(tokenize_symbol(&mut chars)); }
         }
     }
     tokens
