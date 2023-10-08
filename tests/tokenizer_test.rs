@@ -54,10 +54,10 @@ fn tokenize_integer() {
 fn tokenize_float() {
     let actual = tao::tokenize("1.23 4.56 7.89 1_000.0");
     let expected = vec![
-        tao::Token::Float(1.23),
-        tao::Token::Float(4.56),
-        tao::Token::Float(7.89),
-        tao::Token::Float(1000.0),
+        tao::Token::Float(tao::string_to_float("1.23")),
+        tao::Token::Float(tao::string_to_float("4.56")),
+        tao::Token::Float(tao::string_to_float("7.89")),
+        tao::Token::Float(tao::string_to_float("1000.0")),
     ];
     assert_eq!(actual, expected);
 }
@@ -75,3 +75,4 @@ fn tokenize_delimiters() {
     ];
     assert_eq!(actual, expected);
 }
+

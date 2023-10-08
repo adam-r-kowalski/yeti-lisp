@@ -3,7 +3,7 @@ use tao;
 
 fn main() -> io::Result<()> {
     loop {
-        print!("🌓 ");
+        print!("λ ");
         io::stdout().flush()?;
         let mut buffer = String::new();
         io::stdin().read_line(&mut buffer)?;
