@@ -1,12 +1,13 @@
 use std::iter::Peekable;
 use rug::{Integer, Float};
+use im::Vector;
 use crate::tokenizer::Token;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expression {
     Integer(Integer),
     Float(Float),
-    Array(Vec<Expression>),
+    Array(Vector<Expression>),
 }
 
 pub fn parse_expression<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expression {
@@ -14,7 +15,7 @@ pub fn parse_expression<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> 
         Some(Token::Integer(i)) => Expression::Integer(i),
         Some(Token::Float(f)) => Expression::Float(f),
         Some(Token::LeftBracket) => {
-            let mut array = vec![];
+            let mut array = Vector::new();
             while let Some(&ref token) = tokens.peek() {
                 match token {
                     Token::RightBracket => {
@@ -22,7 +23,7 @@ pub fn parse_expression<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> 
                         break;
                     },
                     _ => {
-                        array.push(parse_expression(tokens));
+                        array.push_back(parse_expression(tokens));
                     }
                 }
             }
