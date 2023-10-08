@@ -56,4 +56,3 @@ impl<I: Iterator> PeekableExt<I> for std::iter::Peekable<I> {
         }
     }
 }
-

@@ -79,7 +79,6 @@ fn tokenize_delimiters() {
     assert_eq!(actual, expected);
 }
 
-
 #[test]
 fn tokenize_call_inside_array() {
     let actual = tao::tokenize("[3.14 (+ 2 3)]");
@@ -91,7 +90,7 @@ fn tokenize_call_inside_array() {
         tao::Token::Integer(Integer::from(2)),
         tao::Token::Integer(Integer::from(3)),
         tao::Token::RightParen,
-        tao::Token::RightBracket
+        tao::Token::RightBracket,
     ];
     assert_eq!(actual, expected);
 }
@@ -106,4 +105,3 @@ fn tokenize_rational() {
     ];
     assert_eq!(actual, expected);
 }
-

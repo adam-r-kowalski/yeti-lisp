@@ -1,53 +1,8 @@
-use std::fmt;
-use std::iter::Peekable;
-use rug::{Integer, Float, Rational};
-use im::Vector;
 use crate::tokenizer::Token;
-use crate::numerics::bits_to_decimal_digits;
-
-#[derive(PartialEq, Clone)]
-pub enum Expression {
-    Symbol(String),
-    Keyword(String),
-    String(String),
-    Integer(Integer),
-    Float(Float),
-    Ratio(Rational),
-    Array(Vector<Expression>),
-    Call{ function: Box<Expression>, arguments: Vector<Expression> },
-}
-
-impl fmt::Debug for Expression {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Expression::Symbol(s) => write!(f, "{}", s),
-            Expression::Keyword(k) => write!(f, "{}", k),
-            Expression::String(s) => write!(f, "{}", s),
-            Expression::Integer(i) => write!(f, "{}", i),
-            Expression::Float(float) => {
-                let bits = float.prec();
-                let digits = bits_to_decimal_digits(bits);
-                write!(f, "{:.*}", digits, float)
-            },
-            Expression::Ratio(ratio) => write!(f, "{}/{}", ratio.numer(), ratio.denom()),
-            Expression::Array(array) => {
-                write!(f, "[")?;
-                for (i, element) in array.iter().enumerate() {
-                    if i > 0 { write!(f, " ")?; }
-                    write!(f, "{:?}", element)?;
-                }
-                write!(f, "]")
-            },
-            Expression::Call{ function, arguments } => {
-                write!(f, "({:?}", function)?;
-                for argument in arguments {
-                    write!(f, " {:?}", argument)?;
-                }
-                write!(f, ")")
-            },
-        }
-    }
-}
+use crate::Expression;
+use im::Vector;
+use rug::{Integer, Rational};
+use std::iter::Peekable;
 
 fn parse_integer<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>, i: Integer) -> Expression {
     match tokens.peek() {
@@ -59,8 +14,8 @@ fn parse_integer<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>, i: Integer
                 None => panic!("Expected integer got None"),
             };
             Expression::Ratio(Rational::from((i, denominator)))
-        },
-        _ => Expression::Integer(i)
+        }
+        _ => Expression::Integer(i),
     }
 }
 
@@ -72,11 +27,16 @@ fn parse_call<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expression
             Token::RightParen => {
                 tokens.next();
                 break;
-            },
-            _ => { arguments.push_back(parse_expression(tokens)); }
+            }
+            _ => {
+                arguments.push_back(parse_expression(tokens));
+            }
         }
     }
-    Expression::Call{ function, arguments }
+    Expression::Call {
+        function,
+        arguments,
+    }
 }
 
 fn parse_array<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expression {
@@ -86,8 +46,10 @@ fn parse_array<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expressio
             Token::RightBracket => {
                 tokens.next();
                 break;
-            },
-            _ => { array.push_back(parse_expression(tokens)); }
+            }
+            _ => {
+                array.push_back(parse_expression(tokens));
+            }
         }
     }
     Expression::Array(array)

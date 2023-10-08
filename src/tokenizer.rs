@@ -1,9 +1,9 @@
+use crate::numerics::{bits_to_decimal_digits, string_to_float};
+use crate::peeking_take_while::PeekableExt;
+use rug::{Float, Integer};
 use std::fmt;
 use std::iter::Peekable;
 use std::str::Chars;
-use rug::{Integer, Float};
-use crate::numerics::{bits_to_decimal_digits, string_to_float};
-use crate::peeking_take_while::PeekableExt;
 
 #[derive(PartialEq)]
 pub enum Token {
@@ -31,7 +31,7 @@ impl fmt::Debug for Token {
                 let bits = float.prec();
                 let digits = bits_to_decimal_digits(bits);
                 write!(f, "Float({:.*})", digits, float)
-            },
+            }
             Token::LeftParen => write!(f, "LeftParen"),
             Token::RightParen => write!(f, "RightParen"),
             Token::LeftBracket => write!(f, "LeftBracket"),
@@ -44,17 +44,13 @@ impl fmt::Debug for Token {
 
 fn tokenize_string(chars: &mut Peekable<Chars>) -> Token {
     chars.next();
-    let string: String = chars
-        .peeking_take_while(|&c| c != '"')
-        .collect();
+    let string: String = chars.peeking_take_while(|&c| c != '"').collect();
     chars.next();
     Token::String(string)
 }
 
 fn tokenize_keyword(chars: &mut Peekable<Chars>) -> Token {
-    let keyword: String = chars
-        .peeking_take_while(|&c| !c.is_whitespace())
-        .collect();
+    let keyword: String = chars.peeking_take_while(|&c| !c.is_whitespace()).collect();
     Token::Keyword(keyword)
 }
 
@@ -106,28 +102,57 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     let mut chars = input.chars().peekable();
     while let Some(&c) = chars.peek() {
         match c {
-            '(' => { chars.next(); tokens.push(Token::LeftParen); },
-            ')' => { chars.next(); tokens.push(Token::RightParen); },
-            '{' => { chars.next(); tokens.push(Token::LeftBrace); },
-            '}' => { chars.next(); tokens.push(Token::RightBrace); },
-            '[' => { chars.next(); tokens.push(Token::LeftBracket); },
-            ']' => { chars.next(); tokens.push(Token::RightBracket); },
-            '"' => { tokens.push(tokenize_string(&mut chars)); },
-            ':' => { tokens.push(tokenize_keyword(&mut chars)); },
+            '(' => {
+                chars.next();
+                tokens.push(Token::LeftParen);
+            }
+            ')' => {
+                chars.next();
+                tokens.push(Token::RightParen);
+            }
+            '{' => {
+                chars.next();
+                tokens.push(Token::LeftBrace);
+            }
+            '}' => {
+                chars.next();
+                tokens.push(Token::RightBrace);
+            }
+            '[' => {
+                chars.next();
+                tokens.push(Token::LeftBracket);
+            }
+            ']' => {
+                chars.next();
+                tokens.push(Token::RightBracket);
+            }
+            '"' => {
+                tokens.push(tokenize_string(&mut chars));
+            }
+            ':' => {
+                tokens.push(tokenize_keyword(&mut chars));
+            }
             '-' => {
                 chars.next();
                 match chars.peek() {
                     Some(&c) if c.is_digit(10) => {
-                        tokens.push(tokenize_number(&mut chars, Negative::Yes)); 
-                    },
-                    _ => { tokens.push(Token::Symbol("-".to_string())); },
+                        tokens.push(tokenize_number(&mut chars, Negative::Yes));
+                    }
+                    _ => {
+                        tokens.push(Token::Symbol("-".to_string()));
+                    }
                 }
-            },
-            _ if c.is_whitespace() => { chars.next(); },
-            _ if c.is_digit(10) => { tokens.push(tokenize_number(&mut chars, Negative::No)); },
-            _ => { tokens.push(tokenize_symbol(&mut chars)); }
+            }
+            _ if c.is_whitespace() => {
+                chars.next();
+            }
+            _ if c.is_digit(10) => {
+                tokens.push(tokenize_number(&mut chars, Negative::No));
+            }
+            _ => {
+                tokens.push(tokenize_symbol(&mut chars));
+            }
         }
     }
     tokens
 }
-

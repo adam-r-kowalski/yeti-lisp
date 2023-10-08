@@ -15,4 +15,3 @@ pub fn string_to_float(number: &str) -> Float {
     let parsed = Float::parse(number).unwrap();
     Float::with_val(bits, parsed)
 }
-
