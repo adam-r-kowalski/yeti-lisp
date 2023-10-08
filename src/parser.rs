@@ -1,6 +1,6 @@
 use std::fmt;
 use std::iter::Peekable;
-use rug::{Integer, Float};
+use rug::{Integer, Float, Rational};
 use im::Vector;
 use crate::tokenizer::Token;
 use crate::numerics::bits_to_decimal_digits;
@@ -12,6 +12,7 @@ pub enum Expression {
     String(String),
     Integer(Integer),
     Float(Float),
+    Ratio(Rational),
     Array(Vector<Expression>),
     Call{ function: Box<Expression>, arguments: Vector<Expression> },
 }
@@ -28,6 +29,7 @@ impl fmt::Debug for Expression {
                 let digits = bits_to_decimal_digits(bits);
                 write!(f, "{:.*}", digits, float)
             },
+            Expression::Ratio(ratio) => write!(f, "{}/{}", ratio.numer(), ratio.denom()),
             Expression::Array(array) => {
                 write!(f, "[")?;
                 for (i, element) in array.iter().enumerate() {
@@ -44,6 +46,21 @@ impl fmt::Debug for Expression {
                 write!(f, ")")
             },
         }
+    }
+}
+
+fn parse_integer<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>, i: Integer) -> Expression {
+    match tokens.peek() {
+        Some(&Token::Symbol(ref s)) if s == "/" => {
+            tokens.next();
+            let denominator = match tokens.next() {
+                Some(Token::Integer(i)) => i,
+                Some(t) => panic!("Expected integer got {:?}", t),
+                None => panic!("Expected integer got None"),
+            };
+            Expression::Ratio(Rational::from((i, denominator)))
+        },
+        _ => Expression::Integer(i)
     }
 }
 
@@ -81,7 +98,7 @@ pub fn parse_expression<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> 
         Some(Token::Symbol(s)) => Expression::Symbol(s),
         Some(Token::Keyword(s)) => Expression::Keyword(s),
         Some(Token::String(s)) => Expression::String(s),
-        Some(Token::Integer(i)) => Expression::Integer(i),
+        Some(Token::Integer(i)) => parse_integer(tokens, i),
         Some(Token::Float(f)) => Expression::Float(f),
         Some(Token::LeftParen) => parse_call(tokens),
         Some(Token::LeftBracket) => parse_array(tokens),

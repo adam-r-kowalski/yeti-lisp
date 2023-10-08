@@ -96,3 +96,14 @@ fn tokenize_call_inside_array() {
     assert_eq!(actual, expected);
 }
 
+#[test]
+fn tokenize_rational() {
+    let actual = tao::tokenize("1/2");
+    let expected = vec![
+        tao::Token::Integer(Integer::from(1)),
+        tao::Token::Symbol("/".to_string()),
+        tao::Token::Integer(Integer::from(2)),
+    ];
+    assert_eq!(actual, expected);
+}
+

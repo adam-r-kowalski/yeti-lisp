@@ -85,9 +85,18 @@ fn tokenize_number(chars: &mut Peekable<Chars>, negative: Negative) -> Token {
     }
 }
 
+fn reserved_character(c: char) -> bool {
+    match c {
+        '(' | ')' | '{' | '}' | '[' | ']' | '"' | ':' => true,
+        _ if c.is_whitespace() => true,
+        _ if c.is_digit(10) => true,
+        _ => false,
+    }
+}
+
 fn tokenize_symbol(chars: &mut Peekable<Chars>) -> Token {
     let symbol: String = chars
-        .peeking_take_while(|&c| !c.is_whitespace())
+        .peeking_take_while(|&c| !reserved_character(c))
         .collect();
     Token::Symbol(symbol)
 }

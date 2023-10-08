@@ -1,5 +1,5 @@
 use im::vector;
-use rug::Integer;
+use rug::{Integer, Rational};
 use tao;
 
 #[test]
@@ -146,6 +146,15 @@ fn parse_array_inside_call() {
             ])
         ]
     };
+    assert_eq!(actual, expected);
+}
+
+
+#[test]
+fn parse_rational() {
+    let tokens = tao::tokenize("1/2");
+    let actual = tao::parse(tokens);
+    let expected = tao::Expression::Ratio(Rational::from((Integer::from(1), Integer::from(2))));
     assert_eq!(actual, expected);
 }
 
