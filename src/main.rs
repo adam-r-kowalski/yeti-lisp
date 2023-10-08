@@ -8,7 +8,8 @@ fn main() -> io::Result<()> {
         let mut buffer = String::new();
         io::stdin().read_line(&mut buffer)?;
         let tokens = tao::tokenize(&buffer);
-        io::stdout().write_all(format!("{:?}", tokens).as_bytes())?;
+        let expression = tao::parse(tokens);
+        io::stdout().write_all(format!("{:?}", expression).as_bytes())?;
         println!("");
     }
 }

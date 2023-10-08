@@ -2,23 +2,8 @@ use std::fmt;
 use std::iter::Peekable;
 use std::str::Chars;
 use rug::{Integer, Float};
-
-fn decimal_digits_to_bits(decimal_digits: usize) -> u32 {
-    (decimal_digits as f64 * 3.322).ceil() as u32
-}
-
-fn bits_to_decimal_digits(bits: u32) -> usize {
-    (bits as f64 / 3.322).floor() as usize
-}
-
-pub fn string_to_float(number: &str) -> Float {
-    let offset = if number.starts_with("-") { 2 } else { 1 };
-    let digits = number.len() - offset;
-    let bits = decimal_digits_to_bits(digits);
-    let parsed = Float::parse(number).unwrap();
-    Float::with_val(bits, parsed)
-}
-
+use crate::numerics::{bits_to_decimal_digits, string_to_float};
+use crate::peeking_take_while::PeekableExt;
 
 #[derive(PartialEq)]
 pub enum Token {
@@ -40,7 +25,7 @@ impl fmt::Debug for Token {
         match self {
             Token::Symbol(s) => write!(f, "Symbol({})", s),
             Token::Keyword(k) => write!(f, "Keyword({})", k),
-            Token::String(s) => write!(f, "String({:?})", s),
+            Token::String(s) => write!(f, "String({})", s),
             Token::Integer(i) => write!(f, "Integer({})", i),
             Token::Float(float) => {
                 let bits = float.prec();
@@ -60,8 +45,7 @@ impl fmt::Debug for Token {
 fn tokenize_string(chars: &mut Peekable<Chars>) -> Token {
     chars.next();
     let string: String = chars
-        .by_ref()
-        .take_while(|&c| c != '"')
+        .peeking_take_while(|&c| c != '"')
         .collect();
     chars.next();
     Token::String(string)
@@ -69,8 +53,7 @@ fn tokenize_string(chars: &mut Peekable<Chars>) -> Token {
 
 fn tokenize_keyword(chars: &mut Peekable<Chars>) -> Token {
     let keyword: String = chars
-        .by_ref()
-        .take_while(|&c| !c.is_whitespace())
+        .peeking_take_while(|&c| !c.is_whitespace())
         .collect();
     Token::Keyword(keyword)
 }
@@ -84,8 +67,7 @@ enum Negative {
 fn tokenize_number(chars: &mut Peekable<Chars>, negative: Negative) -> Token {
     let mut is_float = false;
     let mut number: String = chars
-        .by_ref()
-        .take_while(|&c| {
+        .peeking_take_while(|&c| {
             if c == '.' {
                 is_float = true;
             }
@@ -105,8 +87,7 @@ fn tokenize_number(chars: &mut Peekable<Chars>, negative: Negative) -> Token {
 
 fn tokenize_symbol(chars: &mut Peekable<Chars>) -> Token {
     let symbol: String = chars
-        .by_ref()
-        .take_while(|&c| !c.is_whitespace())
+        .peeking_take_while(|&c| !c.is_whitespace())
         .collect();
     Token::Symbol(symbol)
 }
