@@ -1,6 +1,6 @@
 use crate::tokenizer::Token;
 use crate::Expression;
-use im::Vector;
+use im::{HashMap, Vector};
 use rug::{Integer, Rational};
 use std::iter::Peekable;
 
@@ -55,6 +55,24 @@ fn parse_array<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expressio
     Expression::Array(array)
 }
 
+fn parse_map<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expression {
+    let mut map = HashMap::new();
+    while let Some(&ref token) = tokens.peek() {
+        match token {
+            Token::RightBrace => {
+                tokens.next();
+                break;
+            }
+            _ => {
+                let key = parse_expression(tokens);
+                let value = parse_expression(tokens);
+                map.insert(key, value);
+            }
+        }
+    }
+    Expression::Map(map)
+}
+
 pub fn parse_expression<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expression {
     match tokens.next() {
         Some(Token::Symbol(s)) => Expression::Symbol(s),
@@ -64,6 +82,7 @@ pub fn parse_expression<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> 
         Some(Token::Float(f)) => Expression::Float(f),
         Some(Token::LeftParen) => parse_call(tokens),
         Some(Token::LeftBracket) => parse_array(tokens),
+        Some(Token::LeftBrace) => parse_map(tokens),
         Some(t) => panic!("Unexpected token {:?}", t),
         None => panic!("Expected token got None"),
     }

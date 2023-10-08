@@ -56,11 +56,11 @@ fn tokenize_integer() {
 fn tokenize_float() {
     let actual = tao::tokenize("1.23 4.56 7.89 1_000.0 -3.23");
     let expected = vec![
-        tao::Token::Float(tao::string_to_float("1.23")),
-        tao::Token::Float(tao::string_to_float("4.56")),
-        tao::Token::Float(tao::string_to_float("7.89")),
-        tao::Token::Float(tao::string_to_float("1000.0")),
-        tao::Token::Float(tao::string_to_float("-3.23")),
+        tao::Token::Float(tao::Float::from_str("1.23")),
+        tao::Token::Float(tao::Float::from_str("4.56")),
+        tao::Token::Float(tao::Float::from_str("7.89")),
+        tao::Token::Float(tao::Float::from_str("1000.0")),
+        tao::Token::Float(tao::Float::from_str("-3.23")),
     ];
     assert_eq!(actual, expected);
 }
@@ -84,7 +84,7 @@ fn tokenize_call_inside_array() {
     let actual = tao::tokenize("[3.14 (+ 2 3)]");
     let expected = vec![
         tao::Token::LeftBracket,
-        tao::Token::Float(tao::string_to_float("3.14")),
+        tao::Token::Float(tao::Float::from_str("3.14")),
         tao::Token::LeftParen,
         tao::Token::Symbol("+".to_string()),
         tao::Token::Integer(Integer::from(2)),

@@ -1,11 +1,10 @@
-use crate::numerics::{bits_to_decimal_digits, string_to_float};
+use crate::numerics::Float;
 use crate::peeking_take_while::PeekableExt;
-use rug::{Float, Integer};
-use std::fmt;
+use rug::Integer;
 use std::iter::Peekable;
 use std::str::Chars;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum Token {
     Symbol(String),
     Keyword(String),
@@ -18,28 +17,6 @@ pub enum Token {
     RightBracket,
     LeftBrace,
     RightBrace,
-}
-
-impl fmt::Debug for Token {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Token::Symbol(s) => write!(f, "Symbol({})", s),
-            Token::Keyword(k) => write!(f, "Keyword({})", k),
-            Token::String(s) => write!(f, "String({})", s),
-            Token::Integer(i) => write!(f, "Integer({})", i),
-            Token::Float(float) => {
-                let bits = float.prec();
-                let digits = bits_to_decimal_digits(bits);
-                write!(f, "Float({:.*})", digits, float)
-            }
-            Token::LeftParen => write!(f, "LeftParen"),
-            Token::RightParen => write!(f, "RightParen"),
-            Token::LeftBracket => write!(f, "LeftBracket"),
-            Token::RightBracket => write!(f, "RightBracket"),
-            Token::LeftBrace => write!(f, "LeftBrace"),
-            Token::RightBrace => write!(f, "RightBrace"),
-        }
-    }
 }
 
 fn tokenize_string(chars: &mut Peekable<Chars>) -> Token {
@@ -75,7 +52,7 @@ fn tokenize_number(chars: &mut Peekable<Chars>, negative: Negative) -> Token {
         number = format!("-{}", number);
     }
     if is_float {
-        Token::Float(string_to_float(&number))
+        Token::Float(Float::from_str(&number))
     } else {
         Token::Integer(number.parse().unwrap())
     }
@@ -97,62 +74,46 @@ fn tokenize_symbol(chars: &mut Peekable<Chars>) -> Token {
     Token::Symbol(symbol)
 }
 
-pub fn tokenize(input: &str) -> Vec<Token> {
-    let mut tokens = Vec::new();
-    let mut chars = input.chars().peekable();
-    while let Some(&c) = chars.peek() {
+fn consume_and_return(chars: &mut Peekable<Chars>, token: Token) -> Token {
+    chars.next();
+    token
+}
+
+fn next_token(mut chars: &mut Peekable<Chars>) -> Option<Token> {
+    if let Some(&c) = chars.peek() {
         match c {
-            '(' => {
-                chars.next();
-                tokens.push(Token::LeftParen);
-            }
-            ')' => {
-                chars.next();
-                tokens.push(Token::RightParen);
-            }
-            '{' => {
-                chars.next();
-                tokens.push(Token::LeftBrace);
-            }
-            '}' => {
-                chars.next();
-                tokens.push(Token::RightBrace);
-            }
-            '[' => {
-                chars.next();
-                tokens.push(Token::LeftBracket);
-            }
-            ']' => {
-                chars.next();
-                tokens.push(Token::RightBracket);
-            }
-            '"' => {
-                tokens.push(tokenize_string(&mut chars));
-            }
-            ':' => {
-                tokens.push(tokenize_keyword(&mut chars));
-            }
+            '(' => Some(consume_and_return(chars, Token::LeftParen)),
+            ')' => Some(consume_and_return(chars, Token::RightParen)),
+            '{' => Some(consume_and_return(chars, Token::LeftBrace)),
+            '}' => Some(consume_and_return(chars, Token::RightBrace)),
+            '[' => Some(consume_and_return(chars, Token::LeftBracket)),
+            ']' => Some(consume_and_return(chars, Token::RightBracket)),
+            '"' => Some(tokenize_string(&mut chars)),
+            ':' => Some(tokenize_keyword(&mut chars)),
             '-' => {
                 chars.next();
                 match chars.peek() {
-                    Some(&c) if c.is_digit(10) => {
-                        tokens.push(tokenize_number(&mut chars, Negative::Yes));
-                    }
-                    _ => {
-                        tokens.push(Token::Symbol("-".to_string()));
-                    }
+                    Some(&c) if c.is_digit(10) => Some(tokenize_number(&mut chars, Negative::Yes)),
+                    _ => Some(Token::Symbol("-".to_string())),
                 }
             }
             _ if c.is_whitespace() => {
                 chars.next();
+                next_token(chars)
             }
-            _ if c.is_digit(10) => {
-                tokens.push(tokenize_number(&mut chars, Negative::No));
-            }
-            _ => {
-                tokens.push(tokenize_symbol(&mut chars));
-            }
+            _ if c.is_digit(10) => Some(tokenize_number(&mut chars, Negative::No)),
+            _ => Some(tokenize_symbol(&mut chars)),
         }
+    } else {
+        None
+    }
+}
+
+pub fn tokenize(input: &str) -> Vec<Token> {
+    let mut tokens = Vec::new();
+    let mut chars = input.chars().peekable();
+    while let Some(token) = next_token(&mut chars) {
+        tokens.push(token);
     }
     tokens
 }

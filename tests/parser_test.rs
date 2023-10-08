@@ -1,4 +1,4 @@
-use im::vector;
+use im::{hashmap, vector};
 use rug::{Integer, Rational};
 use tao;
 
@@ -38,7 +38,7 @@ fn parse_integer() {
 fn parse_float() {
     let tokens = tao::tokenize("3.14");
     let actual = tao::parse(tokens);
-    let expected = tao::Expression::Float(tao::string_to_float("3.14"));
+    let expected = tao::Expression::Float(tao::Float::from_str("3.14"));
     assert_eq!(actual, expected);
 }
 
@@ -59,7 +59,7 @@ fn parse_heterogenous_array() {
     let tokens = tao::tokenize("[3.14 2 3]");
     let actual = tao::parse(tokens);
     let expected = tao::Expression::Array(vector![
-        tao::Expression::Float(tao::string_to_float("3.14")),
+        tao::Expression::Float(tao::Float::from_str("3.14")),
         tao::Expression::Integer(Integer::from(2)),
         tao::Expression::Integer(Integer::from(3)),
     ]);
@@ -85,7 +85,7 @@ fn parse_nested_array() {
     let tokens = tao::tokenize("[3.14 [2 3]]");
     let actual = tao::parse(tokens);
     let expected = tao::Expression::Array(vector![
-        tao::Expression::Float(tao::string_to_float("3.14")),
+        tao::Expression::Float(tao::Float::from_str("3.14")),
         tao::Expression::Array(vector![
             tao::Expression::Integer(Integer::from(2)),
             tao::Expression::Integer(Integer::from(3)),
@@ -101,7 +101,7 @@ fn parse_nested_call() {
     let expected = tao::Expression::Call {
         function: Box::new(tao::Expression::Symbol("+".to_string())),
         arguments: vector![
-            tao::Expression::Float(tao::string_to_float("3.14")),
+            tao::Expression::Float(tao::Float::from_str("3.14")),
             tao::Expression::Call {
                 function: Box::new(tao::Expression::Symbol("-".to_string())),
                 arguments: vector![
@@ -119,7 +119,7 @@ fn parse_call_inside_array() {
     let tokens = tao::tokenize("[3.14 (+ 2 3)]");
     let actual = tao::parse(tokens);
     let expected = tao::Expression::Array(vector![
-        tao::Expression::Float(tao::string_to_float("3.14")),
+        tao::Expression::Float(tao::Float::from_str("3.14")),
         tao::Expression::Call {
             function: Box::new(tao::Expression::Symbol("+".to_string())),
             arguments: vector![
@@ -138,7 +138,7 @@ fn parse_array_inside_call() {
     let expected = tao::Expression::Call {
         function: Box::new(tao::Expression::Symbol("+".to_string())),
         arguments: vector![
-            tao::Expression::Float(tao::string_to_float("3.14")),
+            tao::Expression::Float(tao::Float::from_str("3.14")),
             tao::Expression::Array(vector![
                 tao::Expression::Integer(Integer::from(2)),
                 tao::Expression::Integer(Integer::from(3)),
@@ -153,5 +153,16 @@ fn parse_rational() {
     let tokens = tao::tokenize("1/2");
     let actual = tao::parse(tokens);
     let expected = tao::Expression::Ratio(Rational::from((Integer::from(1), Integer::from(2))));
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn parse_map() {
+    let tokens = tao::tokenize("{:a 1 :b 2}");
+    let actual = tao::parse(tokens);
+    let expected = tao::Expression::Map(hashmap![
+        tao::Expression::Keyword(":a".to_string()) => tao::Expression::Integer(Integer::from(1)),
+        tao::Expression::Keyword(":b".to_string()) => tao::Expression::Integer(Integer::from(2)),
+    ]);
     assert_eq!(actual, expected);
 }
