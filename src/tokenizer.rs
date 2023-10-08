@@ -8,8 +8,7 @@ fn decimal_digits_to_bits(decimal_digits: usize) -> u32 {
 }
 
 fn bits_to_decimal_digits(bits: u32) -> usize {
-    let decimal_digits_float = bits as f64 / 3.322;
-    decimal_digits_float.floor() as usize
+    (bits as f64 / 3.322).floor() as usize
 }
 
 pub fn string_to_float(number: &str) -> Float {
