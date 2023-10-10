@@ -1,7 +1,7 @@
 use crate::Expression;
 use crate::Expression::{Integer, IntrinsicFunction, Ratio};
 use im::{hashmap, HashMap};
-use rug::Rational;
+use rug;
 
 pub fn environment() -> HashMap<String, Expression> {
     hashmap! {
@@ -25,7 +25,14 @@ pub fn environment() -> HashMap<String, Expression> {
         ),
         "/".to_string() => IntrinsicFunction(
           |arguments| match (&arguments[0], &arguments[1]) {
-            (Integer(lhs), Integer(rhs)) => Ratio(Rational::from((lhs, rhs))),
+            (Integer(lhs), Integer(rhs)) => {
+                let rational = rug::Rational::from((lhs, rhs));
+                if rational.is_integer() {
+                    Integer(rational.numer().clone())
+                } else {
+                    Ratio(rational)
+                }
+            },
             _ => panic!("Expected integer argument"),
           }
         ),
