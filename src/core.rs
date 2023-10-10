@@ -1,11 +1,14 @@
 use crate::Expression;
-use crate::Expression::Integer;
+use crate::Expression::{Integer, IntrinsicFunction};
 use im::{hashmap, HashMap};
-use rug;
 
 pub fn environment() -> HashMap<String, Expression> {
     hashmap! {
-        "x".to_string() => Integer(rug::Integer::from(5)),
-        "y".to_string() => Integer(rug::Integer::from(10)),
+        "+".to_string() => IntrinsicFunction(
+          |arguments| match (&arguments[0], &arguments[1]) {
+            (Integer(lhs), Integer(rhs)) => Integer((lhs + rhs).into()),
+            _ => panic!("Expected integer argument"),
+          }
+        ),
     }
 }
