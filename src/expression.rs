@@ -16,4 +16,5 @@ pub enum Expression {
         function: Box<Expression>,
         arguments: Vector<Expression>,
     },
+    IntrinsicFunction(fn(Vector<Expression>) -> Expression),
 }

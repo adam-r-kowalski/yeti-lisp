@@ -10,10 +10,6 @@ fn read() -> io::Result<tao::Expression> {
     Ok(tao::parse(tokens))
 }
 
-fn eval(expression: tao::Expression) -> tao::Expression {
-    expression
-}
-
 fn print(expression: tao::Expression) -> io::Result<()> {
     io::stdout().write_all(format!("{:?}", expression).as_bytes())?;
     println!("");
@@ -21,7 +17,11 @@ fn print(expression: tao::Expression) -> io::Result<()> {
 }
 
 fn main() -> io::Result<()> {
+    let mut environment = tao::core::environment();
     loop {
-        print(eval(read()?))?;
+        let expression = read()?;
+        let (next_environment, expression) = tao::evaluate(environment, expression);
+        print(expression)?;
+        environment = next_environment;
     }
 }
