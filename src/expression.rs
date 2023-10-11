@@ -7,6 +7,15 @@ type Expressions = Vector<Expression>;
 
 pub type Environment = HashMap<String, Expression>;
 
+#[derive(Debug)]
+pub struct RaisedEffect {
+    pub environment: Environment,
+    pub effect: String,
+    pub arguments: Vector<Expression>,
+}
+
+pub type Result = std::result::Result<(Environment, Expression), RaisedEffect>;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Expression {
     Symbol(String),
@@ -23,7 +32,7 @@ pub enum Expression {
         function: Box<Expression>,
         arguments: Expressions,
     },
-    IntrinsicFunction(fn(Environment, Expressions) -> (Environment, Expression)),
+    IntrinsicFunction(fn(Environment, Expressions) -> Result),
 }
 
 impl Display for Expression {

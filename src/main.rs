@@ -20,8 +20,22 @@ fn main() -> io::Result<()> {
     let mut environment = tao::core::environment();
     loop {
         let expression = read()?;
-        let (next_environment, expression) = tao::evaluate(environment, expression);
-        print(expression)?;
-        environment = next_environment;
+        match tao::evaluate(environment.clone(), expression) {
+            Ok((next_environment, expression)) => {
+                print(expression)?;
+                environment = next_environment;
+            }
+            Err(tao::RaisedEffect {
+                environment: _,
+                effect,
+                arguments,
+            }) => {
+                println!(
+                    "{{:effect {}, :arguments {}}}",
+                    effect,
+                    tao::Expression::Array(arguments)
+                )
+            }
+        }
     }
 }
