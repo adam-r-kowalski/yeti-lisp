@@ -27,8 +27,11 @@ fn tokenize_string(chars: &mut Peekable<Chars>) -> Token {
 }
 
 fn tokenize_keyword(chars: &mut Peekable<Chars>) -> Token {
-    let keyword: String = chars.peeking_take_while(|&c| !c.is_whitespace()).collect();
-    Token::Keyword(keyword)
+    chars.next();
+    let keyword: String = chars
+        .peeking_take_while(|&c| !reserved_character(c))
+        .collect();
+    Token::Keyword(format!(":{}", keyword))
 }
 
 #[derive(PartialEq)]

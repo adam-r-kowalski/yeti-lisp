@@ -1,4 +1,4 @@
-use im::{vector, Vector};
+use im::{vector, HashMap, Vector};
 
 use crate::expression::{Environment, RaisedEffect, Result};
 use crate::Expression;
@@ -18,6 +18,26 @@ fn evaluate_symbol(environment: Environment, symbol: String) -> Result {
     }
 }
 
+fn lookup_key_in_map(
+    environment: Environment,
+    map: HashMap<Expression, Expression>,
+    keyword: String,
+) -> Result {
+    if let Some(e) = map.get(&Expression::Keyword(keyword.clone())) {
+        Ok((environment, e.clone()))
+    } else {
+        Err(RaisedEffect {
+            environment,
+            effect: "error".to_string(),
+            arguments: vector![Expression::String(format!(
+                "Keyword {} not found in map {}",
+                keyword,
+                Expression::Map(map)
+            ))],
+        })
+    }
+}
+
 fn evaluate_call(
     environment: Environment,
     function: Expression,
@@ -29,26 +49,28 @@ fn evaluate_call(
         Expression::Keyword(k) => {
             let (environment, arguments) = evaluate_expressions(environment, arguments)?;
             match &arguments[0] {
-                Expression::Map(m) => {
-                    if let Some(e) = m.get(&Expression::Keyword(k.clone())) {
-                        Ok((environment, e.clone()))
-                    } else {
-                        Err(RaisedEffect {
-                            environment,
-                            effect: "error".to_string(),
-                            arguments: vector![Expression::String(format!(
-                                "Keyword {} not found in map",
-                                k
-                            ))],
-                        })
-                    }
-                }
+                Expression::Map(m) => lookup_key_in_map(environment, m.clone(), k),
                 e => Err(RaisedEffect {
                     environment,
                     effect: "error".to_string(),
                     arguments: vector![Expression::String(format!(
                         "Cannot call keyword {} on {}",
                         k, e
+                    ))],
+                }),
+            }
+        }
+        Expression::Map(m) => {
+            let (environment, arguments) = evaluate_expressions(environment, arguments)?;
+            match &arguments[0] {
+                Expression::Keyword(k) => lookup_key_in_map(environment, m, k.clone()),
+                e => Err(RaisedEffect {
+                    environment,
+                    effect: "error".to_string(),
+                    arguments: vector![Expression::String(format!(
+                        "Cannot call map {} on {}",
+                        Expression::Map(m),
+                        e
                     ))],
                 }),
             }
