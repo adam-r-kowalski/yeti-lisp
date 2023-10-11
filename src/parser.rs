@@ -4,6 +4,15 @@ use im::{HashMap, Vector};
 use rug::{Integer, Rational};
 use std::iter::Peekable;
 
+fn parse_symbol(s: String) -> Expression {
+    match s.as_ref() {
+        "true" => Expression::Bool(true),
+        "false" => Expression::Bool(false),
+        "nil" => Expression::Nil,
+        _ => Expression::Symbol(s),
+    }
+}
+
 fn parse_integer<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>, i: Integer) -> Expression {
     match tokens.peek() {
         Some(&Token::Symbol(ref s)) if s == "/" => {
@@ -75,7 +84,7 @@ fn parse_map<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expression 
 
 pub fn parse_expression<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expression {
     match tokens.next() {
-        Some(Token::Symbol(s)) => Expression::Symbol(s),
+        Some(Token::Symbol(s)) => parse_symbol(s),
         Some(Token::Keyword(s)) => Expression::Keyword(s),
         Some(Token::String(s)) => Expression::String(s),
         Some(Token::Integer(i)) => parse_integer(tokens, i),

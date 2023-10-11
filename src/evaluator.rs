@@ -1,8 +1,7 @@
 use im::Vector;
 
+use crate::expression::Environment;
 use crate::Expression;
-
-pub type Environment = im::HashMap<String, Expression>;
 
 fn evaluate_symbol(environment: Environment, symbol: String) -> (Environment, Expression) {
     if let Some(e) = environment.get(&symbol) {
@@ -31,7 +30,7 @@ fn evaluate_call(
         .into_iter()
         .fold((environment, Vector::new()), reduce);
     match function {
-        Expression::IntrinsicFunction(f) => (environment, f(arguments)),
+        Expression::IntrinsicFunction(f) => (environment.clone(), f(environment, arguments)),
         _ => (
             environment,
             Expression::Call {
@@ -51,4 +50,18 @@ pub fn evaluate(environment: Environment, expression: Expression) -> (Environmen
         } => evaluate_call(environment, *function, arguments),
         e => (environment, e),
     }
+}
+
+pub fn evaluate_arguments(
+    environment: Environment,
+    arguments: Vector<Expression>,
+) -> (Environment, Vector<Expression>) {
+    let mut new_arguments = Vector::new();
+    let mut environment = environment;
+    for argument in arguments {
+        let (new_environment, argument) = evaluate(environment, argument);
+        environment = new_environment;
+        new_arguments.push_back(argument);
+    }
+    (environment, new_arguments)
 }

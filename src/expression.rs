@@ -2,6 +2,10 @@ use crate::numerics::Float;
 use im::{HashMap, Vector};
 use rug::{Integer, Rational};
 
+type Expressions = Vector<Expression>;
+
+pub type Environment = HashMap<String, Expression>;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Expression {
     Symbol(String),
@@ -10,11 +14,13 @@ pub enum Expression {
     Integer(Integer),
     Float(Float),
     Ratio(Rational),
-    Array(Vector<Expression>),
+    Bool(bool),
+    Nil,
+    Array(Expressions),
     Map(HashMap<Expression, Expression>),
     Call {
         function: Box<Expression>,
-        arguments: Vector<Expression>,
+        arguments: Expressions,
     },
-    IntrinsicFunction(fn(Vector<Expression>) -> Expression),
+    IntrinsicFunction(fn(Environment, Expressions) -> Expression),
 }

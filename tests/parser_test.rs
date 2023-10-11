@@ -166,3 +166,27 @@ fn parse_map() {
     ]);
     assert_eq!(actual, expected);
 }
+
+#[test]
+fn parse_true() {
+    let tokens = tao::tokenize("true");
+    let actual = tao::parse(tokens);
+    let expected = tao::Expression::Bool(true);
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn parse_false() {
+    let tokens = tao::tokenize("false");
+    let actual = tao::parse(tokens);
+    let expected = tao::Expression::Bool(false);
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn parse_nil() {
+    let tokens = tao::tokenize("nil");
+    let actual = tao::parse(tokens);
+    let expected = tao::Expression::Nil;
+    assert_eq!(actual, expected);
+}
