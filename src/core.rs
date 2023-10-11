@@ -1,4 +1,4 @@
-use crate::evaluate_arguments;
+use crate::evaluate_expressions;
 use crate::Expression;
 use crate::Expression::{Integer, IntrinsicFunction, Ratio};
 use im::{hashmap, HashMap};
@@ -8,7 +8,7 @@ pub fn environment() -> HashMap<String, Expression> {
     hashmap! {
         "+".to_string() => IntrinsicFunction(
           |env, args| {
-            let (env, args) = evaluate_arguments(env, args);
+            let (env, args) = evaluate_expressions(env, args);
             match (&args[0], &args[1]) {
               (Integer(lhs), Integer(rhs)) => (env, Integer((lhs + rhs).into())),
               _ => panic!("Expected integer argument"),
@@ -17,7 +17,7 @@ pub fn environment() -> HashMap<String, Expression> {
         ),
         "-".to_string() => IntrinsicFunction(
           |env, args| {
-            let (env, args) = evaluate_arguments(env, args);
+            let (env, args) = evaluate_expressions(env, args);
             match (&args[0], &args[1]) {
               (Integer(lhs), Integer(rhs)) => (env, Integer((lhs - rhs).into())),
               _ => panic!("Expected integer argument"),
@@ -26,7 +26,7 @@ pub fn environment() -> HashMap<String, Expression> {
         ),
         "*".to_string() => IntrinsicFunction(
           |env, args| {
-            let (env, args) = evaluate_arguments(env, args);
+            let (env, args) = evaluate_expressions(env, args);
             match (&args[0], &args[1]) {
               (Integer(lhs), Integer(rhs)) => (env, Integer((lhs * rhs).into())),
               _ => panic!("Expected integer argument"),
@@ -35,7 +35,7 @@ pub fn environment() -> HashMap<String, Expression> {
         ),
         "/".to_string() => IntrinsicFunction(
           |env, args| {
-            let (env, args) = evaluate_arguments(env, args);
+            let (env, args) = evaluate_expressions(env, args);
             match (&args[0], &args[1]) {
               (Integer(lhs), Integer(rhs)) => {
                 let rational = rug::Rational::from((lhs, rhs));

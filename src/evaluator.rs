@@ -7,7 +7,7 @@ fn evaluate_symbol(environment: Environment, symbol: String) -> (Environment, Ex
     if let Some(e) = environment.get(&symbol) {
         (environment.clone(), e.clone())
     } else {
-        (environment, Expression::Symbol(symbol))
+        panic!("Symbol {} not found in environment", symbol)
     }
 }
 
@@ -36,11 +36,27 @@ pub fn evaluate(environment: Environment, expression: Expression) -> (Environmen
             function,
             arguments,
         } => evaluate_call(environment, *function, arguments),
+        Expression::Array(a) => {
+            let (environment, a) = evaluate_expressions(environment, a);
+            (environment, Expression::Array(a))
+        }
+        Expression::Map(m) => {
+            let (environment, m) = m.into_iter().fold(
+                (environment, im::HashMap::new()),
+                |(environment, mut m), (k, v)| {
+                    let (environment, k) = evaluate(environment, k);
+                    let (environment, v) = evaluate(environment, v);
+                    m.insert(k, v);
+                    (environment, m)
+                },
+            );
+            (environment, Expression::Map(m))
+        }
         e => (environment, e),
     }
 }
 
-pub fn evaluate_arguments(
+pub fn evaluate_expressions(
     environment: Environment,
     arguments: Vector<Expression>,
 ) -> (Environment, Vector<Expression>) {

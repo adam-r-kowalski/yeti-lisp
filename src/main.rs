@@ -11,7 +11,7 @@ fn read() -> io::Result<tao::Expression> {
 }
 
 fn print(expression: tao::Expression) -> io::Result<()> {
-    io::stdout().write_all(format!("{:?}", expression).as_bytes())?;
+    io::stdout().write_all(format!("{}", expression).as_bytes())?;
     println!("");
     Ok(())
 }

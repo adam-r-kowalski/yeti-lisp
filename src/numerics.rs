@@ -37,3 +37,11 @@ impl std::fmt::Debug for Float {
         write!(f, "{:.*}", digits, self.0)
     }
 }
+
+impl std::fmt::Display for Float {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let bits = self.0.prec();
+        let digits = bits_to_decimal_digits(bits);
+        write!(f, "{:.*}", digits, self.0)
+    }
+}

@@ -6,7 +6,7 @@ mod parser;
 mod peeking_take_while;
 mod tokenizer;
 
-pub use evaluator::{evaluate, evaluate_arguments};
+pub use evaluator::{evaluate, evaluate_expressions};
 pub use expression::Expression;
 pub use numerics::{bits_to_decimal_digits, decimal_digits_to_bits, Float};
 pub use parser::parse;
