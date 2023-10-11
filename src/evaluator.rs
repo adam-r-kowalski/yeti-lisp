@@ -26,6 +26,33 @@ fn evaluate_call(
     let (environment, function) = evaluate(environment.clone(), function)?;
     match function {
         Expression::IntrinsicFunction(f) => f(environment, arguments),
+        Expression::Keyword(k) => {
+            let (environment, arguments) = evaluate_expressions(environment, arguments)?;
+            match &arguments[0] {
+                Expression::Map(m) => {
+                    if let Some(e) = m.get(&Expression::Keyword(k.clone())) {
+                        Ok((environment, e.clone()))
+                    } else {
+                        Err(RaisedEffect {
+                            environment,
+                            effect: "error".to_string(),
+                            arguments: vector![Expression::String(format!(
+                                "Keyword {} not found in map",
+                                k
+                            ))],
+                        })
+                    }
+                }
+                e => Err(RaisedEffect {
+                    environment,
+                    effect: "error".to_string(),
+                    arguments: vector![Expression::String(format!(
+                        "Cannot call keyword {} on {}",
+                        k, e
+                    ))],
+                }),
+            }
+        }
         _ => Err(RaisedEffect {
             environment,
             effect: "error".to_string(),

@@ -156,3 +156,14 @@ fn evaluate_map() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn evaluate_map_key() -> Result {
+    let tokens = tao::tokenize("(:a {:a 1})");
+    let expression = tao::parse(tokens);
+    let environment = tao::core::environment();
+    let (_, actual) = tao::evaluate(environment.clone(), expression)?;
+    let expected = tao::Expression::Integer(Integer::from(1));
+    assert_eq!(actual, expected);
+    Ok(())
+}
