@@ -22,5 +22,5 @@ pub enum Expression {
         function: Box<Expression>,
         arguments: Expressions,
     },
-    IntrinsicFunction(fn(Environment, Expressions) -> Expression),
+    IntrinsicFunction(fn(Environment, Expressions) -> (Environment, Expression)),
 }

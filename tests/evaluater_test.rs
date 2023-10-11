@@ -71,9 +71,9 @@ fn evaluate_symbol_bound_to_function() {
     let environment = hashmap! {
         "double".to_string() => tao::Expression::IntrinsicFunction(
           |env, args| {
-            let (_, args) = tao::evaluate_arguments(env, args);
+            let (env, args) = tao::evaluate_arguments(env, args);
             match &args[0] {
-              tao::Expression::Integer(i) => tao::Expression::Integer(i * Integer::from(2)),
+              tao::Expression::Integer(i) => (env, tao::Expression::Integer(i * Integer::from(2))),
               _ => panic!("Expected integer argument"),
             }
           }
@@ -91,9 +91,9 @@ fn evaluate_add() {
     let environment = hashmap! {
         "+".to_string() => tao::Expression::IntrinsicFunction(
           |env, args| {
-            let (_, args) = tao::evaluate_arguments(env, args);
+            let (env, args) = tao::evaluate_arguments(env, args);
             match (&args[0], &args[1]) {
-              (tao::Expression::Integer(lhs), tao::Expression::Integer(rhs)) => tao::Expression::Integer((lhs + rhs).into()),
+              (tao::Expression::Integer(lhs), tao::Expression::Integer(rhs)) => (env, tao::Expression::Integer((lhs + rhs).into())),
               _ => panic!("Expected integer argument"),
             }
           }
@@ -113,12 +113,11 @@ fn evaluate_if_then_branch() {
           |env, args| {
             let (condition, then, otherwise) = (args[0].clone(), args[1].clone(), args[2].clone());
             let (env, condition) = tao::evaluate(env, condition);
-            let (_, e) = match condition {
+            match condition {
                 tao::Expression::Nil => tao::evaluate(env, otherwise),
                 tao::Expression::Bool(false) => tao::evaluate(env, otherwise),
                 _ => tao::evaluate(env, then),
-            };
-            e
+            }
           }
         ),
     };
@@ -136,16 +135,42 @@ fn evaluate_if_else_branch() {
           |env, args| {
             let (condition, then, otherwise) = (args[0].clone(), args[1].clone(), args[2].clone());
             let (env, condition) = tao::evaluate(env, condition);
-            let (_, e) = match condition {
+            match condition {
                 tao::Expression::Nil => tao::evaluate(env, otherwise),
                 tao::Expression::Bool(false) => tao::evaluate(env, otherwise),
                 _ => tao::evaluate(env, then),
-            };
-            e
+            }
           }
         ),
     };
     let (_, actual) = tao::evaluate(environment, expression);
     let expected = tao::Expression::Integer(Integer::from(2));
     assert_eq!(actual, expected);
+}
+
+#[test]
+fn evaluate_def() {
+    let tokens = tao::tokenize("(def x 5)");
+    let expression = tao::parse(tokens);
+    let environment = hashmap! {
+        "def".to_string() => tao::Expression::IntrinsicFunction(
+          |env, args| {
+            let (name, value) = (args[0].clone(), args[1].clone());
+            let (env, value) = tao::evaluate(env, value);
+            let name = match name {
+                tao::Expression::Symbol(s) => s,
+                _ => panic!("Expected symbol"),
+            };
+            let mut new_env = env.clone();
+            new_env.insert(name, value);
+            (new_env, tao::Expression::Nil)
+          }
+        ),
+    };
+    let (actual_environment, actual) = tao::evaluate(environment.clone(), expression);
+    let expected = tao::Expression::Nil;
+    assert_eq!(actual, expected);
+    let mut expected_environment = environment;
+    expected_environment.insert("x".to_string(), tao::Expression::Integer(Integer::from(5)));
+    assert_eq!(actual_environment, expected_environment);
 }

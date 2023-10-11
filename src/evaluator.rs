@@ -11,26 +11,14 @@ fn evaluate_symbol(environment: Environment, symbol: String) -> (Environment, Ex
     }
 }
 
-fn reduce(
-    (environment, mut arguments): (Environment, Vector<Expression>),
-    argument: Expression,
-) -> (Environment, Vector<Expression>) {
-    let (environment, argument) = evaluate(environment.clone(), argument);
-    arguments.push_back(argument);
-    (environment, arguments)
-}
-
 fn evaluate_call(
     environment: Environment,
     function: Expression,
     arguments: Vector<Expression>,
 ) -> (Environment, Expression) {
     let (environment, function) = evaluate(environment.clone(), function);
-    let (environment, arguments) = arguments
-        .into_iter()
-        .fold((environment, Vector::new()), reduce);
     match function {
-        Expression::IntrinsicFunction(f) => (environment.clone(), f(environment, arguments)),
+        Expression::IntrinsicFunction(f) => f(environment, arguments),
         _ => (
             environment,
             Expression::Call {
@@ -56,12 +44,12 @@ pub fn evaluate_arguments(
     environment: Environment,
     arguments: Vector<Expression>,
 ) -> (Environment, Vector<Expression>) {
-    let mut new_arguments = Vector::new();
-    let mut environment = environment;
-    for argument in arguments {
-        let (new_environment, argument) = evaluate(environment, argument);
-        environment = new_environment;
-        new_arguments.push_back(argument);
-    }
-    (environment, new_arguments)
+    arguments.into_iter().fold(
+        (environment, Vector::new()),
+        |(environment, mut arguments), argument| {
+            let (environment, argument) = evaluate(environment, argument);
+            arguments.push_back(argument);
+            (environment, arguments)
+        },
+    )
 }
