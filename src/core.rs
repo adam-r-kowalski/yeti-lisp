@@ -87,5 +87,19 @@ pub fn environment() -> HashMap<String, Expression> {
             }
           }
         ),
+        "dissoc".to_string() => IntrinsicFunction(
+          |env, args| {
+            let (env, args) = evaluate_expressions(env, args)?;
+            let (map, key) = (args[0].clone(), args[1].clone());
+            match map {
+                Expression::Map(m) => {
+                    let mut new_map = m.clone();
+                    new_map.remove(&key);
+                    Ok((env, Expression::Map(new_map)))
+                },
+                _ => panic!("Expected map"),
+            }
+          }
+        ),
     }
 }

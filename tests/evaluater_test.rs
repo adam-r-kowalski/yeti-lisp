@@ -191,3 +191,14 @@ fn evaluate_assoc() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn evaluate_dissoc() -> Result {
+    let tokens = tao::tokenize("(dissoc {:a 1} :a)");
+    let expression = tao::parse(tokens);
+    let environment = tao::core::environment();
+    let (_, actual) = tao::evaluate(environment.clone(), expression)?;
+    let expected = tao::Expression::Map(hashmap! {});
+    assert_eq!(actual, expected);
+    Ok(())
+}
