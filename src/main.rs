@@ -12,7 +12,7 @@ fn read() -> io::Result<tao::Expression> {
 
 fn print(expression: tao::Expression) -> io::Result<()> {
     io::stdout().write_all(format!("{}", expression).as_bytes())?;
-    println!("");
+    println!("\n");
     Ok(())
 }
 
@@ -31,7 +31,7 @@ fn main() -> io::Result<()> {
                 arguments,
             }) => {
                 println!(
-                    "{{:effect {}, :arguments {}}}",
+                    "{{:effect {}, :arguments {}}}\n",
                     effect,
                     tao::Expression::Array(arguments)
                 )
