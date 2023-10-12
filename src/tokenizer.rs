@@ -65,7 +65,6 @@ fn reserved_character(c: char) -> bool {
     match c {
         '(' | ')' | '{' | '}' | '[' | ']' | '"' | ':' => true,
         _ if c.is_whitespace() => true,
-        _ if c.is_digit(10) => true,
         _ => false,
     }
 }

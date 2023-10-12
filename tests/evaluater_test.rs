@@ -178,3 +178,16 @@ fn evaluate_map_on_key() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn evaluate_assoc() -> Result {
+    let tokens = tao::tokenize("(assoc {} :a 1)");
+    let expression = tao::parse(tokens);
+    let environment = tao::core::environment();
+    let (_, actual) = tao::evaluate(environment.clone(), expression)?;
+    let expected = tao::Expression::Map(hashmap! {
+        tao::Expression::Keyword(":a".to_string()) => tao::Expression::Integer(Integer::from(1)),
+    });
+    assert_eq!(actual, expected);
+    Ok(())
+}

@@ -73,5 +73,19 @@ pub fn environment() -> HashMap<String, Expression> {
             Ok((new_env, Expression::Nil))
           }
         ),
+        "assoc".to_string() => IntrinsicFunction(
+          |env, args| {
+            let (env, args) = evaluate_expressions(env, args)?;
+            let (map, key, value) = (args[0].clone(), args[1].clone(), args[2].clone());
+            match map {
+                Expression::Map(m) => {
+                    let mut new_map = m.clone();
+                    new_map.insert(key, value);
+                    Ok((env, Expression::Map(new_map)))
+                },
+                _ => panic!("Expected map"),
+            }
+          }
+        ),
     }
 }
