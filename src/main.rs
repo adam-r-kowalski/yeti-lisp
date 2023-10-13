@@ -5,8 +5,8 @@ fn read() -> io::Result<forge::Expression> {
     print!("λ ");
     io::stdout().flush()?;
     let mut buffer = String::new();
-    io::stdin().read_line(&mut buffer)?;
-    let tokens = forge::Tokens::new(&buffer);
+    io::stdin().read_line(&mut buffer).unwrap();
+    let tokens = forge::Tokens::from_str(&buffer);
     Ok(forge::parse(tokens))
 }
 

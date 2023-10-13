@@ -6,7 +6,7 @@ type Result = std::result::Result<(), forge::RaisedEffect>;
 
 #[test]
 fn evaluate_keyword() -> Result {
-    let tokens = forge::Tokens::new(":x");
+    let tokens = forge::Tokens::from_str(":x");
     let expression = forge::parse(tokens);
     let environment = HashMap::new();
     let (_, actual) = forge::evaluate(environment, expression)?;
@@ -17,7 +17,7 @@ fn evaluate_keyword() -> Result {
 
 #[test]
 fn evaluate_string() -> Result {
-    let tokens = forge::Tokens::new(r#""hello""#);
+    let tokens = forge::Tokens::from_str(r#""hello""#);
     let expression = forge::parse(tokens);
     let environment = HashMap::new();
     let (_, actual) = forge::evaluate(environment, expression)?;
@@ -28,7 +28,7 @@ fn evaluate_string() -> Result {
 
 #[test]
 fn evaluate_integer() -> Result {
-    let tokens = forge::Tokens::new("5");
+    let tokens = forge::Tokens::from_str("5");
     let expression = forge::parse(tokens);
     let environment = HashMap::new();
     let (_, actual) = forge::evaluate(environment, expression)?;
@@ -39,7 +39,7 @@ fn evaluate_integer() -> Result {
 
 #[test]
 fn evaluate_float() -> Result {
-    let tokens = forge::Tokens::new("3.14");
+    let tokens = forge::Tokens::from_str("3.14");
     let expression = forge::parse(tokens);
     let environment = HashMap::new();
     let (_, actual) = forge::evaluate(environment, expression)?;
@@ -50,7 +50,7 @@ fn evaluate_float() -> Result {
 
 #[test]
 fn evaluate_symbol_bound_to_integer() -> Result {
-    let tokens = forge::Tokens::new("x");
+    let tokens = forge::Tokens::from_str("x");
     let expression = forge::parse(tokens);
     let environment = hashmap! {
         "x".to_string() => forge::Expression::Integer(Integer::from(5)),
@@ -63,7 +63,7 @@ fn evaluate_symbol_bound_to_integer() -> Result {
 
 #[test]
 fn evaluate_symbol_bound_to_function() -> Result {
-    let tokens = forge::Tokens::new("(double 5)");
+    let tokens = forge::Tokens::from_str("(double 5)");
     let expression = forge::parse(tokens);
     let environment = hashmap! {
         "double".to_string() => forge::Expression::IntrinsicFunction(
@@ -84,7 +84,7 @@ fn evaluate_symbol_bound_to_function() -> Result {
 
 #[test]
 fn evaluate_add() -> Result {
-    let tokens = forge::Tokens::new("(+ 5 3)");
+    let tokens = forge::Tokens::from_str("(+ 5 3)");
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment, expression)?;
@@ -95,7 +95,7 @@ fn evaluate_add() -> Result {
 
 #[test]
 fn evaluate_if_then_branch() -> Result {
-    let tokens = forge::Tokens::new("(if true 1 2)");
+    let tokens = forge::Tokens::from_str("(if true 1 2)");
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment, expression)?;
@@ -106,7 +106,7 @@ fn evaluate_if_then_branch() -> Result {
 
 #[test]
 fn evaluate_if_else_branch() -> Result {
-    let tokens = forge::Tokens::new("(if false 1 2)");
+    let tokens = forge::Tokens::from_str("(if false 1 2)");
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment, expression)?;
@@ -117,7 +117,7 @@ fn evaluate_if_else_branch() -> Result {
 
 #[test]
 fn evaluate_def() -> Result {
-    let tokens = forge::Tokens::new("(def x 5)");
+    let tokens = forge::Tokens::from_str("(def x 5)");
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (actual_environment, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -134,7 +134,7 @@ fn evaluate_def() -> Result {
 
 #[test]
 fn evaluate_array() -> Result {
-    let tokens = forge::Tokens::new("[(+ 1 2) (/ 4 3)]");
+    let tokens = forge::Tokens::from_str("[(+ 1 2) (/ 4 3)]");
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -148,7 +148,7 @@ fn evaluate_array() -> Result {
 
 #[test]
 fn evaluate_map() -> Result {
-    let tokens = forge::Tokens::new("{:a (+ 1 2) :b (/ 4 3)}");
+    let tokens = forge::Tokens::from_str("{:a (+ 1 2) :b (/ 4 3)}");
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -162,7 +162,7 @@ fn evaluate_map() -> Result {
 
 #[test]
 fn evaluate_key_on_map() -> Result {
-    let tokens = forge::Tokens::new("(:a {:a 1})");
+    let tokens = forge::Tokens::from_str("(:a {:a 1})");
     let expression = forge::parse(tokens);
     let environment = hashmap! {};
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -173,7 +173,7 @@ fn evaluate_key_on_map() -> Result {
 
 #[test]
 fn evaluate_map_on_key() -> Result {
-    let tokens = forge::Tokens::new("({:a 1} :a)");
+    let tokens = forge::Tokens::from_str("({:a 1} :a)");
     let expression = forge::parse(tokens);
     let environment = hashmap! {};
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -184,7 +184,7 @@ fn evaluate_map_on_key() -> Result {
 
 #[test]
 fn evaluate_assoc() -> Result {
-    let tokens = forge::Tokens::new("(assoc {} :a 1)");
+    let tokens = forge::Tokens::from_str("(assoc {} :a 1)");
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -197,7 +197,7 @@ fn evaluate_assoc() -> Result {
 
 #[test]
 fn evaluate_dissoc() -> Result {
-    let tokens = forge::Tokens::new("(dissoc {:a 1} :a)");
+    let tokens = forge::Tokens::from_str("(dissoc {:a 1} :a)");
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -208,7 +208,7 @@ fn evaluate_dissoc() -> Result {
 
 #[test]
 fn evaluate_merge() -> Result {
-    let tokens = forge::Tokens::new("(merge {:a 1} {:b 2})");
+    let tokens = forge::Tokens::from_str("(merge {:a 1} {:b 2})");
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -222,7 +222,7 @@ fn evaluate_merge() -> Result {
 
 #[test]
 fn evaluate_quote() -> Result {
-    let tokens = forge::Tokens::new("'(1 2)");
+    let tokens = forge::Tokens::from_str("'(1 2)");
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -236,7 +236,7 @@ fn evaluate_quote() -> Result {
 
 #[test]
 fn evaluate_eval() -> Result {
-    let tokens = forge::Tokens::new("(eval '(+ 1 2))");
+    let tokens = forge::Tokens::from_str("(eval '(+ 1 2))");
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -247,7 +247,7 @@ fn evaluate_eval() -> Result {
 
 #[test]
 fn evaluate_read_string() -> Result {
-    let tokens = forge::Tokens::new(r#"(read-string "(+ 1 2)")"#);
+    let tokens = forge::Tokens::from_str(r#"(read-string "(+ 1 2)")"#);
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -264,7 +264,7 @@ fn evaluate_read_string() -> Result {
 
 #[test]
 fn evaluate_fn() -> Result {
-    let tokens = forge::Tokens::new("(fn [x] (* x 2))");
+    let tokens = forge::Tokens::from_str("(fn [x] (* x 2))");
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -284,7 +284,7 @@ fn evaluate_fn() -> Result {
 
 #[test]
 fn evaluate_call_fn() -> Result {
-    let tokens = forge::Tokens::new("((fn [x] (* x 2)) 5)");
+    let tokens = forge::Tokens::from_str("((fn [x] (* x 2)) 5)");
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -295,7 +295,7 @@ fn evaluate_call_fn() -> Result {
 
 #[test]
 fn evaluate_defn() -> Result {
-    let tokens = forge::Tokens::new("(defn double [x] (* x 2))");
+    let tokens = forge::Tokens::from_str("(defn double [x] (* x 2))");
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (actual_environment, actual) = forge::evaluate(environment.clone(), expression)?;
