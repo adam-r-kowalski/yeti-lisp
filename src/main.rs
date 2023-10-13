@@ -1,31 +1,31 @@
 use std::io::{self, Write};
-use tao;
+use forge;
 
-fn read() -> io::Result<tao::Expression> {
+fn read() -> io::Result<forge::Expression> {
     print!("λ ");
     io::stdout().flush()?;
     let mut buffer = String::new();
     io::stdin().read_line(&mut buffer)?;
-    let tokens = tao::tokenize(&buffer);
-    Ok(tao::parse(tokens))
+    let tokens = forge::tokenize(&buffer);
+    Ok(forge::parse(tokens))
 }
 
-fn print(expression: tao::Expression) -> io::Result<()> {
+fn print(expression: forge::Expression) -> io::Result<()> {
     io::stdout().write_all(format!("{}", expression).as_bytes())?;
     println!("\n");
     Ok(())
 }
 
 fn main() -> io::Result<()> {
-    let mut environment = tao::core::environment();
+    let mut environment = forge::core::environment();
     loop {
         let expression = read()?;
-        match tao::evaluate(environment.clone(), expression) {
+        match forge::evaluate(environment.clone(), expression) {
             Ok((next_environment, expression)) => {
                 print(expression)?;
                 environment = next_environment;
             }
-            Err(tao::RaisedEffect {
+            Err(forge::RaisedEffect {
                 environment: _,
                 effect,
                 arguments,
@@ -33,7 +33,7 @@ fn main() -> io::Result<()> {
                 println!(
                     "{{:effect {}, :arguments {}}}\n",
                     effect,
-                    tao::Expression::Array(arguments)
+                    forge::Expression::Array(arguments)
                 )
             }
         }
