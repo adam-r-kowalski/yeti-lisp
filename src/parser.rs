@@ -1,10 +1,9 @@
 extern crate alloc;
 
-use crate::tokenizer::Token;
 use crate::Expression;
+use crate::{tokenizer::Token, Tokens};
 use alloc::boxed::Box;
 use alloc::string::String;
-use alloc::vec::Vec;
 use core::iter::Peekable;
 use im::{HashMap, Vector};
 use rug::{Integer, Rational};
@@ -18,7 +17,7 @@ fn parse_symbol(s: String) -> Expression {
     }
 }
 
-fn parse_integer<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>, i: Integer) -> Expression {
+fn parse_integer(tokens: &mut Peekable<Tokens>, i: Integer) -> Expression {
     match tokens.peek() {
         Some(&Token::Symbol(ref s)) if s == "/" => {
             tokens.next();
@@ -33,7 +32,7 @@ fn parse_integer<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>, i: Integer
     }
 }
 
-fn parse_call<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expression {
+fn parse_call(tokens: &mut Peekable<Tokens>) -> Expression {
     let function = Box::new(parse_expression(tokens));
     let mut arguments = Vector::new();
     while let Some(&ref token) = tokens.peek() {
@@ -53,7 +52,7 @@ fn parse_call<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expression
     }
 }
 
-fn parse_array<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expression {
+fn parse_array(tokens: &mut Peekable<Tokens>) -> Expression {
     let mut array = Vector::new();
     while let Some(&ref token) = tokens.peek() {
         match token {
@@ -69,7 +68,7 @@ fn parse_array<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expressio
     Expression::Array(array)
 }
 
-fn parse_map<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expression {
+fn parse_map(tokens: &mut Peekable<Tokens>) -> Expression {
     let mut map = HashMap::new();
     while let Some(&ref token) = tokens.peek() {
         match token {
@@ -87,12 +86,12 @@ fn parse_map<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expression 
     Expression::Map(map)
 }
 
-fn parse_quote<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expression {
+fn parse_quote(tokens: &mut Peekable<Tokens>) -> Expression {
     let expression = parse_expression(tokens);
     Expression::Quote(Box::new(expression))
 }
 
-pub fn parse_expression<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expression {
+pub fn parse_expression(tokens: &mut Peekable<Tokens>) -> Expression {
     match tokens.next() {
         Some(Token::Symbol(s)) => parse_symbol(s),
         Some(Token::Keyword(s)) => Expression::Keyword(s),
@@ -108,7 +107,7 @@ pub fn parse_expression<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> 
     }
 }
 
-pub fn parse(tokens: Vec<Token>) -> Expression {
-    let mut tokens = tokens.into_iter().peekable();
+pub fn parse(tokens: Tokens) -> Expression {
+    let mut tokens = tokens.peekable();
     parse_expression(&mut tokens)
 }

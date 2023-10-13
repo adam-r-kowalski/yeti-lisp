@@ -6,7 +6,7 @@ fn read() -> io::Result<forge::Expression> {
     io::stdout().flush()?;
     let mut buffer = String::new();
     io::stdin().read_line(&mut buffer)?;
-    let tokens = forge::tokenize(&buffer);
+    let tokens = forge::Tokens::new(&buffer);
     Ok(forge::parse(tokens))
 }
 

@@ -3,7 +3,8 @@ use rug::Integer;
 
 #[test]
 fn tokenize_symbol() {
-    let actual = forge::tokenize("snake_case PascalCase kebab-case camelCase predicate?");
+    let actual = forge::Tokens::new("snake_case PascalCase kebab-case camelCase predicate?")
+        .collect::<Vec<forge::Token>>();
     let expected = vec![
         forge::Token::Symbol("snake_case".to_string()),
         forge::Token::Symbol("PascalCase".to_string()),
@@ -16,7 +17,8 @@ fn tokenize_symbol() {
 
 #[test]
 fn tokenize_keyword() {
-    let actual = forge::tokenize(":snake_case :PascalCase :kebab-case :camelCase :predicate?");
+    let actual = forge::Tokens::new(":snake_case :PascalCase :kebab-case :camelCase :predicate?")
+        .collect::<Vec<forge::Token>>();
     let expected = vec![
         forge::Token::Keyword(":snake_case".to_string()),
         forge::Token::Keyword(":PascalCase".to_string()),
@@ -29,7 +31,7 @@ fn tokenize_keyword() {
 
 #[test]
 fn tokenize_string_literal() {
-    let actual = forge::tokenize(r#""hello" "world" "123""#);
+    let actual = forge::Tokens::new(r#""hello" "world" "123""#).collect::<Vec<forge::Token>>();
     let expected = vec![
         forge::Token::String("hello".to_string()),
         forge::Token::String("world".to_string()),
@@ -40,7 +42,7 @@ fn tokenize_string_literal() {
 
 #[test]
 fn tokenize_integer() {
-    let actual = forge::tokenize("123 456 789 1_000 -321 -456");
+    let actual = forge::Tokens::new("123 456 789 1_000 -321 -456").collect::<Vec<forge::Token>>();
     let expected = vec![
         forge::Token::Integer(Integer::from(123)),
         forge::Token::Integer(Integer::from(456)),
@@ -54,7 +56,7 @@ fn tokenize_integer() {
 
 #[test]
 fn tokenize_float() {
-    let actual = forge::tokenize("1.23 4.56 7.89 1_000.0 -3.23");
+    let actual = forge::Tokens::new("1.23 4.56 7.89 1_000.0 -3.23").collect::<Vec<forge::Token>>();
     let expected = vec![
         forge::Token::Float(forge::Float::from_str("1.23")),
         forge::Token::Float(forge::Float::from_str("4.56")),
@@ -67,7 +69,7 @@ fn tokenize_float() {
 
 #[test]
 fn tokenize_delimiters() {
-    let actual = forge::tokenize("( { [ ] } )");
+    let actual = forge::Tokens::new("( { [ ] } )").collect::<Vec<forge::Token>>();
     let expected = vec![
         forge::Token::LeftParen,
         forge::Token::LeftBrace,
@@ -81,7 +83,7 @@ fn tokenize_delimiters() {
 
 #[test]
 fn tokenize_call_inside_array() {
-    let actual = forge::tokenize("[3.14 (+ 2 3)]");
+    let actual = forge::Tokens::new("[3.14 (+ 2 3)]").collect::<Vec<forge::Token>>();
     let expected = vec![
         forge::Token::LeftBracket,
         forge::Token::Float(forge::Float::from_str("3.14")),
@@ -97,7 +99,7 @@ fn tokenize_call_inside_array() {
 
 #[test]
 fn tokenize_rational() {
-    let actual = forge::tokenize("1/2");
+    let actual = forge::Tokens::new("1/2").collect::<Vec<forge::Token>>();
     let expected = vec![
         forge::Token::Integer(Integer::from(1)),
         forge::Token::Symbol("/".to_string()),
@@ -108,7 +110,7 @@ fn tokenize_rational() {
 
 #[test]
 fn tokenize_quote() {
-    let actual = forge::tokenize("'(1 2)");
+    let actual = forge::Tokens::new("'(1 2)").collect::<Vec<forge::Token>>();
     let expected = vec![
         forge::Token::Quote,
         forge::Token::LeftParen,

@@ -159,7 +159,7 @@ pub fn environment() -> HashMap<String, Expression> {
             let (env, arg) = crate::evaluate(env, args[0].clone())?;
             match arg {
               Expression::String(s) => {
-                let tokens = crate::tokenize(&s);
+                let tokens = crate::Tokens::new(&s);
                 let expression = crate::parse(tokens);
                 Ok((env, expression))
               },

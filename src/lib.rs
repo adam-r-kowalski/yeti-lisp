@@ -13,4 +13,4 @@ pub use expression::{Expression, RaisedEffect};
 pub use numerics::{bits_to_decimal_digits, decimal_digits_to_bits, Float};
 pub use parser::parse;
 pub use peeking_take_while::PeekableExt;
-pub use tokenizer::{tokenize, Token};
+pub use tokenizer::{Token, Tokens};
