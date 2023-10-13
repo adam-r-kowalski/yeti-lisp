@@ -292,3 +292,29 @@ fn evaluate_call_fn() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn evaluate_defn() -> Result {
+    let tokens = forge::tokenize("(defn double [x] (* x 2))");
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (actual_environment, actual) = forge::evaluate(environment.clone(), expression)?;
+    let expected = forge::Expression::Nil;
+    assert_eq!(actual, expected);
+    let mut expected_environment = environment;
+    expected_environment.insert(
+        "double".to_string(),
+        forge::Expression::Function {
+            parameters: vector![forge::Expression::Symbol("x".to_string()),],
+            body: Box::new(forge::Expression::Call {
+                function: Box::new(forge::Expression::Symbol("*".to_string())),
+                arguments: vector![
+                    forge::Expression::Symbol("x".to_string()),
+                    forge::Expression::Integer(Integer::from(2)),
+                ],
+            }),
+        },
+    );
+    assert_eq!(actual_environment, expected_environment);
+    Ok(())
+}

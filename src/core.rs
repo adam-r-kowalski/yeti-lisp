@@ -1,7 +1,7 @@
 use crate::evaluate_expressions;
 use crate::Expression;
 use crate::Expression::{Integer, IntrinsicFunction, Ratio};
-use im::{hashmap, HashMap};
+use im::{hashmap, vector, HashMap};
 use rug;
 
 pub fn environment() -> HashMap<String, Expression> {
@@ -87,6 +87,19 @@ pub fn environment() -> HashMap<String, Expression> {
             let body = Box::new(body);
             let function = Expression::Function{parameters, body};
             Ok((env, function))
+          }
+        ),
+        "defn".to_string() => IntrinsicFunction(
+          |env, args| {
+            let (name, parameters, body) = (args[0].clone(), args[1].clone(), args[2].clone());
+            let (env, function) = crate::evaluate(env, Expression::Call{
+                function: Box::new(Expression::Symbol("fn".to_string())),
+                arguments: vector![parameters, body],
+            })?;
+            crate::evaluate(env, Expression::Call{
+                function: Box::new(Expression::Symbol("def".to_string())),
+                arguments: vector![name, function],
+            })
           }
         ),
         "assoc".to_string() => IntrinsicFunction(
