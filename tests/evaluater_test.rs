@@ -202,3 +202,31 @@ fn evaluate_dissoc() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn evaluate_merge() -> Result {
+    let tokens = tao::tokenize("(merge {:a 1} {:b 2})");
+    let expression = tao::parse(tokens);
+    let environment = tao::core::environment();
+    let (_, actual) = tao::evaluate(environment.clone(), expression)?;
+    let expected = tao::Expression::Map(hashmap! {
+        tao::Expression::Keyword(":a".to_string()) => tao::Expression::Integer(Integer::from(1)),
+        tao::Expression::Keyword(":b".to_string()) => tao::Expression::Integer(Integer::from(2)),
+    });
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[test]
+fn evaluate_quote() -> Result {
+    let tokens = tao::tokenize("'(1 2)");
+    let expression = tao::parse(tokens);
+    let environment = tao::core::environment();
+    let (_, actual) = tao::evaluate(environment.clone(), expression)?;
+    let expected = tao::Expression::Call {
+        function: Box::new(tao::Expression::Integer(Integer::from(1))),
+        arguments: vector![tao::Expression::Integer(Integer::from(2)),],
+    };
+    assert_eq!(actual, expected);
+    Ok(())
+}

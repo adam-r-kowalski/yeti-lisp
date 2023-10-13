@@ -106,6 +106,7 @@ pub fn evaluate(environment: Environment, expression: Expression) -> Result {
             )?;
             Ok((environment, Expression::Map(m)))
         }
+        Expression::Quote(e) => Ok((environment, *e)),
         e => Ok((environment, e)),
     }
 }

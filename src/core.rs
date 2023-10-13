@@ -101,5 +101,19 @@ pub fn environment() -> HashMap<String, Expression> {
             }
           }
         ),
+        "merge".to_string() => IntrinsicFunction(
+          |env, args| {
+            let (env, args) = evaluate_expressions(env, args)?;
+            let (map1, map2) = (args[0].clone(), args[1].clone());
+            match (map1, map2) {
+                (Expression::Map(m1), Expression::Map(m2)) => {
+                    let mut new_map = m1.clone();
+                    new_map.extend(m2);
+                    Ok((env, Expression::Map(new_map)))
+                },
+                _ => panic!("Expected map"),
+            }
+          }
+        ),
     }
 }

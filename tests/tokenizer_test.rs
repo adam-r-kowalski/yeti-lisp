@@ -105,3 +105,16 @@ fn tokenize_rational() {
     ];
     assert_eq!(actual, expected);
 }
+
+#[test]
+fn tokenize_quote() {
+    let actual = tao::tokenize("'(1 2)");
+    let expected = vec![
+        tao::Token::Quote,
+        tao::Token::LeftParen,
+        tao::Token::Integer(Integer::from(1)),
+        tao::Token::Integer(Integer::from(2)),
+        tao::Token::RightParen,
+    ];
+    assert_eq!(actual, expected);
+}

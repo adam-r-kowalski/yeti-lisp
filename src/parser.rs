@@ -82,6 +82,11 @@ fn parse_map<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expression 
     Expression::Map(map)
 }
 
+fn parse_quote<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expression {
+    let expression = parse_expression(tokens);
+    Expression::Quote(Box::new(expression))
+}
+
 pub fn parse_expression<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Expression {
     match tokens.next() {
         Some(Token::Symbol(s)) => parse_symbol(s),
@@ -92,6 +97,7 @@ pub fn parse_expression<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> 
         Some(Token::LeftParen) => parse_call(tokens),
         Some(Token::LeftBracket) => parse_array(tokens),
         Some(Token::LeftBrace) => parse_map(tokens),
+        Some(Token::Quote) => parse_quote(tokens),
         Some(t) => panic!("Unexpected token {:?}", t),
         None => panic!("Expected token got None"),
     }

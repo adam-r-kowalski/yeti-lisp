@@ -33,6 +33,7 @@ pub enum Expression {
         arguments: Expressions,
     },
     IntrinsicFunction(fn(Environment, Expressions) -> Result),
+    Quote(Box<Expression>),
 }
 
 impl Display for Expression {
@@ -62,6 +63,7 @@ impl Display for Expression {
                 write!(f, "({} {})", function, arg_strs.join(" "))
             }
             Expression::IntrinsicFunction(_) => write!(f, "#intrinsic"),
+            Expression::Quote(e) => write!(f, "'{}", e),
         }
     }
 }

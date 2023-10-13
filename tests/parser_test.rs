@@ -190,3 +190,14 @@ fn parse_nil() {
     let expected = tao::Expression::Nil;
     assert_eq!(actual, expected);
 }
+
+#[test]
+fn parse_quote() {
+    let tokens = tao::tokenize("'(1 2)");
+    let actual = tao::parse(tokens);
+    let expected = tao::Expression::Quote(Box::new(tao::Expression::Call {
+        function: Box::new(tao::Expression::Integer(Integer::from(1))),
+        arguments: vector![tao::Expression::Integer(Integer::from(2)),],
+    }));
+    assert_eq!(actual, expected);
+}

@@ -17,6 +17,7 @@ pub enum Token {
     RightBracket,
     LeftBrace,
     RightBrace,
+    Quote,
 }
 
 fn tokenize_string(chars: &mut Peekable<Chars>) -> Token {
@@ -90,8 +91,10 @@ fn next_token(mut chars: &mut Peekable<Chars>) -> Option<Token> {
             '}' => Some(consume_and_return(chars, Token::RightBrace)),
             '[' => Some(consume_and_return(chars, Token::LeftBracket)),
             ']' => Some(consume_and_return(chars, Token::RightBracket)),
+            '\'' => Some(consume_and_return(chars, Token::Quote)),
             '"' => Some(tokenize_string(&mut chars)),
             ':' => Some(tokenize_keyword(&mut chars)),
+            '/' => Some(consume_and_return(chars, Token::Symbol("/".to_string()))),
             '-' => {
                 chars.next();
                 match chars.peek() {
