@@ -73,6 +73,22 @@ pub fn environment() -> HashMap<String, Expression> {
             Ok((new_env, Expression::Nil))
           }
         ),
+        "fn".to_string() => IntrinsicFunction(
+          |env, args| {
+            let (parameters, body) = (args[0].clone(), args[1].clone());
+            let parameters = match parameters {
+                Expression::Array(a) => a,
+                _ => panic!("Expected array"),
+            };
+            let parameters = parameters.into_iter().map(|p| match p {
+                Expression::Symbol(_) => p,
+                _ => panic!("Expected symbol"),
+            }).collect();
+            let body = Box::new(body);
+            let function = Expression::Function{parameters, body};
+            Ok((env, function))
+          }
+        ),
         "assoc".to_string() => IntrinsicFunction(
           |env, args| {
             let (env, args) = evaluate_expressions(env, args)?;

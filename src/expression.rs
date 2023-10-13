@@ -32,6 +32,10 @@ pub enum Expression {
         function: Box<Expression>,
         arguments: Expressions,
     },
+    Function {
+        parameters: Expressions,
+        body: Box<Expression>,
+    },
     IntrinsicFunction(fn(Environment, Expressions) -> Result),
     Quote(Box<Expression>),
 }
@@ -61,6 +65,10 @@ impl Display for Expression {
             } => {
                 let arg_strs: Vec<String> = arguments.iter().map(|e| format!("{}", e)).collect();
                 write!(f, "({} {})", function, arg_strs.join(" "))
+            }
+            Expression::Function { parameters, body } => {
+                let param_strs: Vec<String> = parameters.iter().map(|e| format!("{}", e)).collect();
+                write!(f, "(fn [{}] {})", param_strs.join(" "), body)
             }
             Expression::IntrinsicFunction(_) => write!(f, "#intrinsic"),
             Expression::Quote(e) => write!(f, "'{}", e),

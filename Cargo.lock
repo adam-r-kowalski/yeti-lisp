@@ -18,6 +18,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "forge"
+version = "0.1.0"
+dependencies = [
+ "im",
+ "rug",
+]
+
+[[package]]
 name = "gmp-mpfr-sys"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -81,14 +89,6 @@ checksum = "16d69225bde7a69b235da73377861095455d298f2b970996eec25ddbb42b3d1e"
 dependencies = [
  "bitmaps",
  "typenum",
-]
-
-[[package]]
-name = "forge"
-version = "0.1.0"
-dependencies = [
- "im",
- "rug",
 ]
 
 [[package]]

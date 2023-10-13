@@ -1,6 +1,6 @@
+use forge;
 use im::{hashmap, vector, HashMap};
 use rug::{Integer, Rational};
-use forge;
 
 type Result = std::result::Result<(), forge::RaisedEffect>;
 
@@ -124,7 +124,10 @@ fn evaluate_def() -> Result {
     let expected = forge::Expression::Nil;
     assert_eq!(actual, expected);
     let mut expected_environment = environment;
-    expected_environment.insert("x".to_string(), forge::Expression::Integer(Integer::from(5)));
+    expected_environment.insert(
+        "x".to_string(),
+        forge::Expression::Integer(Integer::from(5)),
+    );
     assert_eq!(actual_environment, expected_environment);
     Ok(())
 }
@@ -254,6 +257,26 @@ fn evaluate_read_string() -> Result {
             forge::Expression::Integer(Integer::from(1)),
             forge::Expression::Integer(Integer::from(2)),
         ],
+    };
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[test]
+fn evaluate_fn() -> Result {
+    let tokens = forge::tokenize("(fn [x] (* x 2))");
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let expected = forge::Expression::Function {
+        parameters: vector![forge::Expression::Symbol("x".to_string()),],
+        body: Box::new(forge::Expression::Call {
+            function: Box::new(forge::Expression::Symbol("*".to_string())),
+            arguments: vector![
+                forge::Expression::Symbol("x".to_string()),
+                forge::Expression::Integer(Integer::from(2)),
+            ],
+        }),
     };
     assert_eq!(actual, expected);
     Ok(())
