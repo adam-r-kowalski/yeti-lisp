@@ -1,8 +1,13 @@
+extern crate alloc;
+
 use crate::tokenizer::Token;
 use crate::Expression;
+use alloc::boxed::Box;
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::iter::Peekable;
 use im::{HashMap, Vector};
 use rug::{Integer, Rational};
-use std::iter::Peekable;
 
 fn parse_symbol(s: String) -> Expression {
     match s.as_ref() {

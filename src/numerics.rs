@@ -13,8 +13,8 @@ pub struct Float(rug::Float);
 
 impl Eq for Float {}
 
-impl std::hash::Hash for Float {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+impl core::hash::Hash for Float {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         OrdFloat::from(self.0.clone()).hash(state)
     }
 }
@@ -30,16 +30,16 @@ impl Float {
     }
 }
 
-impl std::fmt::Debug for Float {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for Float {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let bits = self.0.prec();
         let digits = bits_to_decimal_digits(bits);
         write!(f, "{:.*}", digits, self.0)
     }
 }
 
-impl std::fmt::Display for Float {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for Float {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let bits = self.0.prec();
         let digits = bits_to_decimal_digits(bits);
         write!(f, "{:.*}", digits, self.0)

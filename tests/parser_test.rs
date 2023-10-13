@@ -1,6 +1,6 @@
+use forge;
 use im::{hashmap, vector};
 use rug::{Integer, Rational};
-use forge;
 
 #[test]
 fn parse_symbol() {

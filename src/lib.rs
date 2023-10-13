@@ -1,3 +1,5 @@
+#![no_std]
+
 pub mod core;
 mod evaluator;
 mod expression;

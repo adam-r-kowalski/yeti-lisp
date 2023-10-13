@@ -1,6 +1,10 @@
+extern crate alloc;
+
 use crate::evaluate_expressions;
 use crate::Expression;
 use crate::Expression::{Integer, IntrinsicFunction, Ratio};
+use alloc::boxed::Box;
+use alloc::string::{String, ToString};
 use im::{hashmap, vector, HashMap};
 use rug;
 

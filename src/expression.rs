@@ -1,7 +1,13 @@
+extern crate alloc;
+
 use crate::numerics::Float;
+use alloc::boxed::Box;
+use alloc::format;
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::fmt::{self, Display, Formatter};
 use im::{HashMap, Vector};
 use rug::{Integer, Rational};
-use std::fmt::{self, Display, Formatter};
 
 type Expressions = Vector<Expression>;
 
@@ -14,7 +20,7 @@ pub struct RaisedEffect {
     pub arguments: Vector<Expression>,
 }
 
-pub type Result = std::result::Result<(Environment, Expression), RaisedEffect>;
+pub type Result = core::result::Result<(Environment, Expression), RaisedEffect>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Expression {

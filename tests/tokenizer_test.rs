@@ -1,5 +1,5 @@
-use rug::Integer;
 use forge;
+use rug::Integer;
 
 #[test]
 fn tokenize_symbol() {

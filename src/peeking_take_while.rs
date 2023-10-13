@@ -44,7 +44,7 @@ where
         P: FnMut(&Self::Item) -> bool;
 }
 
-impl<I: Iterator> PeekableExt<I> for std::iter::Peekable<I> {
+impl<I: Iterator> PeekableExt<I> for core::iter::Peekable<I> {
     #[inline]
     fn peeking_take_while<P>(&mut self, predicate: P) -> PeekingTakeWhile<'_, I, P>
     where

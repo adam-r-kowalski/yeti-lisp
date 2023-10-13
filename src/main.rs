@@ -1,5 +1,7 @@
-use std::io::{self, Write};
+//#![no_std]
+
 use forge;
+use std::io::{self, Write};
 
 fn read() -> io::Result<forge::Expression> {
     print!("λ ");

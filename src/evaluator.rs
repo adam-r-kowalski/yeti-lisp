@@ -1,7 +1,10 @@
-use im::{vector, HashMap, Vector};
+extern crate alloc;
 
 use crate::expression::{Environment, RaisedEffect, Result};
 use crate::Expression;
+use alloc::format;
+use alloc::string::{String, ToString};
+use im::{vector, HashMap, Vector};
 
 fn evaluate_symbol(environment: Environment, symbol: String) -> Result {
     if let Some(e) = environment.get(&symbol) {
@@ -128,7 +131,7 @@ pub fn evaluate(environment: Environment, expression: Expression) -> Result {
 pub fn evaluate_expressions(
     environment: Environment,
     expressions: Vector<Expression>,
-) -> std::result::Result<(Environment, Vector<Expression>), RaisedEffect> {
+) -> core::result::Result<(Environment, Vector<Expression>), RaisedEffect> {
     expressions.into_iter().try_fold(
         (environment, Vector::new()),
         |(environment, mut expressions), expression| {

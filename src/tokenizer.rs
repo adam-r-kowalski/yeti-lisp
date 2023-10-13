@@ -1,8 +1,13 @@
+extern crate alloc;
+
 use crate::numerics::Float;
 use crate::peeking_take_while::PeekableExt;
+use alloc::format;
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
+use core::iter::Peekable;
+use core::str::Chars;
 use rug::Integer;
-use std::iter::Peekable;
-use std::str::Chars;
 
 #[derive(PartialEq, Debug)]
 pub enum Token {
