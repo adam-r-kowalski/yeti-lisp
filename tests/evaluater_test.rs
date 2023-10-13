@@ -281,3 +281,14 @@ fn evaluate_fn() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn evaluate_call_fn() -> Result {
+    let tokens = forge::tokenize("((fn [x] (* x 2)) 5)");
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let expected = forge::Expression::Integer(Integer::from(10));
+    assert_eq!(actual, expected);
+    Ok(())
+}

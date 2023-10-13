@@ -45,6 +45,20 @@ fn evaluate_call(
 ) -> Result {
     let (environment, function) = evaluate(environment.clone(), function)?;
     match function {
+        Expression::Function { parameters, body } => {
+            let (environment, arguments) = evaluate_expressions(environment, arguments)?;
+            let environment = parameters.into_iter().zip(arguments.into_iter()).fold(
+                environment,
+                |mut environment, (parameter, argument)| match parameter {
+                    Expression::Symbol(s) => {
+                        environment.insert(s, argument);
+                        environment
+                    }
+                    _ => panic!("Invalid parameter type"),
+                },
+            );
+            evaluate(environment, *body)
+        }
         Expression::IntrinsicFunction(f) => f(environment, arguments),
         Expression::Keyword(k) => {
             let (environment, arguments) = evaluate_expressions(environment, arguments)?;
