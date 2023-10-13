@@ -115,5 +115,11 @@ pub fn environment() -> HashMap<String, Expression> {
             }
           }
         ),
+        "eval".to_string() => IntrinsicFunction(
+          |env, args| {
+            let (env, arg) = crate::evaluate(env, args[0].clone())?;
+            crate::evaluate(env, arg)
+          }
+        ),
     }
 }

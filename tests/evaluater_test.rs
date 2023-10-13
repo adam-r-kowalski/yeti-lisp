@@ -230,3 +230,14 @@ fn evaluate_quote() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn evaluate_eval() -> Result {
+    let tokens = tao::tokenize("(eval '(+ 1 2))");
+    let expression = tao::parse(tokens);
+    let environment = tao::core::environment();
+    let (_, actual) = tao::evaluate(environment.clone(), expression)?;
+    let expected = tao::Expression::Integer(Integer::from(3));
+    assert_eq!(actual, expected);
+    Ok(())
+}
