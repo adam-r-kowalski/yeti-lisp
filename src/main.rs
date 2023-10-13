@@ -1,5 +1,3 @@
-//#![no_std]
-
 use forge;
 use std::io::{self, Write};
 
