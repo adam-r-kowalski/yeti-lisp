@@ -241,3 +241,20 @@ fn evaluate_eval() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn evaluate_read_string() -> Result {
+    let tokens = tao::tokenize(r#"(read-string "(+ 1 2)")"#);
+    let expression = tao::parse(tokens);
+    let environment = tao::core::environment();
+    let (_, actual) = tao::evaluate(environment.clone(), expression)?;
+    let expected = tao::Expression::Call {
+        function: Box::new(tao::Expression::Symbol("+".to_string())),
+        arguments: vector![
+            tao::Expression::Integer(Integer::from(1)),
+            tao::Expression::Integer(Integer::from(2)),
+        ],
+    };
+    assert_eq!(actual, expected);
+    Ok(())
+}

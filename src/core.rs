@@ -121,5 +121,18 @@ pub fn environment() -> HashMap<String, Expression> {
             crate::evaluate(env, arg)
           }
         ),
+        "read-string".to_string() => IntrinsicFunction(
+          |env, args| {
+            let (env, arg) = crate::evaluate(env, args[0].clone())?;
+            match arg {
+              Expression::String(s) => {
+                let tokens = crate::tokenize(&s);
+                let expression = crate::parse(tokens);
+                Ok((env, expression))
+              },
+              _ => panic!("Expected string"),
+            }
+          }
+        ),
     }
 }
