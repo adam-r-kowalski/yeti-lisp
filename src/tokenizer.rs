@@ -42,6 +42,14 @@ pub struct Tokens<I: Iterator<Item = char>> {
     iterator: Peekable<I>,
 }
 
+impl<I: Iterator<Item = char>> Tokens<I> {
+    pub fn new(iterator: I) -> Self {
+        Tokens {
+            iterator: iterator.peekable(),
+        }
+    }
+}
+
 impl<'a> Tokens<Chars<'a>> {
     pub fn from_str(input: &'a str) -> Self {
         Tokens {
