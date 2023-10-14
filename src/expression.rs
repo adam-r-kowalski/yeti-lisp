@@ -49,6 +49,28 @@ pub enum Expression {
 impl Display for Expression {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
+            Expression::Map(map) => {
+                write!(f, "{{")?;
+                for (i, (k, v)) in map.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", {} {}", k, v)?;
+                    } else {
+                        write!(f, "{} {}", k, v)?;
+                    }
+                }
+                write!(f, "}}")
+            }
+            Expression::Array(arr) => {
+                write!(f, "[")?;
+                for (i, e) in arr.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", {}", e)?;
+                    } else {
+                        write!(f, "{}", e)?;
+                    }
+                }
+                write!(f, "]")
+            }
             Expression::Symbol(s) => write!(f, "{}", s),
             Expression::Keyword(k) => write!(f, "{}", k),
             Expression::String(s) => write!(f, "\"{}\"", s),
@@ -57,14 +79,6 @@ impl Display for Expression {
             Expression::Ratio(r) => write!(f, "{}/{}", r.numer(), r.denom()),
             Expression::Bool(b) => write!(f, "{}", if *b { "true" } else { "false" }),
             Expression::Nil => write!(f, "nil"),
-            Expression::Array(arr) => {
-                let strs: Vec<String> = arr.iter().map(|e| format!("{}", e)).collect();
-                write!(f, "[{}]", strs.join(" "))
-            }
-            Expression::Map(map) => {
-                let strs: Vec<String> = map.iter().map(|(k, v)| format!("{} {}", k, v)).collect();
-                write!(f, "{{{}}}", strs.join(", "))
-            }
             Expression::Call {
                 function,
                 arguments,

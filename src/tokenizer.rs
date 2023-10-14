@@ -30,10 +30,14 @@ enum Negative {
     No,
 }
 
+fn is_whitespace(c: char) -> bool {
+    c.is_whitespace() || c == ','
+}
+
 fn reserved_character(c: char) -> bool {
     match c {
         '(' | ')' | '{' | '}' | '[' | ']' | '"' | ':' => true,
-        _ if c.is_whitespace() => true,
+        _ if is_whitespace(c) => true,
         _ => false,
     }
 }
@@ -134,7 +138,7 @@ impl<I: Iterator<Item = char>> Iterator for Tokens<I> {
                         _ => Some(Token::Symbol("-".to_string())),
                     }
                 }
-                _ if c.is_whitespace() => {
+                _ if is_whitespace(c) => {
                     self.iterator.next();
                     self.next()
                 }
