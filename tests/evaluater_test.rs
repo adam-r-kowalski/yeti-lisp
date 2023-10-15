@@ -318,3 +318,25 @@ fn evaluate_defn() -> Result {
     assert_eq!(actual_environment, expected_environment);
     Ok(())
 }
+
+#[test]
+fn evaluate_html_with_only_tag() -> Result {
+    let tokens = forge::Tokens::from_str("(html [:div])");
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let expected = forge::Expression::String("<div></div>".to_string());
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[test]
+fn evaluate_html_with_child() -> Result {
+    let tokens = forge::Tokens::from_str(r#"(html [:ul [:li "hello"]])"#);
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let expected = forge::Expression::String("<ul><li>hello</li></ul>".to_string());
+    assert_eq!(actual, expected);
+    Ok(())
+}

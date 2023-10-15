@@ -3,10 +3,45 @@ extern crate alloc;
 use crate::evaluate_expressions;
 use crate::Expression;
 use crate::Expression::{Integer, IntrinsicFunction, Ratio};
+use crate::RaisedEffect;
 use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use im::{hashmap, vector, HashMap};
 use rug;
+
+fn error(message: &str) -> RaisedEffect {
+    RaisedEffect {
+        environment: environment(),
+        effect: "error".to_string(),
+        arguments: vector![Expression::String(message.to_string())],
+    }
+}
+
+fn html(expr: Expression, string: &mut String) -> core::result::Result<(), RaisedEffect> {
+    match expr {
+        Expression::Array(a) => match &a[0] {
+            Expression::Keyword(s) => {
+                let s = &s[1..];
+                string.push('<');
+                string.push_str(s);
+                string.push('>');
+                if a.len() > 1 {
+                    html(a[1].clone(), string)?;
+                }
+                string.push_str("</");
+                string.push_str(s);
+                string.push('>');
+                Ok(())
+            }
+            _ => Err(error("Expected keyword")),
+        },
+        Expression::String(s) => {
+            string.push_str(&s);
+            Ok(())
+        }
+        _ => Err(error("Expected keyword")),
+    }
+}
 
 pub fn environment() -> HashMap<String, Expression> {
     hashmap! {
@@ -15,7 +50,7 @@ pub fn environment() -> HashMap<String, Expression> {
             let (env, args) = evaluate_expressions(env, args)?;
             match (&args[0], &args[1]) {
               (Integer(lhs), Integer(rhs)) => Ok((env, Integer((lhs + rhs).into()))),
-              _ => panic!("Expected integer argument"),
+              _ => Err(error("Expected integer argument")),
             }
           }
         ),
@@ -24,7 +59,7 @@ pub fn environment() -> HashMap<String, Expression> {
             let (env, args) = evaluate_expressions(env, args)?;
             match (&args[0], &args[1]) {
               (Integer(lhs), Integer(rhs)) => Ok((env, Integer((lhs - rhs).into()))),
-              _ => panic!("Expected integer argument"),
+              _ => Err(error("Expected integer argument")),
             }
           }
         ),
@@ -33,7 +68,7 @@ pub fn environment() -> HashMap<String, Expression> {
             let (env, args) = evaluate_expressions(env, args)?;
             match (&args[0], &args[1]) {
               (Integer(lhs), Integer(rhs)) => Ok((env, Integer((lhs * rhs).into()))),
-              _ => panic!("Expected integer argument"),
+              _ => Err(error("Expected integer argument")),
             }
           }
         ),
@@ -49,7 +84,7 @@ pub fn environment() -> HashMap<String, Expression> {
                     Ok((env, Ratio(rational)))
                 }
               },
-              _ => panic!("Expected integer argument"),
+              _ => Err(error("Expected integer argument")),
             }
           }
         ),
@@ -70,7 +105,7 @@ pub fn environment() -> HashMap<String, Expression> {
             let (env, value) = crate::evaluate(env, value)?;
             let name = match name {
                 Expression::Symbol(s) => s,
-                _ => panic!("Expected symbol"),
+                _ => return Err(error("Expected symbol")),
             };
             let mut new_env = env.clone();
             new_env.insert(name, value);
@@ -82,12 +117,14 @@ pub fn environment() -> HashMap<String, Expression> {
             let (parameters, body) = (args[0].clone(), args[1].clone());
             let parameters = match parameters {
                 Expression::Array(a) => a,
-                _ => panic!("Expected array"),
+                _ => return Err(error("Expected array")),
             };
-            let parameters = parameters.into_iter().map(|p| match p {
-                Expression::Symbol(_) => p,
-                _ => panic!("Expected symbol"),
-            }).collect();
+            for parameter in parameters.iter() {
+                match parameter {
+                    Expression::Symbol(_) => {},
+                    _ => return Err(error("Expected symbol")),
+                }
+            }
             let body = Box::new(body);
             let function = Expression::Function{parameters, body};
             Ok((env, function))
@@ -116,7 +153,7 @@ pub fn environment() -> HashMap<String, Expression> {
                     new_map.insert(key, value);
                     Ok((env, Expression::Map(new_map)))
                 },
-                _ => panic!("Expected map"),
+                _ => Err(error("Expected map")),
             }
           }
         ),
@@ -130,7 +167,7 @@ pub fn environment() -> HashMap<String, Expression> {
                     new_map.remove(&key);
                     Ok((env, Expression::Map(new_map)))
                 },
-                _ => panic!("Expected map"),
+                _ => Err(error("Expected map")),
             }
           }
         ),
@@ -144,7 +181,7 @@ pub fn environment() -> HashMap<String, Expression> {
                     new_map.extend(m2);
                     Ok((env, Expression::Map(new_map)))
                 },
-                _ => panic!("Expected map"),
+                _ => Err(error("Expected map")),
             }
           }
         ),
@@ -163,9 +200,15 @@ pub fn environment() -> HashMap<String, Expression> {
                 let expression = crate::parse(tokens);
                 Ok((env, expression))
               },
-              _ => panic!("Expected string"),
+              _ => Err(error("Expected string")),
             }
           }
         ),
+        "html".to_string() => IntrinsicFunction(|env, args| {
+            let (env, args) = evaluate_expressions(env, args)?;
+            let mut string = String::new();
+            html(args[0].clone(), &mut string)?;
+            Ok((env, Expression::String(string)))
+        }),
     }
 }
