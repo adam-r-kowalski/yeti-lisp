@@ -351,3 +351,26 @@ fn evaluate_html_with_two_children() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn evaluate_html_with_attribute() -> Result {
+    let tokens = forge::Tokens::from_str(r#"(html [:div {:class "red"}])"#);
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let expected = forge::Expression::String(r#"<div class="red"></div>"#.to_string());
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[test]
+fn evaluate_html_with_attribute_and_doesnt_need_closing_tag() -> Result {
+    let tokens = forge::Tokens::from_str(r#"(html [:input {:type "checkbox" :name "agree"}])"#);
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let expected =
+        forge::Expression::String(r#"<input type="checkbox" name="agree" />"#.to_string());
+    assert_eq!(actual, expected);
+    Ok(())
+}

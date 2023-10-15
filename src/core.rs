@@ -17,6 +17,26 @@ fn error(message: &str) -> RaisedEffect {
     }
 }
 
+fn self_closing(tag: &str) -> bool {
+    match tag {
+        "area" => true,
+        "base" => true,
+        "br" => true,
+        "col" => true,
+        "embed" => true,
+        "hr" => true,
+        "img" => true,
+        "input" => true,
+        "link" => true,
+        "meta" => true,
+        "param" => true,
+        "source" => true,
+        "track" => true,
+        "wbr" => true,
+        _ => false,
+    }
+}
+
 fn html(expr: Expression, string: &mut String) -> core::result::Result<(), RaisedEffect> {
     match expr {
         Expression::Array(a) => match &a[0] {
@@ -24,14 +44,58 @@ fn html(expr: Expression, string: &mut String) -> core::result::Result<(), Raise
                 let s = &s[1..];
                 string.push('<');
                 string.push_str(s);
-                string.push('>');
-                for expr in a.iter().skip(1) {
-                    html(expr.clone(), string)?;
+                if a.len() > 1 {
+                    if let Expression::Map(m) = &a[1] {
+                        for (k, v) in m.iter() {
+                            if let Expression::Keyword(k) = k {
+                                let k = &k[1..];
+                                string.push(' ');
+                                string.push_str(k);
+                                string.push_str("=\"");
+                                match v {
+                                    Expression::String(s) => string.push_str(s),
+                                    _ => return Err(error("Expected string")),
+                                }
+                                string.push('"');
+                            } else {
+                                return Err(error("Expected keyword"));
+                            }
+                        }
+                        if self_closing(s) {
+                            string.push_str(" />");
+                            Ok(())
+                        } else {
+                            string.push('>');
+                            for expr in a.iter().skip(2) {
+                                html(expr.clone(), string)?;
+                            }
+                            string.push_str("</");
+                            string.push_str(s);
+                            string.push('>');
+                            Ok(())
+                        }
+                    } else if self_closing(s) {
+                        string.push_str(" />");
+                        Ok(())
+                    } else {
+                        string.push('>');
+                        for expr in a.iter().skip(1) {
+                            html(expr.clone(), string)?;
+                        }
+                        string.push_str("</");
+                        string.push_str(s);
+                        string.push('>');
+                        Ok(())
+                    }
+                } else if self_closing(s) {
+                    string.push_str(" />");
+                    Ok(())
+                } else {
+                    string.push_str("></");
+                    string.push_str(s);
+                    string.push('>');
+                    Ok(())
                 }
-                string.push_str("</");
-                string.push_str(s);
-                string.push('>');
-                Ok(())
             }
             _ => Err(error("Expected keyword")),
         },
