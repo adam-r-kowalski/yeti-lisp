@@ -340,3 +340,14 @@ fn evaluate_html_with_child() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn evaluate_html_with_two_children() -> Result {
+    let tokens = forge::Tokens::from_str(r#"(html [:ul [:li "first"] [:li "second"]])"#);
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let expected = forge::Expression::String("<ul><li>first</li><li>second</li></ul>".to_string());
+    assert_eq!(actual, expected);
+    Ok(())
+}

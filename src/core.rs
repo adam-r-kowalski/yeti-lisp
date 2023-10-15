@@ -25,8 +25,8 @@ fn html(expr: Expression, string: &mut String) -> core::result::Result<(), Raise
                 string.push('<');
                 string.push_str(s);
                 string.push('>');
-                if a.len() > 1 {
-                    html(a[1].clone(), string)?;
+                for expr in a.iter().skip(1) {
+                    html(expr.clone(), string)?;
                 }
                 string.push_str("</");
                 string.push_str(s);
