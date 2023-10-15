@@ -370,7 +370,7 @@ fn evaluate_html_with_attribute_and_doesnt_need_closing_tag() -> Result {
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
     let expected =
-        forge::Expression::String(r#"<input type="checkbox" name="agree" />"#.to_string());
+        forge::Expression::String(r#"<input name="agree" type="checkbox" />"#.to_string());
     assert_eq!(actual, expected);
     Ok(())
 }

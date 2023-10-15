@@ -6,6 +6,7 @@ use crate::Expression::{Integer, IntrinsicFunction, Ratio};
 use crate::RaisedEffect;
 use alloc::boxed::Box;
 use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 use im::{hashmap, vector, HashMap};
 use rug;
 
@@ -46,20 +47,25 @@ fn html(expr: Expression, string: &mut String) -> core::result::Result<(), Raise
                 string.push_str(s);
                 if a.len() > 1 {
                     if let Expression::Map(m) = &a[1] {
+                        let mut entries = Vec::new();
                         for (k, v) in m.iter() {
-                            if let Expression::Keyword(k) = k {
-                                let k = &k[1..];
-                                string.push(' ');
-                                string.push_str(k);
-                                string.push_str("=\"");
-                                match v {
-                                    Expression::String(s) => string.push_str(s),
-                                    _ => return Err(error("Expected string")),
+                            match k {
+                                Expression::Keyword(k) => {
+                                    entries.push((&k[1..], v.clone()));
                                 }
-                                string.push('"');
-                            } else {
-                                return Err(error("Expected keyword"));
+                                _ => return Err(error("Expected keyword")),
                             }
+                        }
+                        entries.sort_by_key(|entry| entry.0);
+                        for (k, v) in entries {
+                            string.push(' ');
+                            string.push_str(k);
+                            string.push_str("=\"");
+                            match v {
+                                Expression::String(s) => string.push_str(&s),
+                                _ => return Err(error("Expected string")),
+                            }
+                            string.push('"');
                         }
                         if self_closing(s) {
                             string.push_str(" />");
