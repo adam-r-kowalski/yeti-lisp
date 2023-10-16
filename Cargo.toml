@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 rug = "1.22.0"
 im = "15.1.0"
+tokio = { version = "1.33.0", features = ["full"] }

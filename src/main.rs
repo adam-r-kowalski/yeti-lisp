@@ -43,7 +43,8 @@ fn print(expression: forge::Expression) -> io::Result<()> {
     Ok(())
 }
 
-fn main() -> io::Result<()> {
+#[tokio::main]
+async fn main() -> io::Result<()> {
     let mut environment = forge::core::environment();
     let mut iterator = StdinIterator::new();
     loop {
