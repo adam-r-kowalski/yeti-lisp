@@ -1,5 +1,9 @@
 extern crate alloc;
 
+use core::net::IpAddr;
+use core::net::Ipv4Addr;
+use core::net::SocketAddr;
+
 use crate::evaluate_expressions;
 use crate::Expression;
 use crate::Expression::{Integer, IntrinsicFunction, Ratio};
@@ -7,6 +11,7 @@ use crate::RaisedEffect;
 use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
+use axum::{routing::get, Router};
 use im::{hashmap, vector, HashMap};
 use rug;
 
@@ -279,6 +284,29 @@ pub fn environment() -> HashMap<String, Expression> {
             let mut string = String::new();
             html(args[0].clone(), &mut string)?;
             Ok((env, Expression::String(string)))
+        }),
+        "server".to_string() => IntrinsicFunction(|env, args| {
+            let (env, arg) = crate::evaluate(env, args[0].clone())?;
+            match arg {
+                Expression::Map(m) => {
+                    let port_expr = m.get(&Expression::Keyword(":port".to_string()));
+                    let port = match port_expr {
+                        Some(Expression::Integer(i)) => i.to_u16().ok_or_else(|| error("Port number out of range"))?,
+                        None => 3000,
+                        _ => return Err(error("Expected integer for :port")),
+                    };
+                    tokio::spawn(async move {
+                        let app = Router::new().route("/", get(|| async { "Hello, World!" }));
+                        let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port);
+                        axum::Server::bind(&socket)
+                            .serve(app.into_make_service())
+                            .await
+                            .unwrap();
+                    });
+                    Ok((env, Expression::Nil))
+                },
+                _ => Err(error("Expected map")),
+            }
         }),
     }
 }

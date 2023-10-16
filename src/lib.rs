@@ -1,5 +1,6 @@
 #![no_std]
 #![forbid(unsafe_code)]
+#![feature(ip_in_core)]
 
 pub mod core;
 mod evaluator;

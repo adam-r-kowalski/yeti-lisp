@@ -374,3 +374,21 @@ fn evaluate_html_with_attribute_and_doesnt_need_closing_tag() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[tokio::test]
+async fn evaluate_server() -> Result {
+    let tokens = forge::Tokens::from_str("(server {:port 8080})");
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let expected = forge::Expression::Nil;
+    assert_eq!(actual, expected);
+    let body = reqwest::get("http://localhost:8080")
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    assert_eq!(body, "Hello, World!");
+    Ok(())
+}
