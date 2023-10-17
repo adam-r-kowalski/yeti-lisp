@@ -376,8 +376,58 @@ fn evaluate_html_with_attribute_and_doesnt_need_closing_tag() -> Result {
 }
 
 #[tokio::test]
-async fn evaluate_server() -> Result {
-    let tokens = forge::Tokens::from_str("(server {:port 8080})");
+async fn evaluate_server_with_string_route_and_no_port() -> Result {
+    let tokens = forge::Tokens::from_str(
+        r#"
+        (server {:routes {"/" "Hello Forge"}})
+        "#,
+    );
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let expected = forge::Expression::Nil;
+    assert_eq!(actual, expected);
+    let body = reqwest::get("http://localhost:3000")
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    assert_eq!(body, "Hello Forge");
+    Ok(())
+}
+
+#[tokio::test]
+async fn evaluate_server_with_string_route() -> Result {
+    let tokens = forge::Tokens::from_str(
+        r#"
+        (server {:port 4000
+                 :routes {"/" "Hello Forge"}})
+        "#,
+    );
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let expected = forge::Expression::Nil;
+    assert_eq!(actual, expected);
+    let body = reqwest::get("http://localhost:4000")
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    assert_eq!(body, "Hello Forge");
+    Ok(())
+}
+
+#[tokio::test]
+async fn evaluate_server_with_html_route() -> Result {
+    let tokens = forge::Tokens::from_str(
+        r#"
+        (server {:port 8080
+                 :routes {"/" [:ul [:li "first"] [:li "second"]]}})
+        "#,
+    );
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -389,6 +439,6 @@ async fn evaluate_server() -> Result {
         .text()
         .await
         .unwrap();
-    assert_eq!(body, "Hello, World!");
+    assert_eq!(body, "<ul><li>first</li><li>second</li></ul>");
     Ok(())
 }

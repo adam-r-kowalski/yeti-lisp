@@ -11,8 +11,10 @@ use crate::RaisedEffect;
 use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
-use axum::{routing::get, Router};
-use im::{hashmap, vector, HashMap};
+use axum::response::Html;
+use axum::routing::get;
+use axum::Router;
+use im::{hashmap, vector, HashMap, Vector};
 use rug;
 
 fn error(message: &str) -> RaisedEffect {
@@ -20,6 +22,43 @@ fn error(message: &str) -> RaisedEffect {
         environment: environment(),
         effect: "error".to_string(),
         arguments: vector![Expression::String(message.to_string())],
+    }
+}
+
+type Result<T> = core::result::Result<T, RaisedEffect>;
+
+fn extract_map(expr: Expression) -> Result<HashMap<Expression, Expression>> {
+    match expr {
+        Expression::Map(m) => Ok(m),
+        _ => Err(error("Expected map")),
+    }
+}
+
+fn extract_string(expr: Expression) -> Result<String> {
+    match expr {
+        Expression::String(s) => Ok(s),
+        _ => Err(error("Expected string")),
+    }
+}
+
+fn extract_keyword(expr: Expression) -> Result<String> {
+    match expr {
+        Expression::Keyword(k) => Ok(k),
+        _ => Err(error("Expected keyword")),
+    }
+}
+
+fn extract_symbol(expr: Expression) -> Result<String> {
+    match expr {
+        Expression::Symbol(s) => Ok(s),
+        _ => Err(error("Expected keyword")),
+    }
+}
+
+fn extract_array(expr: Expression) -> Result<Vector<Expression>> {
+    match expr {
+        Expression::Array(a) => Ok(a),
+        _ => Err(error("Expected array")),
     }
 }
 
@@ -43,54 +82,35 @@ fn self_closing(tag: &str) -> bool {
     }
 }
 
-fn html(expr: Expression, string: &mut String) -> core::result::Result<(), RaisedEffect> {
+fn html(expr: Expression, string: &mut String) -> Result<()> {
     match expr {
-        Expression::Array(a) => match &a[0] {
-            Expression::Keyword(s) => {
-                let s = &s[1..];
-                string.push('<');
-                string.push_str(s);
-                if a.len() > 1 {
-                    if let Expression::Map(m) = &a[1] {
-                        let mut entries = Vec::new();
-                        for (k, v) in m.iter() {
-                            match k {
-                                Expression::Keyword(k) => {
-                                    entries.push((&k[1..], v.clone()));
-                                }
-                                _ => return Err(error("Expected keyword")),
-                            }
-                        }
-                        entries.sort_by_key(|entry| entry.0);
-                        for (k, v) in entries {
-                            string.push(' ');
-                            string.push_str(k);
-                            string.push_str("=\"");
-                            match v {
-                                Expression::String(s) => string.push_str(&s),
-                                _ => return Err(error("Expected string")),
-                            }
-                            string.push('"');
-                        }
-                        if self_closing(s) {
-                            string.push_str(" />");
-                            Ok(())
-                        } else {
-                            string.push('>');
-                            for expr in a.iter().skip(2) {
-                                html(expr.clone(), string)?;
-                            }
-                            string.push_str("</");
-                            string.push_str(s);
-                            string.push('>');
-                            Ok(())
-                        }
-                    } else if self_closing(s) {
+        Expression::Array(a) => {
+            let s = extract_keyword(a[0].clone())?;
+            let s = &s[1..];
+            string.push('<');
+            string.push_str(s);
+            if a.len() > 1 {
+                if let Expression::Map(m) = &a[1] {
+                    let mut entries = Vec::new();
+                    for (k, v) in m.iter() {
+                        let k = extract_keyword(k.clone())?;
+                        entries.push((k, v.clone()));
+                    }
+                    entries.sort_by_key(|entry| entry.0.clone());
+                    for (k, v) in entries {
+                        string.push(' ');
+                        string.push_str(&k[1..]);
+                        string.push_str("=\"");
+                        let s = extract_string(v)?;
+                        string.push_str(&s);
+                        string.push('"');
+                    }
+                    if self_closing(s) {
                         string.push_str(" />");
                         Ok(())
                     } else {
                         string.push('>');
-                        for expr in a.iter().skip(1) {
+                        for expr in a.iter().skip(2) {
                             html(expr.clone(), string)?;
                         }
                         string.push_str("</");
@@ -102,14 +122,25 @@ fn html(expr: Expression, string: &mut String) -> core::result::Result<(), Raise
                     string.push_str(" />");
                     Ok(())
                 } else {
-                    string.push_str("></");
+                    string.push('>');
+                    for expr in a.iter().skip(1) {
+                        html(expr.clone(), string)?;
+                    }
+                    string.push_str("</");
                     string.push_str(s);
                     string.push('>');
                     Ok(())
                 }
+            } else if self_closing(s) {
+                string.push_str(" />");
+                Ok(())
+            } else {
+                string.push_str("></");
+                string.push_str(s);
+                string.push('>');
+                Ok(())
             }
-            _ => Err(error("Expected keyword")),
-        },
+        }
         Expression::String(s) => {
             string.push_str(&s);
             Ok(())
@@ -168,8 +199,7 @@ pub fn environment() -> HashMap<String, Expression> {
             let (condition, then, otherwise) = (args[0].clone(), args[1].clone(), args[2].clone());
             let (env, condition) = crate::evaluate(env, condition)?;
             match condition {
-                Expression::Nil => crate::evaluate(env, otherwise),
-                Expression::Bool(false) => crate::evaluate(env, otherwise),
+                Expression::Nil | Expression::Bool(false) => crate::evaluate(env, otherwise),
                 _ => crate::evaluate(env, then),
             }
           }
@@ -178,10 +208,7 @@ pub fn environment() -> HashMap<String, Expression> {
           |env, args| {
             let (name, value) = (args[0].clone(), args[1].clone());
             let (env, value) = crate::evaluate(env, value)?;
-            let name = match name {
-                Expression::Symbol(s) => s,
-                _ => return Err(error("Expected symbol")),
-            };
+            let name = extract_symbol(name)?;
             let mut new_env = env.clone();
             new_env.insert(name, value);
             Ok((new_env, Expression::Nil))
@@ -190,10 +217,7 @@ pub fn environment() -> HashMap<String, Expression> {
         "fn".to_string() => IntrinsicFunction(
           |env, args| {
             let (parameters, body) = (args[0].clone(), args[1].clone());
-            let parameters = match parameters {
-                Expression::Array(a) => a,
-                _ => return Err(error("Expected array")),
-            };
+            let parameters = extract_array(parameters)?;
             for parameter in parameters.iter() {
                 match parameter {
                     Expression::Symbol(_) => {},
@@ -222,42 +246,28 @@ pub fn environment() -> HashMap<String, Expression> {
           |env, args| {
             let (env, args) = evaluate_expressions(env, args)?;
             let (map, key, value) = (args[0].clone(), args[1].clone(), args[2].clone());
-            match map {
-                Expression::Map(m) => {
-                    let mut new_map = m.clone();
-                    new_map.insert(key, value);
-                    Ok((env, Expression::Map(new_map)))
-                },
-                _ => Err(error("Expected map")),
-            }
+            let mut m = extract_map(map)?;
+            m.insert(key, value);
+            Ok((env, Expression::Map(m)))
           }
         ),
         "dissoc".to_string() => IntrinsicFunction(
           |env, args| {
             let (env, args) = evaluate_expressions(env, args)?;
             let (map, key) = (args[0].clone(), args[1].clone());
-            match map {
-                Expression::Map(m) => {
-                    let mut new_map = m.clone();
-                    new_map.remove(&key);
-                    Ok((env, Expression::Map(new_map)))
-                },
-                _ => Err(error("Expected map")),
-            }
+            let mut m = extract_map(map)?;
+            m.remove(&key);
+            Ok((env, Expression::Map(m)))
           }
         ),
         "merge".to_string() => IntrinsicFunction(
           |env, args| {
             let (env, args) = evaluate_expressions(env, args)?;
             let (map1, map2) = (args[0].clone(), args[1].clone());
-            match (map1, map2) {
-                (Expression::Map(m1), Expression::Map(m2)) => {
-                    let mut new_map = m1.clone();
-                    new_map.extend(m2);
-                    Ok((env, Expression::Map(new_map)))
-                },
-                _ => Err(error("Expected map")),
-            }
+            let mut map1 = extract_map(map1)?;
+            let map2 = extract_map(map2)?;
+            map1.extend(map2);
+            Ok((env, Expression::Map(map1)))
           }
         ),
         "eval".to_string() => IntrinsicFunction(
@@ -269,14 +279,10 @@ pub fn environment() -> HashMap<String, Expression> {
         "read-string".to_string() => IntrinsicFunction(
           |env, args| {
             let (env, arg) = crate::evaluate(env, args[0].clone())?;
-            match arg {
-              Expression::String(s) => {
-                let tokens = crate::Tokens::from_str(&s);
-                let expression = crate::parse(tokens);
-                Ok((env, expression))
-              },
-              _ => Err(error("Expected string")),
-            }
+            let s = extract_string(arg)?;
+            let tokens = crate::Tokens::from_str(&s);
+            let expression = crate::parse(tokens);
+            Ok((env, expression))
           }
         ),
         "html".to_string() => IntrinsicFunction(|env, args| {
@@ -287,26 +293,37 @@ pub fn environment() -> HashMap<String, Expression> {
         }),
         "server".to_string() => IntrinsicFunction(|env, args| {
             let (env, arg) = crate::evaluate(env, args[0].clone())?;
-            match arg {
-                Expression::Map(m) => {
-                    let port_expr = m.get(&Expression::Keyword(":port".to_string()));
-                    let port = match port_expr {
-                        Some(Expression::Integer(i)) => i.to_u16().ok_or_else(|| error("Port number out of range"))?,
-                        None => 3000,
-                        _ => return Err(error("Expected integer for :port")),
-                    };
-                    tokio::spawn(async move {
-                        let app = Router::new().route("/", get(|| async { "Hello, World!" }));
-                        let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port);
-                        axum::Server::bind(&socket)
-                            .serve(app.into_make_service())
-                            .await
-                            .unwrap();
-                    });
-                    Ok((env, Expression::Nil))
-                },
-                _ => Err(error("Expected map")),
+            let m = extract_map(arg)?;
+            let port_expr = m.get(&Expression::Keyword(":port".to_string()));
+            let port = match port_expr {
+                Some(Expression::Integer(i)) => i.to_u16().ok_or_else(|| error("Port number out of range"))?,
+                None => 3000,
+                _ => return Err(error("Expected integer for :port")),
+            };
+            let mut app = Router::new();
+            if let Some(routes) = m.get(&Expression::Keyword(":routes".to_string())) {
+                let m = extract_map(routes.clone())?;
+                for (k, v) in m.iter() {
+                    let path = extract_string(k.clone())?;
+                    match v.clone() {
+                        Expression::String(text) => app = app.route(&path, get(|| async { text })),
+                        Expression::Array(_) => {
+                            let mut string = String::new();
+                            html(v.clone(), &mut string)?;
+                            app = app.route(&path, get(|| async { Html(string) }))
+                        },
+                        _ => return Err(error("Expected string for route")),
+                    }
+                }
             }
+            tokio::spawn(async move {
+                let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port);
+                axum::Server::bind(&socket)
+                    .serve(app.into_make_service())
+                    .await
+                    .unwrap();
+            });
+            Ok((env, Expression::Nil))
         }),
     }
 }
