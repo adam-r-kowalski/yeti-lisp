@@ -22,6 +22,7 @@ pub enum Token {
     LeftBrace,
     RightBrace,
     Quote,
+    NewLine,
 }
 
 #[derive(PartialEq)]
@@ -138,6 +139,7 @@ impl<I: Iterator<Item = char>> Iterator for Tokens<I> {
                         _ => Some(Token::Symbol("-".to_string())),
                     }
                 }
+                '\n' => Some(self.consume_and_return(Token::NewLine)),
                 _ if is_whitespace(c) => {
                     self.iterator.next();
                     self.next()

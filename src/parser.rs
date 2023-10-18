@@ -23,7 +23,7 @@ struct Parser<I: Iterator<Item = char>> {
 
 impl<I: Iterator<Item = char>> Parser<I> {
     fn expression(&mut self) -> Expression {
-        match self.tokens.next() {
+        let expr = match self.tokens.next() {
             Some(Token::Symbol(s)) => symbol(s),
             Some(Token::Keyword(s)) => Expression::Keyword(s),
             Some(Token::String(s)) => Expression::String(s),
@@ -33,9 +33,14 @@ impl<I: Iterator<Item = char>> Parser<I> {
             Some(Token::LeftBracket) => self.array(),
             Some(Token::LeftBrace) => self.map(),
             Some(Token::Quote) => self.quote(),
+            Some(Token::NewLine) => self.expression(),
             Some(t) => panic!("Unexpected token {:?}", t),
             None => panic!("Expected token got None"),
+        };
+        if let Some(Token::NewLine) = self.tokens.peek() {
+            self.tokens.next();
         }
+        expr
     }
 
     fn integer(&mut self, i: Integer) -> Expression {
