@@ -1,6 +1,9 @@
+use std::sync::Arc;
+
 use forge;
 use im::{hashmap, vector, HashMap};
 use rug::{Integer, Rational};
+use spin::Mutex;
 
 type Result = std::result::Result<(), forge::RaisedEffect>;
 
@@ -8,7 +11,7 @@ type Result = std::result::Result<(), forge::RaisedEffect>;
 fn evaluate_keyword() -> Result {
     let tokens = forge::Tokens::from_str(":x");
     let expression = forge::parse(tokens);
-    let environment = HashMap::new();
+    let environment = forge::Environment::new();
     let (_, actual) = forge::evaluate(environment, expression)?;
     let expected = forge::Expression::Keyword(":x".to_string());
     assert_eq!(actual, expected);
@@ -19,7 +22,7 @@ fn evaluate_keyword() -> Result {
 fn evaluate_string() -> Result {
     let tokens = forge::Tokens::from_str(r#""hello""#);
     let expression = forge::parse(tokens);
-    let environment = HashMap::new();
+    let environment = forge::Environment::new();
     let (_, actual) = forge::evaluate(environment, expression)?;
     let expected = forge::Expression::String("hello".to_string());
     assert_eq!(actual, expected);
@@ -30,7 +33,7 @@ fn evaluate_string() -> Result {
 fn evaluate_integer() -> Result {
     let tokens = forge::Tokens::from_str("5");
     let expression = forge::parse(tokens);
-    let environment = HashMap::new();
+    let environment = forge::Environment::new();
     let (_, actual) = forge::evaluate(environment, expression)?;
     let expected = forge::Expression::Integer(Integer::from(5));
     assert_eq!(actual, expected);
@@ -41,7 +44,7 @@ fn evaluate_integer() -> Result {
 fn evaluate_float() -> Result {
     let tokens = forge::Tokens::from_str("3.14");
     let expression = forge::parse(tokens);
-    let environment = HashMap::new();
+    let environment = forge::Environment::new();
     let (_, actual) = forge::evaluate(environment, expression)?;
     let expected = forge::Expression::Float(forge::Float::from_str("3.14"));
     assert_eq!(actual, expected);
@@ -52,8 +55,11 @@ fn evaluate_float() -> Result {
 fn evaluate_symbol_bound_to_integer() -> Result {
     let tokens = forge::Tokens::from_str("x");
     let expression = forge::parse(tokens);
-    let environment = hashmap! {
-        "x".to_string() => forge::Expression::Integer(Integer::from(5)),
+    let environment = forge::Environment {
+        bindings: hashmap! {
+            "x".to_string() => forge::Expression::Integer(Integer::from(5)),
+        },
+        servers: Arc::new(Mutex::new(HashMap::new())),
     };
     let (_, actual) = forge::evaluate(environment, expression)?;
     let expected = forge::Expression::Integer(Integer::from(5));
@@ -65,16 +71,19 @@ fn evaluate_symbol_bound_to_integer() -> Result {
 fn evaluate_symbol_bound_to_function() -> Result {
     let tokens = forge::Tokens::from_str("(double 5)");
     let expression = forge::parse(tokens);
-    let environment = hashmap! {
-        "double".to_string() => forge::Expression::IntrinsicFunction(
-          |env, args| {
-            let (env, args) = forge::evaluate_expressions(env, args)?;
-            match &args[0] {
-              forge::Expression::Integer(i) => Ok((env, forge::Expression::Integer(i * Integer::from(2)))),
-              _ => panic!("Expected integer argument"),
-            }
-          }
-        ),
+    let environment = forge::Environment {
+        bindings: hashmap! {
+            "double".to_string() => forge::Expression::IntrinsicFunction(
+              |env, args| {
+                let (env, args) = forge::evaluate_expressions(env, args)?;
+                match &args[0] {
+                  forge::Expression::Integer(i) => Ok((env, forge::Expression::Integer(i * Integer::from(2)))),
+                  _ => panic!("Expected integer argument"),
+                }
+              }
+            ),
+        },
+        servers: Arc::new(Mutex::new(HashMap::new())),
     };
     let (_, actual) = forge::evaluate(environment, expression)?;
     let expected = forge::Expression::Integer(Integer::from(10));
@@ -128,7 +137,7 @@ fn evaluate_def() -> Result {
         "x".to_string(),
         forge::Expression::Integer(Integer::from(5)),
     );
-    assert_eq!(actual_environment, expected_environment);
+    assert_eq!(actual_environment.bindings, expected_environment.bindings);
     Ok(())
 }
 
@@ -164,8 +173,8 @@ fn evaluate_map() -> Result {
 fn evaluate_key_on_map() -> Result {
     let tokens = forge::Tokens::from_str("(:a {:a 1})");
     let expression = forge::parse(tokens);
-    let environment = hashmap! {};
-    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let environment = forge::Environment::new();
+    let (_, actual) = forge::evaluate(environment, expression)?;
     let expected = forge::Expression::Integer(Integer::from(1));
     assert_eq!(actual, expected);
     Ok(())
@@ -175,8 +184,8 @@ fn evaluate_key_on_map() -> Result {
 fn evaluate_map_on_key() -> Result {
     let tokens = forge::Tokens::from_str("({:a 1} :a)");
     let expression = forge::parse(tokens);
-    let environment = hashmap! {};
-    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let environment = forge::Environment::new();
+    let (_, actual) = forge::evaluate(environment, expression)?;
     let expected = forge::Expression::Integer(Integer::from(1));
     assert_eq!(actual, expected);
     Ok(())
@@ -315,7 +324,7 @@ fn evaluate_defn() -> Result {
             }),
         },
     );
-    assert_eq!(actual_environment, expected_environment);
+    assert_eq!(actual_environment.bindings, expected_environment.bindings);
     Ok(())
 }
 

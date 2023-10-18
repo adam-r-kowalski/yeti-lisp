@@ -4,14 +4,39 @@ use crate::numerics::Float;
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::String;
+use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::fmt::{self, Display, Formatter};
+use core::hash::Hash;
 use im::{HashMap, Vector};
 use rug::{Integer, Rational};
+use spin::Mutex;
+use tokio::sync::broadcast::Sender;
 
 type Expressions = Vector<Expression>;
 
-pub type Environment = HashMap<String, Expression>;
+#[derive(Debug, Clone)]
+pub struct Environment {
+    pub bindings: HashMap<String, Expression>,
+    pub servers: Arc<Mutex<HashMap<u16, Sender<()>>>>,
+}
+
+impl Environment {
+    pub fn get(&self, key: &str) -> Option<Expression> {
+        self.bindings.get(key).cloned()
+    }
+
+    pub fn insert(&mut self, key: String, value: Expression) {
+        self.bindings.insert(key, value);
+    }
+
+    pub fn new() -> Environment {
+        Environment {
+            bindings: HashMap::new(),
+            servers: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct RaisedEffect {

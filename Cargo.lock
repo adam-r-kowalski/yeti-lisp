@@ -228,6 +228,7 @@ dependencies = [
  "im",
  "reqwest",
  "rug",
+ "spin",
  "tokio",
 ]
 
@@ -943,6 +944,15 @@ checksum = "4031e820eb552adee9295814c0ced9e5cf38ddf1e8b7d566d6de8e2538ea989e"
 dependencies = [
  "libc",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "spin"
+version = "0.9.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
+dependencies = [
+ "lock_api",
 ]
 
 [[package]]
