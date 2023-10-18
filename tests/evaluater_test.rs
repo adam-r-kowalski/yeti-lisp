@@ -439,7 +439,7 @@ async fn evaluate_server_with_html_route() -> Result {
     );
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
-    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let (_, actual) = forge::evaluate(environment, expression)?;
     let expected = forge::Expression::Nil;
     assert_eq!(actual, expected);
     let body = reqwest::get("http://localhost:8080")
@@ -449,5 +449,21 @@ async fn evaluate_server_with_html_route() -> Result {
         .await
         .unwrap();
     assert_eq!(body, "<ul><li>first</li><li>second</li></ul>");
+    Ok(())
+}
+
+#[tokio::test]
+async fn evaluate_shutdown() -> Result {
+    let tokens = forge::Tokens::from_str("(server {:port 8080})");
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (environment, actual) = forge::evaluate(environment, expression)?;
+    let expected = forge::Expression::Nil;
+    assert_eq!(actual, expected);
+    let tokens = forge::Tokens::from_str("(shutdown {:port 8080})");
+    let expression = forge::parse(tokens);
+    let (_, actual) = forge::evaluate(environment, expression)?;
+    let expected = forge::Expression::Nil;
+    assert_eq!(actual, expected);
     Ok(())
 }

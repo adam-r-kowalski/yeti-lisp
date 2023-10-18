@@ -339,6 +339,19 @@ pub fn environment() -> Environment {
                 }
                 Ok((env, Expression::Nil))
             }),
+            "shutdown".to_string() => IntrinsicFunction(|env, args| {
+                let (env, arg) = crate::evaluate(env, args[0].clone())?;
+                let m = extract_map(arg)?;
+                let port_expr = m.get(&Expression::Keyword(":port".to_string()));
+                let port = match port_expr {
+                    Some(Expression::Integer(i)) => i.to_u16().ok_or_else(|| error("Port number out of range"))?,
+                    _ => return Err(error("Expected integer for :port")),
+                };
+                if let Some(tx) = env.servers.lock().get(&port) {
+                    tx.send(()).unwrap();
+                }
+                Ok((env, Expression::Nil))
+            })
         },
         servers: alloc::sync::Arc::new(spin::Mutex::new(HashMap::new())),
     }
