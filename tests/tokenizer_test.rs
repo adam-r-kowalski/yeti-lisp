@@ -1,5 +1,5 @@
 use forge;
-use rug::Integer;
+use rug::{Integer, Rational};
 
 #[test]
 fn tokenize_symbol() {
@@ -101,17 +101,6 @@ fn tokenize_call_inside_array() {
 }
 
 #[test]
-fn tokenize_rational() {
-    let actual = forge::Tokens::from_str("1/2").collect::<Vec<forge::Token>>();
-    let expected = vec![
-        forge::Token::Integer(Integer::from(1)),
-        forge::Token::Symbol("/".to_string()),
-        forge::Token::Integer(Integer::from(2)),
-    ];
-    assert_eq!(actual, expected);
-}
-
-#[test]
 fn tokenize_quote() {
     let actual = forge::Tokens::from_str("'(1 2)").collect::<Vec<forge::Token>>();
     let expected = vec![
@@ -121,5 +110,15 @@ fn tokenize_quote() {
         forge::Token::Integer(Integer::from(2)),
         forge::Token::RightParen,
     ];
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn tokenize_ratio() {
+    let actual = forge::Tokens::from_str("5/3").collect::<Vec<forge::Token>>();
+    let expected = vec![forge::Token::Ratio(Rational::from((
+        Integer::from(5),
+        Integer::from(3),
+    )))];
     assert_eq!(actual, expected);
 }

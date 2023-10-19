@@ -6,7 +6,7 @@ use alloc::format;
 use alloc::string::{String, ToString};
 use core::iter::Peekable;
 use core::str::Chars;
-use rug::Integer;
+use rug::{Integer, Rational};
 
 #[derive(PartialEq, Debug)]
 pub enum Token {
@@ -15,6 +15,7 @@ pub enum Token {
     String(String),
     Integer(Integer),
     Float(Float),
+    Ratio(Rational),
     LeftParen,
     RightParen,
     LeftBracket,
@@ -22,7 +23,6 @@ pub enum Token {
     LeftBrace,
     RightBrace,
     Quote,
-    NewLine,
 }
 
 #[derive(PartialEq)]
@@ -103,7 +103,24 @@ impl<I: Iterator<Item = char>> Tokens<I> {
         if is_float {
             Token::Float(Float::from_str(&number))
         } else {
-            Token::Integer(number.parse().unwrap())
+            let numerator = number.parse().unwrap();
+            if let Some('/') = self.iterator.peek() {
+                self.iterator.next();
+                let negative = match self.iterator.peek() {
+                    Some('-') => {
+                        self.iterator.next();
+                        Negative::Yes
+                    }
+                    _ => Negative::No,
+                };
+                if let Token::Integer(denominator) = self.number(negative) {
+                    Token::Ratio(Rational::from((numerator, denominator)))
+                } else {
+                    panic!("Expected denominator got {:?}", self.iterator.peek());
+                }
+            } else {
+                Token::Integer(numerator)
+            }
         }
     }
 
@@ -139,7 +156,6 @@ impl<I: Iterator<Item = char>> Iterator for Tokens<I> {
                         _ => Some(Token::Symbol("-".to_string())),
                     }
                 }
-                '\n' => Some(self.consume_and_return(Token::NewLine)),
                 _ if is_whitespace(c) => {
                     self.iterator.next();
                     self.next()

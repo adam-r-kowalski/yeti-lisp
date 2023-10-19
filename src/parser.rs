@@ -6,7 +6,6 @@ use alloc::boxed::Box;
 use alloc::string::String;
 use core::iter::Peekable;
 use im::{HashMap, Vector};
-use rug::{Integer, Rational};
 
 fn symbol(s: String) -> Expression {
     match s.as_ref() {
@@ -23,38 +22,19 @@ struct Parser<I: Iterator<Item = char>> {
 
 impl<I: Iterator<Item = char>> Parser<I> {
     fn expression(&mut self) -> Expression {
-        let expr = match self.tokens.next() {
+        match self.tokens.next() {
             Some(Token::Symbol(s)) => symbol(s),
             Some(Token::Keyword(s)) => Expression::Keyword(s),
             Some(Token::String(s)) => Expression::String(s),
-            Some(Token::Integer(i)) => self.integer(i),
+            Some(Token::Integer(i)) => Expression::Integer(i),
             Some(Token::Float(f)) => Expression::Float(f),
+            Some(Token::Ratio(r)) => Expression::Ratio(r),
             Some(Token::LeftParen) => self.call(),
             Some(Token::LeftBracket) => self.array(),
             Some(Token::LeftBrace) => self.map(),
             Some(Token::Quote) => self.quote(),
-            Some(Token::NewLine) => self.expression(),
             Some(t) => panic!("Unexpected token {:?}", t),
             None => panic!("Expected token got None"),
-        };
-        if let Some(Token::NewLine) = self.tokens.peek() {
-            self.tokens.next();
-        }
-        expr
-    }
-
-    fn integer(&mut self, i: Integer) -> Expression {
-        match self.tokens.peek() {
-            Some(&Token::Symbol(ref s)) if s == "/" => {
-                self.tokens.next();
-                let denominator = match self.tokens.next() {
-                    Some(Token::Integer(i)) => i,
-                    Some(t) => panic!("Expected integer got {:?}", t),
-                    None => panic!("Expected integer got None"),
-                };
-                Expression::Ratio(Rational::from((i, denominator)))
-            }
-            _ => Expression::Integer(i),
         }
     }
 
@@ -113,8 +93,7 @@ impl<I: Iterator<Item = char>> Parser<I> {
     }
 
     fn quote(&mut self) -> Expression {
-        let expression = self.expression();
-        Expression::Quote(Box::new(expression))
+        Expression::Quote(Box::new(self.expression()))
     }
 }
 

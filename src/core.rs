@@ -347,8 +347,12 @@ pub fn environment() -> Environment {
                     Some(Expression::Integer(i)) => i.to_u16().ok_or_else(|| error("Port number out of range"))?,
                     _ => return Err(error("Expected integer for :port")),
                 };
-                if let Some(tx) = env.servers.lock().get(&port) {
-                    tx.send(()).unwrap();
+                {
+                    let mut servers = env.servers.lock();
+                    if let Some(tx) = servers.get(&port) {
+                        tx.send(()).unwrap();
+                        servers.remove(&port);
+                    }
                 }
                 Ok((env, Expression::Nil))
             })
