@@ -384,6 +384,24 @@ fn evaluate_html_with_attribute_and_doesnt_need_closing_tag() -> Result {
     Ok(())
 }
 
+#[test]
+fn evaluate_html_with_css() -> Result {
+    let tokens = forge::Tokens::from_str(
+        r#"
+        (html
+         [:style
+          {:body {:background-color "red"}}])
+        "#,
+    );
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let expected_html = "<style>body { background-color: red; }</style>".to_string();
+    let expected = forge::Expression::String(expected_html);
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
 #[tokio::test]
 async fn evaluate_server_with_string_route_and_no_port() -> Result {
     let tokens = forge::Tokens::from_str(

@@ -84,13 +84,38 @@ fn self_closing(tag: &str) -> bool {
     }
 }
 
+fn style_tag(style_map: HashMap<Expression, Expression>, string: &mut String) -> Result<()> {
+    string.push_str("<style>");
+    for (k, v) in style_map {
+        let selector = extract_keyword(k.clone())?;
+        let rules_map = extract_map(v.clone())?;
+        string.push_str(&selector[1..]);
+        string.push_str(" { ");
+        for (rule_key, rule_value) in rules_map {
+            let rule_property = extract_keyword(rule_key.clone())?;
+            let rule_val_str = extract_string(rule_value)?;
+            string.push_str(&rule_property[1..]);
+            string.push_str(": ");
+            string.push_str(&rule_val_str);
+            string.push_str("; ");
+        }
+        string.push_str("}");
+    }
+    string.push_str("</style>");
+    Ok(())
+}
+
 fn html(expr: Expression, string: &mut String) -> Result<()> {
     match expr {
         Expression::Array(a) => {
-            let s = extract_keyword(a[0].clone())?;
-            let s = &s[1..];
+            let keyword = extract_keyword(a[0].clone())?;
+            let keyword = &keyword[1..];
+            if keyword == "style" {
+                let style_map = extract_map(a[1].clone())?;
+                return style_tag(style_map, string);
+            }
             string.push('<');
-            string.push_str(s);
+            string.push_str(keyword);
             if a.len() > 1 {
                 if let Expression::Map(m) = &a[1] {
                     let mut entries = Vec::new();
@@ -107,7 +132,7 @@ fn html(expr: Expression, string: &mut String) -> Result<()> {
                         string.push_str(&s);
                         string.push('"');
                     }
-                    if self_closing(s) {
+                    if self_closing(keyword) {
                         string.push_str(" />");
                         Ok(())
                     } else {
@@ -116,11 +141,11 @@ fn html(expr: Expression, string: &mut String) -> Result<()> {
                             html(expr.clone(), string)?;
                         }
                         string.push_str("</");
-                        string.push_str(s);
+                        string.push_str(keyword);
                         string.push('>');
                         Ok(())
                     }
-                } else if self_closing(s) {
+                } else if self_closing(keyword) {
                     string.push_str(" />");
                     Ok(())
                 } else {
@@ -129,16 +154,16 @@ fn html(expr: Expression, string: &mut String) -> Result<()> {
                         html(expr.clone(), string)?;
                     }
                     string.push_str("</");
-                    string.push_str(s);
+                    string.push_str(keyword);
                     string.push('>');
                     Ok(())
                 }
-            } else if self_closing(s) {
+            } else if self_closing(keyword) {
                 string.push_str(" />");
                 Ok(())
             } else {
                 string.push_str("></");
-                string.push_str(s);
+                string.push_str(keyword);
                 string.push('>');
                 Ok(())
             }
