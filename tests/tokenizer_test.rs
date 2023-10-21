@@ -17,26 +17,31 @@ fn tokenize_symbol() {
 
 #[test]
 fn tokenize_keyword() {
-    let actual =
-        forge::Tokens::from_str(":snake_case :PascalCase :kebab-case :camelCase :predicate?")
-            .collect::<Vec<forge::Token>>();
+    let actual = forge::Tokens::from_str(
+        ":snake_case :PascalCase :kebab-case :camelCase :predicate? :that's",
+    )
+    .collect::<Vec<forge::Token>>();
     let expected = vec![
         forge::Token::Keyword(":snake_case".to_string()),
         forge::Token::Keyword(":PascalCase".to_string()),
         forge::Token::Keyword(":kebab-case".to_string()),
         forge::Token::Keyword(":camelCase".to_string()),
         forge::Token::Keyword(":predicate?".to_string()),
+        forge::Token::Keyword(":that's".to_string()),
     ];
     assert_eq!(actual, expected);
 }
 
 #[test]
 fn tokenize_string_literal() {
-    let actual = forge::Tokens::from_str(r#""hello" "world" "123""#).collect::<Vec<forge::Token>>();
+    let actual = forge::Tokens::from_str(r#""hello" "world" "123" "that's" "that’s"#)
+        .collect::<Vec<forge::Token>>();
     let expected = vec![
         forge::Token::String("hello".to_string()),
         forge::Token::String("world".to_string()),
         forge::Token::String("123".to_string()),
+        forge::Token::String("that's".to_string()),
+        forge::Token::String("that’s".to_string()),
     ];
     assert_eq!(actual, expected);
 }
