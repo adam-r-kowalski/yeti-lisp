@@ -10,6 +10,7 @@ use core::fmt::{self, Display, Formatter};
 use core::hash::Hash;
 use im::{HashMap, Vector};
 use rug::{Integer, Rational};
+use rusqlite::Connection;
 use spin::Mutex;
 use tokio::sync::broadcast::Sender;
 
@@ -38,14 +39,68 @@ impl Environment {
     }
 }
 
-#[derive(Debug)]
 pub struct RaisedEffect {
     pub environment: Environment,
     pub effect: String,
     pub arguments: Vector<Expression>,
 }
 
+impl core::fmt::Debug for RaisedEffect {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "#raised_effect({} {})",
+            self.effect,
+            self.arguments
+                .iter()
+                .map(|e| format!("{}", e))
+                .collect::<Vec<String>>()
+                .join(" ")
+        )
+    }
+}
+
 pub type Result = core::result::Result<(Environment, Expression), RaisedEffect>;
+
+pub struct Sqlite {
+    connection: Arc<Connection>,
+}
+
+impl Sqlite {
+    pub fn new(connection: Connection) -> Sqlite {
+        Sqlite {
+            connection: Arc::new(connection),
+        }
+    }
+}
+
+impl PartialEq for Sqlite {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.connection, &other.connection)
+    }
+}
+
+impl core::hash::Hash for Sqlite {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        Arc::as_ptr(&self.connection).hash(state)
+    }
+}
+
+impl core::fmt::Debug for Sqlite {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "#sqlite({:?})", Arc::as_ptr(&self.connection))
+    }
+}
+
+impl Eq for Sqlite {}
+
+impl Clone for Sqlite {
+    fn clone(&self) -> Self {
+        Sqlite {
+            connection: self.connection.clone(),
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Expression {
@@ -67,7 +122,8 @@ pub enum Expression {
         parameters: Expressions,
         body: Box<Expression>,
     },
-    IntrinsicFunction(fn(Environment, Expressions) -> Result),
+    NativeFunction(fn(Environment, Expressions) -> Result),
+    Sqlite(Sqlite),
     Quote(Box<Expression>),
 }
 
@@ -115,7 +171,8 @@ impl Display for Expression {
                 let param_strs: Vec<String> = parameters.iter().map(|e| format!("{}", e)).collect();
                 write!(f, "(fn [{}] {})", param_strs.join(" "), body)
             }
-            Expression::IntrinsicFunction(_) => write!(f, "#intrinsic"),
+            Expression::NativeFunction(_) => write!(f, "#native_function"),
+            Expression::Sqlite(s) => write!(f, "{:?}", s),
             Expression::Quote(e) => write!(f, "'{}", e),
         }
     }

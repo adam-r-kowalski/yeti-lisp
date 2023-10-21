@@ -62,7 +62,7 @@ fn evaluate_call(
             );
             evaluate(environment, *body)
         }
-        Expression::IntrinsicFunction(f) => f(environment, arguments),
+        Expression::NativeFunction(f) => f(environment, arguments),
         Expression::Keyword(k) => {
             let (environment, arguments) = evaluate_expressions(environment, arguments)?;
             match &arguments[0] {

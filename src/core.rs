@@ -5,11 +5,12 @@ use core::net::Ipv4Addr;
 use core::net::SocketAddr;
 
 use crate::evaluate_expressions;
-use crate::expression::Environment;
+use crate::expression::{Environment, Sqlite};
 use crate::Expression;
-use crate::Expression::{Integer, IntrinsicFunction, Ratio};
+use crate::Expression::{Integer, NativeFunction, Ratio};
 use crate::RaisedEffect;
 use alloc::boxed::Box;
+use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use axum::response::Html;
@@ -17,6 +18,7 @@ use axum::routing::get;
 use axum::Router;
 use im::{hashmap, vector, HashMap, Vector};
 use rug;
+use rusqlite::Connection;
 use tokio::sync::broadcast;
 
 fn error(message: &str) -> RaisedEffect {
@@ -33,6 +35,13 @@ fn extract_map(expr: Expression) -> Result<HashMap<Expression, Expression>> {
     match expr {
         Expression::Map(m) => Ok(m),
         _ => Err(error("Expected map")),
+    }
+}
+
+fn extract_key(map: HashMap<Expression, Expression>, key: &str) -> Result<Expression> {
+    match map.get(&Expression::Keyword(key.to_string())) {
+        Some(expr) => Ok(expr.clone()),
+        None => Err(error(&format!("Expected keyword {}", key))),
     }
 }
 
@@ -61,6 +70,13 @@ fn extract_array(expr: Expression) -> Result<Vector<Expression>> {
     match expr {
         Expression::Array(a) => Ok(a),
         _ => Err(error("Expected array")),
+    }
+}
+
+fn extract_integer(expr: Expression) -> Result<rug::Integer> {
+    match expr {
+        Expression::Integer(i) => Ok(i),
+        _ => Err(error("Expected integer")),
     }
 }
 
@@ -176,10 +192,75 @@ fn html(expr: Expression, string: &mut String) -> Result<()> {
     }
 }
 
+fn sql(expr: Expression) -> Result<Expression> {
+    let map = extract_map(expr)?;
+    let table_name = extract_keyword(extract_key(map.clone(), ":create-table")?)?;
+    let table_name = &table_name[1..];
+    let string = format!("CREATE TABLE {} (", table_name).to_string();
+    let columns = extract_array(extract_key(map, ":with-columns")?)?;
+    let mut string = columns
+        .iter()
+        .enumerate()
+        .try_fold(string, |mut string, (i, column)| {
+            let column = extract_array(column.clone())?;
+            let name = extract_keyword(column[0].clone())?;
+            let name = &name[1..];
+            if i > 0 {
+                string.push_str(", ");
+            }
+            string.push_str(name);
+            match column[1].clone() {
+                Expression::Keyword(type_name) => {
+                    let type_name = &type_name[1..].to_uppercase();
+                    string.push(' ');
+                    string.push_str(type_name);
+                }
+                Expression::Array(a) => {
+                    let type_name = extract_keyword(a[0].clone())?;
+                    let type_name = &type_name[1..].to_uppercase();
+                    let argument = extract_integer(a[1].clone())?;
+                    string.push(' ');
+                    string.push_str(type_name);
+                    string.push('(');
+                    string.push_str(&argument.to_string());
+                    string.push(')');
+                }
+                _ => return Err(error("Expected keyword")),
+            };
+            column
+                .iter()
+                .skip(2)
+                .try_fold(string, |mut string, expr| match expr {
+                    Expression::Keyword(attribute) => {
+                        let attribute = &attribute[1..].to_uppercase();
+                        string.push(' ');
+                        string.push_str(attribute);
+                        Ok(string)
+                    }
+                    Expression::Array(a) => {
+                        let attribute = extract_keyword(a[0].clone())?;
+                        let attribute = &attribute[1..].to_uppercase();
+                        string.push(' ');
+                        string.push_str(attribute);
+                        match a[1] {
+                            Expression::Nil => {
+                                string.push_str(" NULL");
+                                Ok(string)
+                            }
+                            _ => Err(error("Expected nil")),
+                        }
+                    }
+                    _ => Err(error("Expected keyword")),
+                })
+        })?;
+    string.push(')');
+    Ok(Expression::Array(vector![Expression::String(string)]))
+}
+
 pub fn environment() -> Environment {
     Environment {
         bindings: hashmap! {
-            "+".to_string() => IntrinsicFunction(
+            "+".to_string() => NativeFunction(
               |env, args| {
                 let (env, args) = evaluate_expressions(env, args)?;
                 match (&args[0], &args[1]) {
@@ -188,7 +269,7 @@ pub fn environment() -> Environment {
                 }
               }
             ),
-            "-".to_string() => IntrinsicFunction(
+            "-".to_string() => NativeFunction(
               |env, args| {
                 let (env, args) = evaluate_expressions(env, args)?;
                 match (&args[0], &args[1]) {
@@ -197,7 +278,7 @@ pub fn environment() -> Environment {
                 }
               }
             ),
-            "*".to_string() => IntrinsicFunction(
+            "*".to_string() => NativeFunction(
               |env, args| {
                 let (env, args) = evaluate_expressions(env, args)?;
                 match (&args[0], &args[1]) {
@@ -206,7 +287,7 @@ pub fn environment() -> Environment {
                 }
               }
             ),
-            "/".to_string() => IntrinsicFunction(
+            "/".to_string() => NativeFunction(
               |env, args| {
                 let (env, args) = evaluate_expressions(env, args)?;
                 match (&args[0], &args[1]) {
@@ -222,7 +303,7 @@ pub fn environment() -> Environment {
                 }
               }
             ),
-            "if".to_string() => IntrinsicFunction(
+            "if".to_string() => NativeFunction(
               |env, args| {
                 let (condition, then, otherwise) = (args[0].clone(), args[1].clone(), args[2].clone());
                 let (env, condition) = crate::evaluate(env, condition)?;
@@ -232,7 +313,7 @@ pub fn environment() -> Environment {
                 }
               }
             ),
-            "def".to_string() => IntrinsicFunction(
+            "def".to_string() => NativeFunction(
               |env, args| {
                 let (name, value) = (args[0].clone(), args[1].clone());
                 let (env, value) = crate::evaluate(env, value)?;
@@ -242,7 +323,7 @@ pub fn environment() -> Environment {
                 Ok((new_env, Expression::Nil))
               }
             ),
-            "fn".to_string() => IntrinsicFunction(
+            "fn".to_string() => NativeFunction(
               |env, args| {
                 let (parameters, body) = (args[0].clone(), args[1].clone());
                 let parameters = extract_array(parameters)?;
@@ -257,7 +338,7 @@ pub fn environment() -> Environment {
                 Ok((env, function))
               }
             ),
-            "defn".to_string() => IntrinsicFunction(
+            "defn".to_string() => NativeFunction(
               |env, args| {
                 let (name, parameters, body) = (args[0].clone(), args[1].clone(), args[2].clone());
                 let (env, function) = crate::evaluate(env, Expression::Call{
@@ -270,7 +351,7 @@ pub fn environment() -> Environment {
                 })
               }
             ),
-            "assoc".to_string() => IntrinsicFunction(
+            "assoc".to_string() => NativeFunction(
               |env, args| {
                 let (env, args) = evaluate_expressions(env, args)?;
                 let (map, key, value) = (args[0].clone(), args[1].clone(), args[2].clone());
@@ -279,7 +360,7 @@ pub fn environment() -> Environment {
                 Ok((env, Expression::Map(m)))
               }
             ),
-            "dissoc".to_string() => IntrinsicFunction(
+            "dissoc".to_string() => NativeFunction(
               |env, args| {
                 let (env, args) = evaluate_expressions(env, args)?;
                 let (map, key) = (args[0].clone(), args[1].clone());
@@ -288,7 +369,7 @@ pub fn environment() -> Environment {
                 Ok((env, Expression::Map(m)))
               }
             ),
-            "merge".to_string() => IntrinsicFunction(
+            "merge".to_string() => NativeFunction(
               |env, args| {
                 let (env, args) = evaluate_expressions(env, args)?;
                 let (map1, map2) = (args[0].clone(), args[1].clone());
@@ -298,13 +379,13 @@ pub fn environment() -> Environment {
                 Ok((env, Expression::Map(map1)))
               }
             ),
-            "eval".to_string() => IntrinsicFunction(
+            "eval".to_string() => NativeFunction(
               |env, args| {
                 let (env, arg) = crate::evaluate(env, args[0].clone())?;
                 crate::evaluate(env, arg)
               }
             ),
-            "read-string".to_string() => IntrinsicFunction(
+            "read-string".to_string() => NativeFunction(
               |env, args| {
                 let (env, arg) = crate::evaluate(env, args[0].clone())?;
                 let s = extract_string(arg)?;
@@ -313,13 +394,13 @@ pub fn environment() -> Environment {
                 Ok((env, expression))
               }
             ),
-            "html".to_string() => IntrinsicFunction(|env, args| {
+            "html".to_string() => NativeFunction(|env, args| {
                 let (env, args) = evaluate_expressions(env, args)?;
                 let mut string = String::new();
                 html(args[0].clone(), &mut string)?;
                 Ok((env, Expression::String(string)))
             }),
-            "server".to_string() => IntrinsicFunction(|env, args| {
+            "server".to_string() => NativeFunction(|env, args| {
                 let (env, arg) = crate::evaluate(env, args[0].clone())?;
                 let m = extract_map(arg)?;
                 let port_expr = m.get(&Expression::Keyword(":port".to_string()));
@@ -364,7 +445,7 @@ pub fn environment() -> Environment {
                 }
                 Ok((env, Expression::Nil))
             }),
-            "shutdown".to_string() => IntrinsicFunction(|env, args| {
+            "shutdown".to_string() => NativeFunction(|env, args| {
                 let (env, arg) = crate::evaluate(env, args[0].clone())?;
                 let m = extract_map(arg)?;
                 let port_expr = m.get(&Expression::Keyword(":port".to_string()));
@@ -380,7 +461,24 @@ pub fn environment() -> Environment {
                     }
                 }
                 Ok((env, Expression::Nil))
-            })
+            }),
+            "sqlite".to_string() => NativeFunction(|env, args| {
+                let (env, arg) = crate::evaluate(env, args[0].clone())?;
+                let path = extract_string(arg)?;
+                if path == ":memory:" {
+                    match Connection::open_in_memory() {
+                        Ok(db) => Ok((env, Expression::Sqlite(Sqlite::new(db)))),
+                        Err(_) => Err(error("Failed to open SQLite database")),
+                    }
+                } else {
+                    Err(error("Only :memory: is supported"))
+                }
+            }),
+            "sql".to_string() => NativeFunction(|env, args| {
+                let (env, args) = evaluate_expressions(env, args)?;
+                let expr = sql(args[0].clone())?;
+                Ok((env, expr))
+            }),
         },
         servers: alloc::sync::Arc::new(spin::Mutex::new(HashMap::new())),
     }
