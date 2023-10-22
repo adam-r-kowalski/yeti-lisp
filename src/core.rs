@@ -21,7 +21,7 @@ use rug;
 use rusqlite::Connection;
 use tokio::sync::broadcast;
 
-fn error(message: &str) -> RaisedEffect {
+pub fn error(message: &str) -> RaisedEffect {
     RaisedEffect {
         environment: environment(),
         effect: "error".to_string(),
@@ -77,6 +77,35 @@ fn extract_integer(expr: Expression) -> Result<rug::Integer> {
     match expr {
         Expression::Integer(i) => Ok(i),
         _ => Err(error("Expected integer")),
+    }
+}
+
+fn nth(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
+    let (env, args) = evaluate_expressions(env, args)?;
+    let array = &args[0];
+    let index = &args[1];
+    let arr = extract_array(array.clone())?;
+    let idx = extract_integer(index.clone())?
+        .to_usize()
+        .ok_or_else(|| error("Index out of range"))?;
+
+    match args.len() {
+        2 => {
+            let result = arr
+                .get(idx)
+                .cloned()
+                .ok_or_else(|| error("Index out of range"))?;
+            Ok((env, result))
+        }
+        3 => {
+            let default_value = &args[2];
+            let result = arr
+                .get(idx)
+                .cloned()
+                .unwrap_or_else(|| default_value.clone());
+            Ok((env, result))
+        }
+        _ => Err(error("Invalid number of arguments")),
     }
 }
 
@@ -479,6 +508,7 @@ pub fn environment() -> Environment {
                 let expr = sql(args[0].clone())?;
                 Ok((env, expr))
             }),
+            "nth".to_string() => NativeFunction(nth),
         },
         servers: alloc::sync::Arc::new(spin::Mutex::new(HashMap::new())),
     }
