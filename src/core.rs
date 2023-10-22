@@ -82,30 +82,30 @@ fn extract_integer(expr: Expression) -> Result<rug::Integer> {
 
 fn nth(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
     let (env, args) = evaluate_expressions(env, args)?;
-    let array = &args[0];
-    let index = &args[1];
-    let arr = extract_array(array.clone())?;
-    let idx = extract_integer(index.clone())?
+    let arr = extract_array(args[0].clone())?;
+    let idx = extract_integer(args[1].clone())?
         .to_usize()
         .ok_or_else(|| error("Index out of range"))?;
+    if let Some(value) = arr.get(idx) {
+        Ok((env, value.clone()))
+    } else if args.len() == 3 {
+        Ok((env, args[2].clone()))
+    } else {
+        Err(error("Index out of range"))
+    }
+}
 
-    match args.len() {
-        2 => {
-            let result = arr
-                .get(idx)
-                .cloned()
-                .ok_or_else(|| error("Index out of range"))?;
-            Ok((env, result))
-        }
-        3 => {
-            let default_value = &args[2];
-            let result = arr
-                .get(idx)
-                .cloned()
-                .unwrap_or_else(|| default_value.clone());
-            Ok((env, result))
-        }
-        _ => Err(error("Invalid number of arguments")),
+fn map_get(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
+    let (env, args) = evaluate_expressions(env, args)?;
+    let array = &args[0];
+    let key = &args[1];
+    let map = extract_map(array.clone())?;
+    if let Some(value) = map.get(key) {
+        Ok((env, value.clone()))
+    } else if args.len() == 3 {
+        Ok((env, args[2].clone()))
+    } else {
+        Ok((env, Expression::Nil))
     }
 }
 
@@ -509,6 +509,7 @@ pub fn environment() -> Environment {
                 Ok((env, expr))
             }),
             "nth".to_string() => NativeFunction(nth),
+            "get".to_string() => NativeFunction(map_get),
         },
         servers: alloc::sync::Arc::new(spin::Mutex::new(HashMap::new())),
     }
