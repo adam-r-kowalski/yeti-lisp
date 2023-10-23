@@ -5,7 +5,7 @@ use crate::expression::Environment;
 use crate::Expression::{Integer, NativeFunction, Ratio};
 use crate::{array, extract, html, map, server, Expression};
 use crate::{evaluate_expressions, ratio};
-use crate::{sql, sqlite};
+use crate::{query, sql, sqlite, tables};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::ToString;
@@ -131,6 +131,8 @@ pub fn environment() -> Environment {
             "shutdown".to_string() => NativeFunction(server::shutdown),
             "sqlite".to_string() => NativeFunction(sqlite),
             "sql".to_string() => NativeFunction(sql),
+            "query".to_string() => NativeFunction(query),
+            "tables".to_string() => NativeFunction(tables),
             "nth".to_string() => NativeFunction(array::nth),
             "count".to_string() => NativeFunction(array::count),
         },

@@ -1,5 +1,6 @@
 extern crate alloc;
 use crate::effect::{error, Effect};
+use crate::expression::Sqlite;
 use crate::Expression;
 use alloc::format;
 use alloc::string::{String, ToString};
@@ -53,5 +54,12 @@ pub fn integer(expr: Expression) -> Result<rug::Integer> {
     match expr {
         Expression::Integer(i) => Ok(i),
         _ => Err(error("Expected integer")),
+    }
+}
+
+pub fn sqlite(expr: Expression) -> Result<Sqlite> {
+    match expr {
+        Expression::Sqlite(s) => Ok(s),
+        _ => Err(error("Expected sqlite database")),
     }
 }

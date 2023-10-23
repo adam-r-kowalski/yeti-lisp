@@ -110,3 +110,12 @@ pub fn evaluate_expressions(
         },
     )
 }
+
+pub fn evaluate_source(
+    env: Environment,
+    source: &str,
+) -> core::result::Result<(Environment, Expression), Effect> {
+    let tokens = crate::Tokens::from_str(source);
+    let expression = crate::parse(tokens);
+    evaluate(env, expression)
+}

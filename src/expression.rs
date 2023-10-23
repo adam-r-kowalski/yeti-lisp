@@ -42,7 +42,7 @@ impl Environment {
 pub type Result = core::result::Result<(Environment, Expression), Effect>;
 
 pub struct Sqlite {
-    connection: Arc<Connection>,
+    pub connection: Arc<Connection>,
 }
 
 impl Sqlite {

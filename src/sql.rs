@@ -95,3 +95,41 @@ pub fn sql(env: Environment, args: Vector<Expression>) -> Result<(Environment, E
     let expr = sql_string(args[0].clone())?;
     Ok((env, expr))
 }
+
+pub fn query(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
+    let (env, args) = evaluate_expressions(env, args)?;
+    let db = extract::sqlite(args[0].clone())?;
+    let array = extract::array(sql_string(args[1].clone())?)?;
+    let string = extract::string(array[0].clone())?;
+    if let Err(e) = db.connection.execute(&string, ()) {
+        return Err(error(&format!("Failed to execute query: {}", e)));
+    }
+    Ok((env, Expression::Nil))
+}
+
+pub fn tables(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
+    let (env, args) = evaluate_expressions(env, args)?;
+    let db = extract::sqlite(args[0].clone())?;
+    let result = db
+        .connection
+        .prepare("SELECT name FROM sqlite_master WHERE type='table';");
+    match result {
+        Ok(mut stmt) => {
+            let rows: Vector<Expression> = stmt
+                .query_map([], |row| {
+                    let name: String = row.get(0)?;
+                    Ok(Expression::String(name))
+                })
+                .unwrap()
+                .fold(Vector::new(), |mut acc, row| {
+                    let row = row.unwrap();
+                    acc.push_back(row);
+                    acc
+                });
+            Ok((env, Expression::Array(rows)))
+        }
+        Err(e) => {
+            return Err(error(&format!("Failed to execute query: {}", e)));
+        }
+    }
+}
