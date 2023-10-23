@@ -1,5 +1,6 @@
 extern crate alloc;
 
+use crate::effect::Effect;
 use crate::numerics::Float;
 use alloc::boxed::Box;
 use alloc::format;
@@ -38,29 +39,7 @@ impl Environment {
         }
     }
 }
-
-pub struct RaisedEffect {
-    pub environment: Environment,
-    pub effect: String,
-    pub arguments: Vector<Expression>,
-}
-
-impl core::fmt::Debug for RaisedEffect {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(
-            f,
-            "#raised_effect({} {})",
-            self.effect,
-            self.arguments
-                .iter()
-                .map(|e| format!("{}", e))
-                .collect::<Vec<String>>()
-                .join(" ")
-        )
-    }
-}
-
-pub type Result = core::result::Result<(Environment, Expression), RaisedEffect>;
+pub type Result = core::result::Result<(Environment, Expression), Effect>;
 
 pub struct Sqlite {
     connection: Arc<Connection>,

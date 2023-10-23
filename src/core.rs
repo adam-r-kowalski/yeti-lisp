@@ -4,11 +4,12 @@ use core::net::IpAddr;
 use core::net::Ipv4Addr;
 use core::net::SocketAddr;
 
+use crate::effect::{error, Effect};
 use crate::evaluate_expressions;
 use crate::expression::{Environment, Sqlite};
+use crate::extract;
 use crate::Expression;
 use crate::Expression::{Integer, NativeFunction, Ratio};
-use crate::RaisedEffect;
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::{String, ToString};
@@ -21,69 +22,12 @@ use rug;
 use rusqlite::Connection;
 use tokio::sync::broadcast;
 
-pub fn error(message: &str) -> RaisedEffect {
-    RaisedEffect {
-        environment: environment(),
-        effect: "error".to_string(),
-        arguments: vector![Expression::String(message.to_string())],
-    }
-}
-
-type Result<T> = core::result::Result<T, RaisedEffect>;
-
-fn extract_map(expr: Expression) -> Result<HashMap<Expression, Expression>> {
-    match expr {
-        Expression::Map(m) => Ok(m),
-        _ => Err(error("Expected map")),
-    }
-}
-
-fn extract_key(map: HashMap<Expression, Expression>, key: &str) -> Result<Expression> {
-    match map.get(&Expression::Keyword(key.to_string())) {
-        Some(expr) => Ok(expr.clone()),
-        None => Err(error(&format!("Expected keyword {}", key))),
-    }
-}
-
-fn extract_string(expr: Expression) -> Result<String> {
-    match expr {
-        Expression::String(s) => Ok(s),
-        _ => Err(error("Expected string")),
-    }
-}
-
-fn extract_keyword(expr: Expression) -> Result<String> {
-    match expr {
-        Expression::Keyword(k) => Ok(k),
-        _ => Err(error("Expected keyword")),
-    }
-}
-
-fn extract_symbol(expr: Expression) -> Result<String> {
-    match expr {
-        Expression::Symbol(s) => Ok(s),
-        _ => Err(error("Expected keyword")),
-    }
-}
-
-fn extract_array(expr: Expression) -> Result<Vector<Expression>> {
-    match expr {
-        Expression::Array(a) => Ok(a),
-        _ => Err(error("Expected array")),
-    }
-}
-
-fn extract_integer(expr: Expression) -> Result<rug::Integer> {
-    match expr {
-        Expression::Integer(i) => Ok(i),
-        _ => Err(error("Expected integer")),
-    }
-}
+type Result<T> = core::result::Result<T, Effect>;
 
 fn nth(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
     let (env, args) = evaluate_expressions(env, args)?;
-    let arr = extract_array(args[0].clone())?;
-    let idx = extract_integer(args[1].clone())?
+    let arr = extract::array(args[0].clone())?;
+    let idx = extract::integer(args[1].clone())?
         .to_usize()
         .ok_or_else(|| error("Index out of range"))?;
     if let Some(value) = arr.get(idx) {
@@ -99,7 +43,7 @@ fn map_get(env: Environment, args: Vector<Expression>) -> Result<(Environment, E
     let (env, args) = evaluate_expressions(env, args)?;
     let array = &args[0];
     let key = &args[1];
-    let map = extract_map(array.clone())?;
+    let map = extract::map(array.clone())?;
     if let Some(value) = map.get(key) {
         Ok((env, value.clone()))
     } else if args.len() == 3 {
@@ -132,13 +76,13 @@ fn self_closing(tag: &str) -> bool {
 fn style_tag(style_map: HashMap<Expression, Expression>, string: &mut String) -> Result<()> {
     string.push_str("<style>");
     for (k, v) in style_map {
-        let selector = extract_keyword(k.clone())?;
-        let rules_map = extract_map(v.clone())?;
+        let selector = extract::keyword(k.clone())?;
+        let rules_map = extract::map(v.clone())?;
         string.push_str(&selector[1..]);
         string.push_str(" { ");
         for (rule_key, rule_value) in rules_map {
-            let rule_property = extract_keyword(rule_key.clone())?;
-            let rule_val_str = extract_string(rule_value)?;
+            let rule_property = extract::keyword(rule_key.clone())?;
+            let rule_val_str = extract::string(rule_value)?;
             string.push_str(&rule_property[1..]);
             string.push_str(": ");
             string.push_str(&rule_val_str);
@@ -153,10 +97,10 @@ fn style_tag(style_map: HashMap<Expression, Expression>, string: &mut String) ->
 fn html(expr: Expression, string: &mut String) -> Result<()> {
     match expr {
         Expression::Array(a) => {
-            let keyword = extract_keyword(a[0].clone())?;
+            let keyword = extract::keyword(a[0].clone())?;
             let keyword = &keyword[1..];
             if keyword == "style" {
-                let style_map = extract_map(a[1].clone())?;
+                let style_map = extract::map(a[1].clone())?;
                 return style_tag(style_map, string);
             }
             string.push('<');
@@ -165,7 +109,7 @@ fn html(expr: Expression, string: &mut String) -> Result<()> {
                 if let Expression::Map(m) = &a[1] {
                     let mut entries = Vec::new();
                     for (k, v) in m.iter() {
-                        let k = extract_keyword(k.clone())?;
+                        let k = extract::keyword(k.clone())?;
                         entries.push((k, v.clone()));
                     }
                     entries.sort_by_key(|entry| entry.0.clone());
@@ -173,7 +117,7 @@ fn html(expr: Expression, string: &mut String) -> Result<()> {
                         string.push(' ');
                         string.push_str(&k[1..]);
                         string.push_str("=\"");
-                        let s = extract_string(v)?;
+                        let s = extract::string(v)?;
                         string.push_str(&s);
                         string.push('"');
                     }
@@ -222,17 +166,17 @@ fn html(expr: Expression, string: &mut String) -> Result<()> {
 }
 
 fn sql(expr: Expression) -> Result<Expression> {
-    let map = extract_map(expr)?;
-    let table_name = extract_keyword(extract_key(map.clone(), ":create-table")?)?;
+    let map = extract::map(expr)?;
+    let table_name = extract::keyword(extract::key(map.clone(), ":create-table")?)?;
     let table_name = &table_name[1..];
     let string = format!("CREATE TABLE {} (", table_name).to_string();
-    let columns = extract_array(extract_key(map, ":with-columns")?)?;
+    let columns = extract::array(extract::key(map, ":with-columns")?)?;
     let mut string = columns
         .iter()
         .enumerate()
         .try_fold(string, |mut string, (i, column)| {
-            let column = extract_array(column.clone())?;
-            let name = extract_keyword(column[0].clone())?;
+            let column = extract::array(column.clone())?;
+            let name = extract::keyword(column[0].clone())?;
             let name = &name[1..];
             if i > 0 {
                 string.push_str(", ");
@@ -245,9 +189,9 @@ fn sql(expr: Expression) -> Result<Expression> {
                     string.push_str(type_name);
                 }
                 Expression::Array(a) => {
-                    let type_name = extract_keyword(a[0].clone())?;
+                    let type_name = extract::keyword(a[0].clone())?;
                     let type_name = &type_name[1..].to_uppercase();
-                    let argument = extract_integer(a[1].clone())?;
+                    let argument = extract::integer(a[1].clone())?;
                     string.push(' ');
                     string.push_str(type_name);
                     string.push('(');
@@ -267,7 +211,7 @@ fn sql(expr: Expression) -> Result<Expression> {
                         Ok(string)
                     }
                     Expression::Array(a) => {
-                        let attribute = extract_keyword(a[0].clone())?;
+                        let attribute = extract::keyword(a[0].clone())?;
                         let attribute = &attribute[1..].to_uppercase();
                         string.push(' ');
                         string.push_str(attribute);
@@ -346,7 +290,7 @@ pub fn environment() -> Environment {
               |env, args| {
                 let (name, value) = (args[0].clone(), args[1].clone());
                 let (env, value) = crate::evaluate(env, value)?;
-                let name = extract_symbol(name)?;
+                let name = extract::symbol(name)?;
                 let mut new_env = env.clone();
                 new_env.insert(name, value);
                 Ok((new_env, Expression::Nil))
@@ -355,7 +299,7 @@ pub fn environment() -> Environment {
             "fn".to_string() => NativeFunction(
               |env, args| {
                 let (parameters, body) = (args[0].clone(), args[1].clone());
-                let parameters = extract_array(parameters)?;
+                let parameters = extract::array(parameters)?;
                 for parameter in parameters.iter() {
                     match parameter {
                         Expression::Symbol(_) => {},
@@ -384,7 +328,7 @@ pub fn environment() -> Environment {
               |env, args| {
                 let (env, args) = evaluate_expressions(env, args)?;
                 let (map, key, value) = (args[0].clone(), args[1].clone(), args[2].clone());
-                let mut m = extract_map(map)?;
+                let mut m = extract::map(map)?;
                 m.insert(key, value);
                 Ok((env, Expression::Map(m)))
               }
@@ -393,7 +337,7 @@ pub fn environment() -> Environment {
               |env, args| {
                 let (env, args) = evaluate_expressions(env, args)?;
                 let (map, key) = (args[0].clone(), args[1].clone());
-                let mut m = extract_map(map)?;
+                let mut m = extract::map(map)?;
                 m.remove(&key);
                 Ok((env, Expression::Map(m)))
               }
@@ -402,8 +346,8 @@ pub fn environment() -> Environment {
               |env, args| {
                 let (env, args) = evaluate_expressions(env, args)?;
                 let (map1, map2) = (args[0].clone(), args[1].clone());
-                let mut map1 = extract_map(map1)?;
-                let map2 = extract_map(map2)?;
+                let mut map1 = extract::map(map1)?;
+                let map2 = extract::map(map2)?;
                 map1.extend(map2);
                 Ok((env, Expression::Map(map1)))
               }
@@ -417,7 +361,7 @@ pub fn environment() -> Environment {
             "read-string".to_string() => NativeFunction(
               |env, args| {
                 let (env, arg) = crate::evaluate(env, args[0].clone())?;
-                let s = extract_string(arg)?;
+                let s = extract::string(arg)?;
                 let tokens = crate::Tokens::from_str(&s);
                 let expression = crate::parse(tokens);
                 Ok((env, expression))
@@ -431,7 +375,7 @@ pub fn environment() -> Environment {
             }),
             "server".to_string() => NativeFunction(|env, args| {
                 let (env, arg) = crate::evaluate(env, args[0].clone())?;
-                let m = extract_map(arg)?;
+                let m = extract::map(arg)?;
                 let port_expr = m.get(&Expression::Keyword(":port".to_string()));
                 let port = match port_expr {
                     Some(Expression::Integer(i)) => i.to_u16().ok_or_else(|| error("Port number out of range"))?,
@@ -443,9 +387,9 @@ pub fn environment() -> Environment {
                 }
                 let mut app = Router::new();
                 if let Some(routes) = m.get(&Expression::Keyword(":routes".to_string())) {
-                    let m = extract_map(routes.clone())?;
+                    let m = extract::map(routes.clone())?;
                     for (k, v) in m.iter() {
-                        let path = extract_string(k.clone())?;
+                        let path = extract::string(k.clone())?;
                         match v.clone() {
                             Expression::String(text) => app = app.route(&path, get(|| async { text })),
                             Expression::Array(_) => {
@@ -476,7 +420,7 @@ pub fn environment() -> Environment {
             }),
             "shutdown".to_string() => NativeFunction(|env, args| {
                 let (env, arg) = crate::evaluate(env, args[0].clone())?;
-                let m = extract_map(arg)?;
+                let m = extract::map(arg)?;
                 let port_expr = m.get(&Expression::Keyword(":port".to_string()));
                 let port = match port_expr {
                     Some(Expression::Integer(i)) => i.to_u16().ok_or_else(|| error("Port number out of range"))?,
@@ -493,7 +437,7 @@ pub fn environment() -> Environment {
             }),
             "sqlite".to_string() => NativeFunction(|env, args| {
                 let (env, arg) = crate::evaluate(env, args[0].clone())?;
-                let path = extract_string(arg)?;
+                let path = extract::string(arg)?;
                 if path == ":memory:" {
                     match Connection::open_in_memory() {
                         Ok(db) => Ok((env, Expression::Sqlite(Sqlite::new(db)))),

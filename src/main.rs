@@ -54,17 +54,7 @@ async fn main() -> io::Result<()> {
                 print(expression)?;
                 environment = next_environment;
             }
-            Err(forge::RaisedEffect {
-                environment: _,
-                effect,
-                arguments,
-            }) => {
-                println!(
-                    "{{:effect {}, :arguments {}}}\n",
-                    effect,
-                    forge::Expression::Array(arguments)
-                )
-            }
+            Err(effect) => println!("{:?}\n", effect),
         }
     }
 }

@@ -1,43 +1,20 @@
 extern crate alloc;
 
-use crate::expression::{Environment, RaisedEffect, Result};
+use crate::effect::{error, Effect};
+use crate::expression::{Environment, Result};
 use crate::Expression;
 use alloc::format;
-use alloc::string::{String, ToString};
-use im::{vector, HashMap, Vector};
+use alloc::string::String;
+use im::Vector;
 
 fn evaluate_symbol(environment: Environment, symbol: String) -> Result {
     if let Some(e) = environment.get(&symbol) {
         Ok((environment.clone(), e.clone()))
     } else {
-        Err(RaisedEffect {
-            environment,
-            effect: "error".to_string(),
-            arguments: vector![Expression::String(format!(
-                "Symbol {} not found in environment",
-                symbol
-            ))],
-        })
-    }
-}
-
-fn lookup_key_in_map(
-    environment: Environment,
-    map: HashMap<Expression, Expression>,
-    keyword: String,
-) -> Result {
-    if let Some(e) = map.get(&Expression::Keyword(keyword.clone())) {
-        Ok((environment, e.clone()))
-    } else {
-        Err(RaisedEffect {
-            environment,
-            effect: "error".to_string(),
-            arguments: vector![Expression::String(format!(
-                "Keyword {} not found in map {}",
-                keyword,
-                Expression::Map(map)
-            ))],
-        })
+        Err(error(&format!(
+            "Symbol {} not found in environment",
+            symbol
+        )))
     }
 }
 
@@ -66,37 +43,29 @@ fn evaluate_call(
         Expression::Keyword(k) => {
             let (environment, arguments) = evaluate_expressions(environment, arguments)?;
             match &arguments[0] {
-                Expression::Map(m) => lookup_key_in_map(environment, m.clone(), k),
-                e => Err(RaisedEffect {
-                    environment,
-                    effect: "error".to_string(),
-                    arguments: vector![Expression::String(format!(
-                        "Cannot call keyword {} on {}",
-                        k, e
-                    ))],
-                }),
+                Expression::Map(m) => {
+                    if let Some(v) = m.get(&Expression::Keyword(k)) {
+                        Ok((environment, v.clone()))
+                    } else if arguments.len() == 2 {
+                        Ok((environment, arguments[1].clone()))
+                    } else {
+                        Ok((environment, Expression::Nil))
+                    }
+                }
+                e => Err(error(&format!("Cannot call keyword {} on {}", k, e))),
             }
         }
         Expression::Map(m) => {
             let (environment, arguments) = evaluate_expressions(environment, arguments)?;
-            match &arguments[0] {
-                Expression::Keyword(k) => lookup_key_in_map(environment, m, k.clone()),
-                e => Err(RaisedEffect {
-                    environment,
-                    effect: "error".to_string(),
-                    arguments: vector![Expression::String(format!(
-                        "Cannot call map {} on {}",
-                        Expression::Map(m),
-                        e
-                    ))],
-                }),
+            if let Some(v) = m.get(&arguments[0]) {
+                Ok((environment, v.clone()))
+            } else if arguments.len() == 2 {
+                Ok((environment, arguments[1].clone()))
+            } else {
+                Ok((environment, Expression::Nil))
             }
         }
-        _ => Err(RaisedEffect {
-            environment,
-            effect: "error".to_string(),
-            arguments: vector![Expression::String(format!("Cannot call {}", function))],
-        }),
+        _ => Err(error(&format!("Cannot call {}", function))),
     }
 }
 
@@ -131,7 +100,7 @@ pub fn evaluate(environment: Environment, expression: Expression) -> Result {
 pub fn evaluate_expressions(
     environment: Environment,
     expressions: Vector<Expression>,
-) -> core::result::Result<(Environment, Vector<Expression>), RaisedEffect> {
+) -> core::result::Result<(Environment, Vector<Expression>), Effect> {
     expressions.into_iter().try_fold(
         (environment, Vector::new()),
         |(environment, mut expressions), expression| {

@@ -1,7 +1,7 @@
 use forge;
 use rug::Integer;
 
-type Result = std::result::Result<(), forge::RaisedEffect>;
+type Result = std::result::Result<(), forge::effect::Effect>;
 
 #[test]
 fn nth_inbounds_gives_values() -> Result {
@@ -20,8 +20,8 @@ fn nth_out_of_bounds_gives_error() -> Result {
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let actual = forge::evaluate(environment, expression).err().unwrap();
-    let expected = forge::core::error("Index out of bounds: 4");
-    assert_eq!(actual.effect, expected.effect);
+    let expected = forge::effect::error("Index out of range");
+    assert_eq!(actual, expected);
     Ok(())
 }
 
