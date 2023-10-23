@@ -11,6 +11,7 @@ mod html;
 mod numerics;
 mod parser;
 mod peeking_take_while;
+pub mod server;
 mod tokenizer;
 
 pub use evaluator::{evaluate, evaluate_expressions};
