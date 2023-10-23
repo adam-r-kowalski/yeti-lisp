@@ -2,6 +2,7 @@
 #![forbid(unsafe_code)]
 #![feature(ip_in_core)]
 
+pub mod array;
 pub mod core;
 pub mod effect;
 mod evaluator;
