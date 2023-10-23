@@ -267,3 +267,25 @@ fn evaluate_defn() -> Result {
     assert_eq!(actual_environment.bindings, expected_environment.bindings);
     Ok(())
 }
+
+#[test]
+fn evaluate_multiply_ratio_by_integer() -> Result {
+    let tokens = forge::Tokens::from_str("(* 7/3 3)");
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let expected = forge::Expression::Integer(Integer::from(7));
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[test]
+fn evaluate_multiply_integer_by_ratio() -> Result {
+    let tokens = forge::Tokens::from_str("(* 3 7/3)");
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let expected = forge::Expression::Integer(Integer::from(7));
+    assert_eq!(actual, expected);
+    Ok(())
+}

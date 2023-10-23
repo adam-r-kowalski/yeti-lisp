@@ -114,7 +114,12 @@ impl<I: Iterator<Item = char>> Tokens<I> {
                     _ => Negative::No,
                 };
                 if let Token::Integer(denominator) = self.number(negative) {
-                    Token::Ratio(Rational::from((numerator, denominator)))
+                    let rational = Rational::from((numerator, denominator));
+                    if rational.is_integer() {
+                        Token::Integer(rational.numer().clone())
+                    } else {
+                        Token::Ratio(rational)
+                    }
                 } else {
                     panic!("Expected denominator got {:?}", self.iterator.peek());
                 }

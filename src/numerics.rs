@@ -1,4 +1,6 @@
-use rug::{self, float::OrdFloat};
+use rug::{self, float::OrdFloat, Rational};
+
+use crate::Expression;
 
 pub fn decimal_digits_to_bits(decimal_digits: usize) -> u32 {
     (decimal_digits as f64 * 3.322).ceil() as u32
@@ -43,5 +45,13 @@ impl core::fmt::Display for Float {
         let bits = self.0.prec();
         let digits = bits_to_decimal_digits(bits);
         write!(f, "{:.*}", digits, self.0)
+    }
+}
+
+pub fn ratio(rational: Rational) -> Expression {
+    if rational.is_integer() {
+        Expression::Integer(rational.numer().clone())
+    } else {
+        Expression::Ratio(rational)
     }
 }

@@ -120,10 +120,10 @@ fn tokenize_quote() {
 
 #[test]
 fn tokenize_ratio() {
-    let actual = forge::Tokens::from_str("5/3").collect::<Vec<forge::Token>>();
-    let expected = vec![forge::Token::Ratio(Rational::from((
-        Integer::from(5),
-        Integer::from(3),
-    )))];
+    let actual = forge::Tokens::from_str("5/3 4/2").collect::<Vec<forge::Token>>();
+    let expected = vec![
+        forge::Token::Ratio(Rational::from((Integer::from(5), Integer::from(3)))),
+        forge::Token::Integer(Integer::from(2)),
+    ];
     assert_eq!(actual, expected);
 }
