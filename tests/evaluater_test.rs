@@ -289,3 +289,36 @@ fn evaluate_multiply_integer_by_ratio() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn evaluate_equality_when_true() -> Result {
+    let tokens = forge::Tokens::from_str("(= 3 3)");
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let expected = forge::Expression::Bool(true);
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[test]
+fn evaluate_equality_when_false() -> Result {
+    let tokens = forge::Tokens::from_str("(= 3 4)");
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let expected = forge::Expression::Bool(false);
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[test]
+fn evaluate_equality_of_floats() -> Result {
+    let tokens = forge::Tokens::from_str("(= 3.4 3.4)");
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
+    let expected = forge::Expression::Bool(true);
+    assert_eq!(actual, expected);
+    Ok(())
+}

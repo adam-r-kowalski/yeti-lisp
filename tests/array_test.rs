@@ -35,3 +35,14 @@ fn nth_out_of_bounds_with_default_gives_default() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn count_of_array() -> Result {
+    let tokens = forge::Tokens::from_str("(count [1 4 9])");
+    let expression = forge::parse(tokens);
+    let environment = forge::core::environment();
+    let (_, actual) = forge::evaluate(environment, expression)?;
+    let expected = forge::Expression::Integer(Integer::from(3));
+    assert_eq!(actual, expected);
+    Ok(())
+}

@@ -15,6 +15,12 @@ use rug;
 pub fn environment() -> Environment {
     Environment {
         bindings: hashmap! {
+            "=".to_string() => NativeFunction(
+              |env, args| {
+                let (env, args) = evaluate_expressions(env, args)?;
+                Ok((env, Expression::Bool(args[0] == args[1])))
+              }
+            ),
             "+".to_string() => NativeFunction(
               |env, args| {
                 let (env, args) = evaluate_expressions(env, args)?;
@@ -126,6 +132,7 @@ pub fn environment() -> Environment {
             "sqlite".to_string() => NativeFunction(sqlite),
             "sql".to_string() => NativeFunction(sql),
             "nth".to_string() => NativeFunction(array::nth),
+            "count".to_string() => NativeFunction(array::count),
         },
         servers: alloc::sync::Arc::new(spin::Mutex::new(HashMap::new())),
     }
