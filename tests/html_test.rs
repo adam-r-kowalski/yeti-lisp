@@ -4,7 +4,7 @@ type Result = std::result::Result<(), forge::effect::Effect>;
 
 #[test]
 fn evaluate_html_with_only_tag() -> Result {
-    let tokens = forge::Tokens::from_str("(html [:div])");
+    let tokens = forge::Tokens::from_str("(html/string [:div])");
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -15,7 +15,7 @@ fn evaluate_html_with_only_tag() -> Result {
 
 #[test]
 fn evaluate_html_with_child() -> Result {
-    let tokens = forge::Tokens::from_str(r#"(html [:ul [:li "hello"]])"#);
+    let tokens = forge::Tokens::from_str(r#"(html/string [:ul [:li "hello"]])"#);
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -26,7 +26,7 @@ fn evaluate_html_with_child() -> Result {
 
 #[test]
 fn evaluate_html_with_two_children() -> Result {
-    let tokens = forge::Tokens::from_str(r#"(html [:ul [:li "first"] [:li "second"]])"#);
+    let tokens = forge::Tokens::from_str(r#"(html/string [:ul [:li "first"] [:li "second"]])"#);
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -37,7 +37,7 @@ fn evaluate_html_with_two_children() -> Result {
 
 #[test]
 fn evaluate_html_with_attribute() -> Result {
-    let tokens = forge::Tokens::from_str(r#"(html [:div {:class "red"}])"#);
+    let tokens = forge::Tokens::from_str(r#"(html/string [:div {:class "red"}])"#);
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -48,7 +48,8 @@ fn evaluate_html_with_attribute() -> Result {
 
 #[test]
 fn evaluate_html_with_attribute_and_doesnt_need_closing_tag() -> Result {
-    let tokens = forge::Tokens::from_str(r#"(html [:input {:type "checkbox" :name "agree"}])"#);
+    let tokens =
+        forge::Tokens::from_str(r#"(html/string [:input {:type "checkbox" :name "agree"}])"#);
     let expression = forge::parse(tokens);
     let environment = forge::core::environment();
     let (_, actual) = forge::evaluate(environment.clone(), expression)?;
@@ -62,7 +63,7 @@ fn evaluate_html_with_attribute_and_doesnt_need_closing_tag() -> Result {
 fn evaluate_html_with_css() -> Result {
     let tokens = forge::Tokens::from_str(
         r#"
-        (html
+        (html/string
          [:style
           {:body {:background-color "red"}}])
         "#,

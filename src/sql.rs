@@ -6,8 +6,10 @@ use crate::expression::{Environment, Sqlite};
 use crate::extract;
 use crate::Expression;
 use alloc::format;
+use alloc::string::String;
 use alloc::string::ToString;
-use im::{vector, Vector};
+use alloc::vec::Vec;
+use im::{vector, HashMap, Vector};
 use rusqlite::Connection;
 
 type Result<T> = core::result::Result<T, Effect>;
@@ -77,7 +79,7 @@ fn sql_string(expr: Expression) -> Result<Expression> {
     Ok(Expression::Array(vector![Expression::String(string)]))
 }
 
-pub fn sqlite(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
+pub fn connect(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
     let (env, arg) = crate::evaluate(env, args[0].clone())?;
     let path = extract::string(arg)?;
     if path == ":memory:" {
@@ -90,13 +92,13 @@ pub fn sqlite(env: Environment, args: Vector<Expression>) -> Result<(Environment
     }
 }
 
-pub fn sql(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
+pub fn string(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
     let (env, args) = evaluate_expressions(env, args)?;
     let expr = sql_string(args[0].clone())?;
     Ok((env, expr))
 }
 
-pub fn query(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
+pub fn execute(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
     let (env, args) = evaluate_expressions(env, args)?;
     let db = extract::sqlite(args[0].clone())?;
     let array = extract::array(sql_string(args[1].clone())?)?;
@@ -115,17 +117,30 @@ pub fn tables(env: Environment, args: Vector<Expression>) -> Result<(Environment
         .prepare("SELECT name FROM sqlite_master WHERE type='table';");
     match result {
         Ok(mut stmt) => {
+            let column_names: Vec<String> =
+                stmt.column_names().iter().map(|c| c.to_string()).collect();
             let rows: Vector<Expression> = stmt
                 .query_map([], |row| {
-                    let name: String = row.get(0)?;
-                    Ok(Expression::String(name))
+                    let map = column_names.iter().enumerate().fold(
+                        HashMap::new(),
+                        |mut map, (i, name)| {
+                            match row.get_ref(i).unwrap().data_type() {
+                                rusqlite::types::Type::Text => {
+                                    map.insert(
+                                        Expression::Keyword(format!(":{}", name)),
+                                        Expression::String(row.get(i).unwrap()),
+                                    );
+                                }
+                                _ => panic!("Unsupported data type"),
+                            }
+                            map
+                        },
+                    );
+                    Ok(Expression::Map(map))
                 })
                 .unwrap()
-                .fold(Vector::new(), |mut acc, row| {
-                    let row = row.unwrap();
-                    acc.push_back(row);
-                    acc
-                });
+                .map(|row| row.unwrap())
+                .collect();
             Ok((env, Expression::Array(rows)))
         }
         Err(e) => {

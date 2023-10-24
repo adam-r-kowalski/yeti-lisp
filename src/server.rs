@@ -4,11 +4,9 @@ use core::net::IpAddr;
 use core::net::Ipv4Addr;
 use core::net::SocketAddr;
 
-use crate::build_html_string;
 use crate::effect::{error, Effect};
 use crate::expression::Environment;
-use crate::extract;
-use crate::Expression;
+use crate::{extract, html, Expression};
 use alloc::string::{String, ToString};
 use axum::response::Html;
 use axum::routing::get;
@@ -41,7 +39,7 @@ pub fn start(env: Environment, args: Vector<Expression>) -> Result<(Environment,
                 Expression::String(text) => app = app.route(&path, get(|| async { text })),
                 Expression::Array(_) => {
                     let mut string = String::new();
-                    build_html_string(v.clone(), &mut string)?;
+                    html::build_string(v.clone(), &mut string)?;
                     app = app.route(&path, get(|| async { Html(string) }))
                 }
                 _ => return Err(error("Expected string for route")),

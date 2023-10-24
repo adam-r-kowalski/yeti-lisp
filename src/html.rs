@@ -52,7 +52,7 @@ fn style_tag(style_map: HashMap<Expression, Expression>, string: &mut String) ->
     Ok(())
 }
 
-pub fn build_html_string(expr: Expression, string: &mut String) -> Result<()> {
+pub fn build_string(expr: Expression, string: &mut String) -> Result<()> {
     match expr {
         Expression::Array(a) => {
             let keyword = extract::keyword(a[0].clone())?;
@@ -85,7 +85,7 @@ pub fn build_html_string(expr: Expression, string: &mut String) -> Result<()> {
                     } else {
                         string.push('>');
                         for expr in a.iter().skip(2) {
-                            build_html_string(expr.clone(), string)?;
+                            build_string(expr.clone(), string)?;
                         }
                         string.push_str("</");
                         string.push_str(keyword);
@@ -98,7 +98,7 @@ pub fn build_html_string(expr: Expression, string: &mut String) -> Result<()> {
                 } else {
                     string.push('>');
                     for expr in a.iter().skip(1) {
-                        build_html_string(expr.clone(), string)?;
+                        build_string(expr.clone(), string)?;
                     }
                     string.push_str("</");
                     string.push_str(keyword);
@@ -123,9 +123,9 @@ pub fn build_html_string(expr: Expression, string: &mut String) -> Result<()> {
     }
 }
 
-pub fn html(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
+pub fn string(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
     let (env, args) = evaluate_expressions(env, args)?;
     let mut string = String::new();
-    build_html_string(args[0].clone(), &mut string)?;
+    build_string(args[0].clone(), &mut string)?;
     Ok((env, Expression::String(string)))
 }

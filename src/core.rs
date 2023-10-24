@@ -3,9 +3,7 @@ extern crate alloc;
 use crate::effect::error;
 use crate::expression::Environment;
 use crate::Expression::{Integer, NativeFunction, Ratio};
-use crate::{array, extract, html, map, server, Expression};
-use crate::{evaluate_expressions, ratio};
-use crate::{query, sql, sqlite, tables};
+use crate::{array, evaluate_expressions, extract, html, map, ratio, server, sql, Expression};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::ToString;
@@ -126,15 +124,15 @@ pub fn environment() -> Environment {
             "dissoc".to_string() => NativeFunction(map::dissoc),
             "merge".to_string() => NativeFunction(map::merge),
             "get".to_string() => NativeFunction(map::get),
-            "html".to_string() => NativeFunction(html),
-            "server".to_string() => NativeFunction(server::start),
-            "shutdown".to_string() => NativeFunction(server::shutdown),
-            "sqlite".to_string() => NativeFunction(sqlite),
-            "sql".to_string() => NativeFunction(sql),
-            "query".to_string() => NativeFunction(query),
-            "tables".to_string() => NativeFunction(tables),
             "nth".to_string() => NativeFunction(array::nth),
             "count".to_string() => NativeFunction(array::count),
+            "html/string".to_string() => NativeFunction(html::string),
+            "server/start".to_string() => NativeFunction(server::start),
+            "server/stop".to_string() => NativeFunction(server::shutdown),
+            "sql/connect".to_string() => NativeFunction(sql::connect),
+            "sql/string".to_string() => NativeFunction(sql::string),
+            "sql/execute!".to_string() => NativeFunction(sql::execute),
+            "sql/tables".to_string() => NativeFunction(sql::tables),
         },
         servers: alloc::sync::Arc::new(spin::Mutex::new(HashMap::new())),
     }

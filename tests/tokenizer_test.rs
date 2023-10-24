@@ -3,14 +3,17 @@ use rug::{Integer, Rational};
 
 #[test]
 fn tokenize_symbol() {
-    let actual = forge::Tokens::from_str("snake_case PascalCase kebab-case camelCase predicate?")
-        .collect::<Vec<forge::Token>>();
+    let actual = forge::Tokens::from_str(
+        "snake_case PascalCase kebab-case camelCase predicate? namespaced/symbol",
+    )
+    .collect::<Vec<forge::Token>>();
     let expected = vec![
         forge::Token::Symbol("snake_case".to_string()),
         forge::Token::Symbol("PascalCase".to_string()),
         forge::Token::Symbol("kebab-case".to_string()),
         forge::Token::Symbol("camelCase".to_string()),
         forge::Token::Symbol("predicate?".to_string()),
+        forge::Token::Symbol("namespaced/symbol".to_string()),
     ];
     assert_eq!(actual, expected);
 }
