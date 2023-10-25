@@ -1,5 +1,10 @@
-use yeti;
+use crossterm::execute;
+use crossterm::style::{
+    Color::{self, Reset},
+    Colors, Print, SetColors,
+};
 use std::io::{self, Write};
+use yeti;
 
 struct StdinIterator {
     buffer: String,
@@ -30,9 +35,41 @@ impl Iterator for StdinIterator {
     }
 }
 
+fn print_with_color(color: Color, text: &str) -> () {
+    let mut stdout = io::stdout();
+    execute!(
+        stdout,
+        SetColors(Colors {
+            foreground: Some(color),
+            background: None
+        }),
+        Print(text),
+    )
+    .unwrap();
+    execute!(
+        stdout,
+        SetColors(Colors {
+            foreground: Some(Reset),
+            background: None
+        }),
+    )
+    .unwrap();
+}
+
+const BLUE: Color = Color::Rgb {
+    r: 58,
+    g: 102,
+    b: 167,
+};
+
+const RED: Color = Color::Rgb {
+    r: 211,
+    g: 47,
+    b: 47,
+};
+
 fn read(iterator: &mut StdinIterator) -> io::Result<yeti::Expression> {
-    print!("λ ");
-    io::stdout().flush()?;
+    print_with_color(BLUE, "⛰  ");
     let tokens = yeti::Tokens::new(iterator);
     Ok(yeti::parse(tokens))
 }
@@ -54,7 +91,7 @@ async fn main() -> io::Result<()> {
                 print(expression)?;
                 environment = next_environment;
             }
-            Err(effect) => println!("{:?}\n", effect),
+            Err(effect) => print_with_color(RED, &format!("{:?}\n", effect)),
         }
     }
 }
