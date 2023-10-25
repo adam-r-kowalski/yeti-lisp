@@ -3,15 +3,15 @@ use forge;
 type Result = std::result::Result<(), forge::effect::Effect>;
 
 #[tokio::test]
-async fn evaluate_sql_connect() -> Result {
+async fn sql_connect() -> Result {
     let env = forge::core::environment();
-    let (_, actual) = forge::evaluate_source(env, r#"(sql/connect ":memory:")"#)?;
+    let (_, actual) = forge::evaluate_source(env, r#"(sql/connect)"#)?;
     assert!(matches!(actual, forge::Expression::Sqlite(_)));
     Ok(())
 }
 
 #[tokio::test]
-async fn evaluate_sql_create_table() -> Result {
+async fn create_table_string() -> Result {
     let env = forge::core::environment();
     let (env, actual) = forge::evaluate_source(
         env,
@@ -32,9 +32,9 @@ async fn evaluate_sql_create_table() -> Result {
 }
 
 #[tokio::test]
-async fn evaluate_query_create_table() -> Result {
+async fn get_all_table_names() -> Result {
     let env = forge::core::environment();
-    let (env, _) = forge::evaluate_source(env, r#"(def conn (sql/connect ":memory:"))"#)?;
+    let (env, _) = forge::evaluate_source(env, r#"(def conn (sql/connect))"#)?;
     let (env, _) = forge::evaluate_source(
         env,
         r#"
@@ -47,6 +47,29 @@ async fn evaluate_query_create_table() -> Result {
     )?;
     let (env, actual) = forge::evaluate_source(env, "(sql/tables conn)")?;
     let (_, expected) = forge::evaluate_source(env, r#"[{:name "fruit"}]"#)?;
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[tokio::test]
+async fn insert_into_vector_syntax_string() -> Result {
+    let env = forge::core::environment();
+    let (env, actual) = forge::evaluate_source(
+        env,
+        r#"
+    (sql/string
+     {:insert-into :properties
+      :columns [:name :surname :age]
+      :values [["Jon" "Smith" 34]
+               ["Andrew" "Cooper" 12]
+               ["Jane" "Daniels" 56]]})
+    "#,
+    )?;
+    let (_, expected) = forge::evaluate_source(
+        env,
+        r#"["INSERT INTO properties (name, surname, age) VALUES (?, ?, ?), (?, ?, ?), (?, ?, ?)"
+            "Jon" "Smith" 34 "Andrew" "Cooper" 12 "Jane" "Daniels" 56]"#,
+    )?;
     assert_eq!(actual, expected);
     Ok(())
 }

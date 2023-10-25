@@ -14,10 +14,11 @@ use rusqlite::Connection;
 
 type Result<T> = core::result::Result<T, Effect>;
 
-fn sql_string(expr: Expression) -> Result<Expression> {
-    let map = extract::map(expr)?;
-    let table_name = extract::keyword(extract::key(map.clone(), ":create-table")?)?;
-    let table_name = &table_name[1..];
+fn create_table(
+    map: HashMap<Expression, Expression>,
+    table_name: Expression,
+) -> Result<Expression> {
+    let table_name = &extract::keyword(table_name)?[1..];
     let string = format!("CREATE TABLE {} (", table_name).to_string();
     let columns = extract::array(extract::key(map, ":with-columns")?)?;
     let mut string = columns
@@ -79,16 +80,70 @@ fn sql_string(expr: Expression) -> Result<Expression> {
     Ok(Expression::Array(vector![Expression::String(string)]))
 }
 
-pub fn connect(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
-    let (env, arg) = crate::evaluate(env, args[0].clone())?;
-    let path = extract::string(arg)?;
-    if path == ":memory:" {
-        match Connection::open_in_memory() {
-            Ok(db) => Ok((env, Expression::Sqlite(Sqlite::new(db)))),
-            Err(_) => Err(error("Failed to open SQLite database")),
+fn insert_into(map: HashMap<Expression, Expression>, table_name: Expression) -> Result<Expression> {
+    let table_name = &extract::keyword(table_name)?[1..];
+    let string = format!("INSERT INTO {} (", table_name).to_string();
+    let columns = extract::array(extract::key(map.clone(), ":columns")?)?;
+    let mut string = columns
+        .iter()
+        .enumerate()
+        .try_fold(string, |mut string, (i, column)| {
+            if i > 0 {
+                string.push_str(", ");
+            }
+            let column = extract::keyword(column.clone())?;
+            let column = &column[1..];
+            string.push_str(column);
+            Ok(string)
+        })?;
+    string.push_str(") VALUES");
+    let placeholder = columns
+        .iter()
+        .enumerate()
+        .fold(String::new(), |mut string, (i, _)| {
+            if i > 0 {
+                string.push_str(", ");
+            }
+            string.push_str("?");
+            string
+        });
+    let values = extract::array(extract::key(map, ":values")?)?;
+    let string = (0..values.len()).fold(string, |mut string, i| {
+        if i > 0 {
+            string.push_str(",");
         }
+        string.push_str(" (");
+        string.push_str(&placeholder);
+        string.push(')');
+        string
+    });
+    let result = vector![Expression::String(string)];
+    let result = values.iter().try_fold(result, |result, value| {
+        let row = extract::array(value.clone())?;
+        let result = row.iter().fold(result, |mut result, column| {
+            result.push_back(column.clone());
+            result
+        });
+        Ok(result)
+    })?;
+    Ok(Expression::Array(result))
+}
+
+fn sql_string(expr: Expression) -> Result<Expression> {
+    let map = extract::map(expr)?;
+    if let Some(table_name) = map.get(&Expression::Keyword(":create-table".to_string())) {
+        create_table(map.clone(), table_name.clone())
+    } else if let Some(table_name) = map.get(&Expression::Keyword(":insert-into".to_string())) {
+        insert_into(map.clone(), table_name.clone())
     } else {
-        Err(error("Only :memory: is supported"))
+        Err(error("Unsupported SQL operation"))
+    }
+}
+
+pub fn connect(env: Environment, _args: Vector<Expression>) -> Result<(Environment, Expression)> {
+    match Connection::open_in_memory() {
+        Ok(db) => Ok((env, Expression::Sqlite(Sqlite::new(db)))),
+        Err(_) => Err(error("Failed to open SQLite database")),
     }
 }
 
