@@ -1,14 +1,14 @@
-use forge;
+use yeti;
 
-type Result = std::result::Result<(), forge::effect::Effect>;
+type Result = std::result::Result<(), yeti::effect::Effect>;
 
 #[tokio::test]
 async fn evaluate_server_with_string_route_and_no_port() -> Result {
-    let tokens = forge::Tokens::from_str(r#"(server/start {:routes {"/" "Hello Forge"}})"#);
-    let expression = forge::parse(tokens);
-    let environment = forge::core::environment();
-    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
-    let expected = forge::Expression::Nil;
+    let tokens = yeti::Tokens::from_str(r#"(server/start {:routes {"/" "Hello Forge"}})"#);
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let expected = yeti::Expression::Nil;
     assert_eq!(actual, expected);
     let body = reqwest::get("http://localhost:3000")
         .await
@@ -22,16 +22,16 @@ async fn evaluate_server_with_string_route_and_no_port() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_with_string_route() -> Result {
-    let tokens = forge::Tokens::from_str(
+    let tokens = yeti::Tokens::from_str(
         r#"
         (server/start {:port 4000
                        :routes {"/" "Hello Forge"}})
         "#,
     );
-    let expression = forge::parse(tokens);
-    let environment = forge::core::environment();
-    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
-    let expected = forge::Expression::Nil;
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let expected = yeti::Expression::Nil;
     assert_eq!(actual, expected);
     let body = reqwest::get("http://localhost:4000")
         .await
@@ -45,16 +45,16 @@ async fn evaluate_server_with_string_route() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_with_html_route() -> Result {
-    let tokens = forge::Tokens::from_str(
+    let tokens = yeti::Tokens::from_str(
         r#"
         (server/start {:port 8080
                        :routes {"/" [:ul [:li "first"] [:li "second"]]}})
         "#,
     );
-    let expression = forge::parse(tokens);
-    let environment = forge::core::environment();
-    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
-    let expected = forge::Expression::Nil;
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let expected = yeti::Expression::Nil;
     assert_eq!(actual, expected);
     let body = reqwest::get("http://localhost:8080")
         .await
@@ -68,16 +68,16 @@ async fn evaluate_server_with_html_route() -> Result {
 
 #[tokio::test]
 async fn evaluate_stop() -> Result {
-    let tokens = forge::Tokens::from_str("(server/start {:port 9090})");
-    let expression = forge::parse(tokens);
-    let environment = forge::core::environment();
-    let (environment, actual) = forge::evaluate(environment, expression)?;
-    let expected = forge::Expression::Nil;
+    let tokens = yeti::Tokens::from_str("(server/start {:port 9090})");
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (environment, actual) = yeti::evaluate(environment, expression)?;
+    let expected = yeti::Expression::Nil;
     assert_eq!(actual, expected);
-    let tokens = forge::Tokens::from_str("(server/stop {:port 9090})");
-    let expression = forge::parse(tokens);
-    let (_, actual) = forge::evaluate(environment, expression)?;
-    let expected = forge::Expression::Nil;
+    let tokens = yeti::Tokens::from_str("(server/stop {:port 9090})");
+    let expression = yeti::parse(tokens);
+    let (_, actual) = yeti::evaluate(environment, expression)?;
+    let expected = yeti::Expression::Nil;
     assert_eq!(actual, expected);
     Ok(())
 }

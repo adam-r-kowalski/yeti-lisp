@@ -1,4 +1,4 @@
-use forge;
+use yeti;
 use std::io::{self, Write};
 
 struct StdinIterator {
@@ -30,14 +30,14 @@ impl Iterator for StdinIterator {
     }
 }
 
-fn read(iterator: &mut StdinIterator) -> io::Result<forge::Expression> {
+fn read(iterator: &mut StdinIterator) -> io::Result<yeti::Expression> {
     print!("λ ");
     io::stdout().flush()?;
-    let tokens = forge::Tokens::new(iterator);
-    Ok(forge::parse(tokens))
+    let tokens = yeti::Tokens::new(iterator);
+    Ok(yeti::parse(tokens))
 }
 
-fn print(expression: forge::Expression) -> io::Result<()> {
+fn print(expression: yeti::Expression) -> io::Result<()> {
     io::stdout().write_all(format!("{}", expression).as_bytes())?;
     println!("\n");
     Ok(())
@@ -45,11 +45,11 @@ fn print(expression: forge::Expression) -> io::Result<()> {
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
-    let mut environment = forge::core::environment();
+    let mut environment = yeti::core::environment();
     let mut iterator = StdinIterator::new();
     loop {
         let expression = read(&mut iterator)?;
-        match forge::evaluate(environment.clone(), expression) {
+        match yeti::evaluate(environment.clone(), expression) {
             Ok((next_environment, expression)) => {
                 print(expression)?;
                 environment = next_environment;

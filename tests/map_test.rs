@@ -1,83 +1,83 @@
-use forge;
+use yeti;
 use im::hashmap;
 use rug::Integer;
 
-type Result = std::result::Result<(), forge::effect::Effect>;
+type Result = std::result::Result<(), yeti::effect::Effect>;
 
 #[test]
 fn get_key_from_map() -> Result {
-    let tokens = forge::Tokens::from_str("(get {:a 1} :a)");
-    let expression = forge::parse(tokens);
-    let environment = forge::core::environment();
-    let (_, actual) = forge::evaluate(environment, expression)?;
-    let expected = forge::Expression::Integer(Integer::from(1));
+    let tokens = yeti::Tokens::from_str("(get {:a 1} :a)");
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (_, actual) = yeti::evaluate(environment, expression)?;
+    let expected = yeti::Expression::Integer(Integer::from(1));
     assert_eq!(actual, expected);
     Ok(())
 }
 
 #[test]
 fn get_non_existing_key_from_map() -> Result {
-    let tokens = forge::Tokens::from_str("(get {:a 1} :b)");
-    let expression = forge::parse(tokens);
-    let environment = forge::core::environment();
-    let (_, actual) = forge::evaluate(environment, expression)?;
-    let expected = forge::Expression::Nil;
+    let tokens = yeti::Tokens::from_str("(get {:a 1} :b)");
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (_, actual) = yeti::evaluate(environment, expression)?;
+    let expected = yeti::Expression::Nil;
     assert_eq!(actual, expected);
     Ok(())
 }
 
 #[test]
 fn get_non_existing_key_from_map_with_default_value() -> Result {
-    let tokens = forge::Tokens::from_str("(get {:a 1} :b 5)");
-    let expression = forge::parse(tokens);
-    let environment = forge::core::environment();
-    let (_, actual) = forge::evaluate(environment, expression)?;
-    let expected = forge::Expression::Integer(Integer::from(5));
+    let tokens = yeti::Tokens::from_str("(get {:a 1} :b 5)");
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (_, actual) = yeti::evaluate(environment, expression)?;
+    let expected = yeti::Expression::Integer(Integer::from(5));
     assert_eq!(actual, expected);
     Ok(())
 }
 
 #[test]
 fn evaluate_key_on_map() -> Result {
-    let tokens = forge::Tokens::from_str("(:a {:a 1})");
-    let expression = forge::parse(tokens);
-    let environment = forge::Environment::new();
-    let (_, actual) = forge::evaluate(environment, expression)?;
-    let expected = forge::Expression::Integer(Integer::from(1));
+    let tokens = yeti::Tokens::from_str("(:a {:a 1})");
+    let expression = yeti::parse(tokens);
+    let environment = yeti::Environment::new();
+    let (_, actual) = yeti::evaluate(environment, expression)?;
+    let expected = yeti::Expression::Integer(Integer::from(1));
     assert_eq!(actual, expected);
     Ok(())
 }
 
 #[test]
 fn evaluate_map_on_key() -> Result {
-    let tokens = forge::Tokens::from_str("({:a 1} :a)");
-    let expression = forge::parse(tokens);
-    let environment = forge::Environment::new();
-    let (_, actual) = forge::evaluate(environment, expression)?;
-    let expected = forge::Expression::Integer(Integer::from(1));
+    let tokens = yeti::Tokens::from_str("({:a 1} :a)");
+    let expression = yeti::parse(tokens);
+    let environment = yeti::Environment::new();
+    let (_, actual) = yeti::evaluate(environment, expression)?;
+    let expected = yeti::Expression::Integer(Integer::from(1));
     assert_eq!(actual, expected);
     Ok(())
 }
 
 #[test]
 fn evaluate_map_on_key_non_keyword() -> Result {
-    let tokens = forge::Tokens::from_str("({1 :a} 1)");
-    let expression = forge::parse(tokens);
-    let environment = forge::Environment::new();
-    let (_, actual) = forge::evaluate(environment, expression)?;
-    let expected = forge::Expression::Keyword(":a".to_string());
+    let tokens = yeti::Tokens::from_str("({1 :a} 1)");
+    let expression = yeti::parse(tokens);
+    let environment = yeti::Environment::new();
+    let (_, actual) = yeti::evaluate(environment, expression)?;
+    let expected = yeti::Expression::Keyword(":a".to_string());
     assert_eq!(actual, expected);
     Ok(())
 }
 
 #[test]
 fn evaluate_assoc() -> Result {
-    let tokens = forge::Tokens::from_str("(assoc {} :a 1)");
-    let expression = forge::parse(tokens);
-    let environment = forge::core::environment();
-    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
-    let expected = forge::Expression::Map(hashmap! {
-        forge::Expression::Keyword(":a".to_string()) => forge::Expression::Integer(Integer::from(1)),
+    let tokens = yeti::Tokens::from_str("(assoc {} :a 1)");
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let expected = yeti::Expression::Map(hashmap! {
+        yeti::Expression::Keyword(":a".to_string()) => yeti::Expression::Integer(Integer::from(1)),
     });
     assert_eq!(actual, expected);
     Ok(())
@@ -85,24 +85,24 @@ fn evaluate_assoc() -> Result {
 
 #[test]
 fn evaluate_dissoc() -> Result {
-    let tokens = forge::Tokens::from_str("(dissoc {:a 1} :a)");
-    let expression = forge::parse(tokens);
-    let environment = forge::core::environment();
-    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
-    let expected = forge::Expression::Map(hashmap! {});
+    let tokens = yeti::Tokens::from_str("(dissoc {:a 1} :a)");
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let expected = yeti::Expression::Map(hashmap! {});
     assert_eq!(actual, expected);
     Ok(())
 }
 
 #[test]
 fn evaluate_merge() -> Result {
-    let tokens = forge::Tokens::from_str("(merge {:a 1} {:b 2})");
-    let expression = forge::parse(tokens);
-    let environment = forge::core::environment();
-    let (_, actual) = forge::evaluate(environment.clone(), expression)?;
-    let expected = forge::Expression::Map(hashmap! {
-        forge::Expression::Keyword(":a".to_string()) => forge::Expression::Integer(Integer::from(1)),
-        forge::Expression::Keyword(":b".to_string()) => forge::Expression::Integer(Integer::from(2)),
+    let tokens = yeti::Tokens::from_str("(merge {:a 1} {:b 2})");
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let expected = yeti::Expression::Map(hashmap! {
+        yeti::Expression::Keyword(":a".to_string()) => yeti::Expression::Integer(Integer::from(1)),
+        yeti::Expression::Keyword(":b".to_string()) => yeti::Expression::Integer(Integer::from(2)),
     });
     assert_eq!(actual, expected);
     Ok(())
