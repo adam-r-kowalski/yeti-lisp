@@ -73,3 +73,60 @@ async fn insert_into_vector_syntax_string() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[tokio::test]
+async fn select_string() -> Result {
+    let env = yeti::core::environment();
+    let (env, actual) = yeti::evaluate_source(
+        env,
+        r#"
+    (sql/string
+     {:select [:a :b :c]
+      :from :foo
+      :where [:= :foo.a "baz"]})
+    "#,
+    )?;
+    let (_, expected) =
+        yeti::evaluate_source(env, r#"["SELECT a, b, c FROM foo WHERE foo.a = ?" "baz"]"#)?;
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[tokio::test]
+async fn insert_and_select() -> Result {
+    let env = yeti::core::environment();
+    let (env, _) = yeti::evaluate_source(env, r#"(def conn (sql/connect))"#)?;
+    let (env, _) = yeti::evaluate_source(
+        env,
+        r#"
+    (sql/execute! conn
+     {:create-table :properties
+      :with-columns [[:name [:varchar 32] [:not nil]]
+                     [:surname [:varchar 32] [:not nil]]
+                     [:age :int [:not nil]]]})
+    "#,
+    )?;
+    let (env, _) = yeti::evaluate_source(
+        env,
+        r#"
+    (sql/execute! conn
+     {:insert-into :properties
+      :columns [:name :surname :age]
+      :values [["Jon" "Smith" 34]
+               ["Andrew" "Cooper" 12]
+               ["Jane" "Daniels" 56]]})
+    "#,
+    )?;
+    let (env, actual) = yeti::evaluate_source(
+        env,
+        r#"
+    (sql/query conn
+     {:select [:name, :surname]
+      :from :properties
+      :where [:= :age 34]})
+    "#,
+    )?;
+    let (_, expected) = yeti::evaluate_source(env, r#"[{:name "Jon" :surname "Smith"}]"#)?;
+    assert_eq!(actual, expected);
+    Ok(())
+}

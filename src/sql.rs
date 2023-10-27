@@ -10,7 +10,7 @@ use alloc::string::String;
 use alloc::string::ToString;
 use alloc::vec::Vec;
 use im::{vector, HashMap, Vector};
-use rusqlite::Connection;
+use rusqlite::{Connection, ToSql};
 
 type Result<T> = core::result::Result<T, Effect>;
 
@@ -129,12 +129,53 @@ fn insert_into(map: HashMap<Expression, Expression>, table_name: Expression) -> 
     Ok(Expression::Array(result))
 }
 
+fn select(map: HashMap<Expression, Expression>, columns: Expression) -> Result<Expression> {
+    let columns = extract::array(columns)?;
+    let string = "SELECT".to_string();
+    let mut string = columns
+        .iter()
+        .enumerate()
+        .try_fold(string, |mut string, (i, column)| {
+            if i > 0 {
+                string.push_str(",");
+            }
+            string.push(' ');
+            let column = extract::keyword(column.clone())?;
+            string.push_str(&column[1..]);
+            Ok(string)
+        })?;
+    let from = extract::keyword(extract::key(map.clone(), ":from")?)?;
+    let from = &from[1..];
+    string.push_str(" FROM ");
+    string.push_str(from);
+    if let Some(where_clause) = map.get(&Expression::Keyword(":where".to_string())) {
+        let where_clause = extract::array(where_clause.clone())?;
+        let op = extract::keyword(where_clause[0].clone())?;
+        if op != ":=" {
+            return Err(error("Unsupported operator"));
+        }
+        let lhs = extract::keyword(where_clause[1].clone())?;
+        let lhs = &lhs[1..];
+        let rhs = where_clause[2].clone();
+        string.push_str(" WHERE ");
+        string.push_str(lhs);
+        string.push_str(" = ?");
+        let result = vector![Expression::String(string), rhs];
+        Ok(Expression::Array(result))
+    } else {
+        let result = vector![Expression::String(string)];
+        Ok(Expression::Array(result))
+    }
+}
+
 fn sql_string(expr: Expression) -> Result<Expression> {
     let map = extract::map(expr)?;
     if let Some(table_name) = map.get(&Expression::Keyword(":create-table".to_string())) {
         create_table(map.clone(), table_name.clone())
     } else if let Some(table_name) = map.get(&Expression::Keyword(":insert-into".to_string())) {
         insert_into(map.clone(), table_name.clone())
+    } else if let Some(columns) = map.get(&Expression::Keyword(":select".to_string())) {
+        select(map.clone(), columns.clone())
     } else {
         Err(error("Unsupported SQL operation"))
     }
@@ -153,15 +194,82 @@ pub fn string(env: Environment, args: Vector<Expression>) -> Result<(Environment
     Ok((env, expr))
 }
 
+impl ToSql for Expression {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput> {
+        match self {
+            Expression::Integer(i) => Ok(rusqlite::types::ToSqlOutput::Owned(
+                rusqlite::types::Value::Integer(i.to_i64().unwrap()),
+            )),
+            Expression::String(s) => Ok(rusqlite::types::ToSqlOutput::Owned(
+                rusqlite::types::Value::Text(s.clone()),
+            )),
+            Expression::Nil => Ok(rusqlite::types::ToSqlOutput::Owned(
+                rusqlite::types::Value::Null,
+            )),
+            e => panic!("Unsupported data type: {:?}", e),
+        }
+    }
+}
+
+pub fn query(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
+    let (env, args) = evaluate_expressions(env, args)?;
+    let db = extract::sqlite(args[0].clone())?;
+    let array = extract::array(sql_string(args[1].clone())?)?;
+    let string = extract::string(array[0].clone())?;
+    let parameters = array
+        .iter()
+        .skip(1)
+        .map(|p| p as &dyn ToSql)
+        .collect::<Vec<_>>();
+    let result = db.connection.prepare(&string);
+    match result {
+        Ok(mut stmt) => {
+            let column_names: Vec<String> =
+                stmt.column_names().iter().map(|c| c.to_string()).collect();
+            let rows: Vector<Expression> = stmt
+                .query_map(&parameters[..], |row| {
+                    let map = column_names.iter().enumerate().fold(
+                        HashMap::new(),
+                        |mut map, (i, name)| {
+                            match row.get_ref(i).unwrap().data_type() {
+                                rusqlite::types::Type::Text => {
+                                    map.insert(
+                                        Expression::Keyword(format!(":{}", name)),
+                                        Expression::String(row.get(i).unwrap()),
+                                    );
+                                }
+                                _ => panic!("Unsupported data type"),
+                            }
+                            map
+                        },
+                    );
+                    Ok(Expression::Map(map))
+                })
+                .unwrap()
+                .map(|row| row.unwrap())
+                .collect();
+            Ok((env, Expression::Array(rows)))
+        }
+        Err(e) => {
+            return Err(error(&format!("Failed to execute query: {}", e)));
+        }
+    }
+}
+
 pub fn execute(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
     let (env, args) = evaluate_expressions(env, args)?;
     let db = extract::sqlite(args[0].clone())?;
     let array = extract::array(sql_string(args[1].clone())?)?;
     let string = extract::string(array[0].clone())?;
-    if let Err(e) = db.connection.execute(&string, ()) {
-        return Err(error(&format!("Failed to execute query: {}", e)));
+    let parameters = array
+        .iter()
+        .skip(1)
+        .map(|p| p as &dyn ToSql)
+        .collect::<Vec<_>>();
+    match db.connection.execute(&string, &parameters[..]) {
+        Ok(_) => Ok((env, Expression::Nil)),
+        Err(e) => Err(error(&format!("Failed to execute query: {}", e))),
     }
-    Ok((env, Expression::Nil))
 }
 
 pub fn tables(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
