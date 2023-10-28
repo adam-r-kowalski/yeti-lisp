@@ -1,35 +1,31 @@
 extern crate alloc;
 
-use crate::Expression;
-use alloc::format;
 use alloc::string::{String, ToString};
-use alloc::vec::Vec;
-use im::{vector, Vector};
+use core::error::Error;
 
 #[derive(PartialEq, Eq, Clone)]
-pub struct Effect {
-    pub kind: String,
-    pub arguments: Vector<Expression>,
+pub enum Effect {
+    Error(String),
 }
 
 pub fn error(message: &str) -> Effect {
-    Effect {
-        kind: "error".to_string(),
-        arguments: vector![Expression::String(message.to_string())],
-    }
+    Effect::Error(message.to_string())
 }
 
 impl core::fmt::Debug for Effect {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(
-            f,
-            "#effect({} {})",
-            self.kind,
-            self.arguments
-                .iter()
-                .map(|e| format!("{}", e))
-                .collect::<Vec<String>>()
-                .join(" ")
-        )
+        match self {
+            Effect::Error(message) => write!(f, "#effect::error({})", message),
+        }
     }
 }
+
+impl core::fmt::Display for Effect {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Effect::Error(message) => write!(f, "#effect::error({})", message),
+        }
+    }
+}
+
+impl Error for Effect {}

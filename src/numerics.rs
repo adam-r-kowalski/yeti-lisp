@@ -30,6 +30,10 @@ impl Float {
         let float = rug::Float::with_val(bits, parsed);
         Float(float)
     }
+
+    pub fn to_f64(&self) -> f64 {
+        self.0.to_f64()
+    }
 }
 
 impl core::fmt::Debug for Float {

@@ -5,6 +5,7 @@ use crate::evaluate_expressions;
 use crate::expression::{Environment, Sqlite};
 use crate::extract;
 use crate::Expression;
+use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::String;
 use alloc::string::ToString;
@@ -200,13 +201,25 @@ impl ToSql for Expression {
             Expression::Integer(i) => Ok(rusqlite::types::ToSqlOutput::Owned(
                 rusqlite::types::Value::Integer(i.to_i64().unwrap()),
             )),
+            Expression::Float(f) => Ok(rusqlite::types::ToSqlOutput::Owned(
+                rusqlite::types::Value::Real(f.to_f64()),
+            )),
+            Expression::Ratio(r) => Ok(rusqlite::types::ToSqlOutput::Owned(
+                rusqlite::types::Value::Real(r.to_f64()),
+            )),
             Expression::String(s) => Ok(rusqlite::types::ToSqlOutput::Owned(
                 rusqlite::types::Value::Text(s.clone()),
             )),
             Expression::Nil => Ok(rusqlite::types::ToSqlOutput::Owned(
                 rusqlite::types::Value::Null,
             )),
-            e => panic!("Unsupported data type: {:?}", e),
+            Expression::Bool(b) => Ok(rusqlite::types::ToSqlOutput::Owned(
+                rusqlite::types::Value::Integer(if *b { 1 } else { 0 }),
+            )),
+            _ => {
+                let effect = error(&format!("Unsupported data type: {:?}", self));
+                Err(rusqlite::Error::ToSqlConversionFailure(Box::new(effect)))
+            }
         }
     }
 }

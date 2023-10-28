@@ -91,7 +91,7 @@ async fn main() -> io::Result<()> {
                 print(expression)?;
                 environment = next_environment;
             }
-            Err(effect) => print_with_color(RED, &format!("{:?}\n\n", effect)),
+            Err(effect) => print_with_color(RED, &format!("{}\n\n", effect)),
         }
     }
 }
