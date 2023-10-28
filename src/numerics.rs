@@ -34,6 +34,12 @@ impl Float {
     pub fn to_f64(&self) -> f64 {
         self.0.to_f64()
     }
+
+    pub fn from_f64(f: f64) -> Float {
+        let bits = f64::MANTISSA_DIGITS;
+        let float = rug::Float::with_val(bits, f);
+        Float(float)
+    }
 }
 
 impl core::fmt::Debug for Float {

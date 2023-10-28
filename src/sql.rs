@@ -3,6 +3,7 @@ extern crate alloc;
 use crate::effect::{error, Effect};
 use crate::expression::{Environment, Sqlite};
 use crate::extract;
+use crate::numerics::Float;
 use crate::Expression;
 use crate::{evaluate_expressions, evaluate_source};
 use alloc::boxed::Box;
@@ -11,6 +12,7 @@ use alloc::string::String;
 use alloc::string::ToString;
 use alloc::vec::Vec;
 use im::{vector, HashMap, Vector};
+use rusqlite::types::{FromSql, FromSqlResult, ToSqlOutput, Value, ValueRef};
 use rusqlite::{Connection, ToSql};
 
 type Result<T> = core::result::Result<T, Effect>;
@@ -196,30 +198,34 @@ pub fn string(env: Environment, args: Vector<Expression>) -> Result<(Environment
 }
 
 impl ToSql for Expression {
-    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput> {
+    fn to_sql(&self) -> rusqlite::Result<ToSqlOutput> {
         match self {
-            Expression::Integer(i) => Ok(rusqlite::types::ToSqlOutput::Owned(
-                rusqlite::types::Value::Integer(i.to_i64().unwrap()),
-            )),
-            Expression::Float(f) => Ok(rusqlite::types::ToSqlOutput::Owned(
-                rusqlite::types::Value::Real(f.to_f64()),
-            )),
-            Expression::Ratio(r) => Ok(rusqlite::types::ToSqlOutput::Owned(
-                rusqlite::types::Value::Real(r.to_f64()),
-            )),
-            Expression::String(s) => Ok(rusqlite::types::ToSqlOutput::Owned(
-                rusqlite::types::Value::Text(s.clone()),
-            )),
-            Expression::Nil => Ok(rusqlite::types::ToSqlOutput::Owned(
-                rusqlite::types::Value::Null,
-            )),
-            Expression::Bool(b) => Ok(rusqlite::types::ToSqlOutput::Owned(
-                rusqlite::types::Value::Integer(if *b { 1 } else { 0 }),
-            )),
+            Expression::Integer(i) => Ok(ToSqlOutput::Owned(Value::Integer(i.to_i64().unwrap()))),
+            Expression::Float(f) => Ok(ToSqlOutput::Owned(Value::Real(f.to_f64()))),
+            Expression::Ratio(r) => Ok(ToSqlOutput::Owned(Value::Real(r.to_f64()))),
+            Expression::String(s) => Ok(ToSqlOutput::Owned(Value::Text(s.clone()))),
+            Expression::Nil => Ok(ToSqlOutput::Owned(Value::Null)),
+            Expression::Bool(b) => Ok(ToSqlOutput::Owned(Value::Integer(if *b { 1 } else { 0 }))),
             _ => {
                 let effect = error(&format!("Unsupported data type: {:?}", self));
                 Err(rusqlite::Error::ToSqlConversionFailure(Box::new(effect)))
             }
+        }
+    }
+}
+
+impl FromSql for Expression {
+    fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
+        match value {
+            ValueRef::Null => Ok(Expression::Nil),
+            ValueRef::Integer(int) => Ok(Expression::Integer(rug::Integer::from(int))),
+            ValueRef::Real(float) => Ok(Expression::Float(Float::from_f64(float))),
+            ValueRef::Text(text) => Ok(Expression::String(
+                String::from_utf8_lossy(text).into_owned(),
+            )),
+            ValueRef::Blob(blob) => Ok(Expression::String(
+                String::from_utf8_lossy(blob).into_owned(),
+            )),
         }
     }
 }
@@ -241,31 +247,25 @@ pub fn query(env: Environment, args: Vector<Expression>) -> Result<(Environment,
                 stmt.column_names().iter().map(|c| c.to_string()).collect();
             let rows: Vector<Expression> = stmt
                 .query_map(&parameters[..], |row| {
-                    let map = column_names.iter().enumerate().fold(
+                    let result = column_names.iter().enumerate().try_fold(
                         HashMap::new(),
                         |mut map, (i, name)| {
-                            match row.get_ref(i).unwrap().data_type() {
-                                rusqlite::types::Type::Text => {
-                                    map.insert(
-                                        Expression::Keyword(format!(":{}", name)),
-                                        Expression::String(row.get(i).unwrap()),
-                                    );
-                                }
-                                _ => panic!("Unsupported data type"),
-                            }
-                            map
+                            let value: Expression = row.get(i)?;
+                            map.insert(Expression::Keyword(format!(":{}", name)), value);
+                            Ok(map)
                         },
                     );
-                    Ok(Expression::Map(map))
+                    match result {
+                        Ok(map) => Ok(Expression::Map(map)),
+                        Err(e) => Err(e),
+                    }
                 })
-                .unwrap()
+                .or_else(|e| Err(error(&format!("Failed to execute query: {}", e))))?
                 .map(|row| row.unwrap())
                 .collect();
             Ok((env, Expression::Array(rows)))
         }
-        Err(e) => {
-            return Err(error(&format!("Failed to execute query: {}", e)));
-        }
+        Err(e) => Err(error(&format!("Failed to execute query: {}", e))),
     }
 }
 
