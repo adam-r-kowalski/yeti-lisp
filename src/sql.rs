@@ -1,10 +1,10 @@
 extern crate alloc;
 
 use crate::effect::{error, Effect};
-use crate::evaluate_expressions;
 use crate::expression::{Environment, Sqlite};
 use crate::extract;
 use crate::Expression;
+use crate::{evaluate_expressions, evaluate_source};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::String;
@@ -286,41 +286,14 @@ pub fn execute(env: Environment, args: Vector<Expression>) -> Result<(Environmen
 }
 
 pub fn tables(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
-    let (env, args) = evaluate_expressions(env, args)?;
-    let db = extract::sqlite(args[0].clone())?;
-    let result = db
-        .connection
-        .prepare("SELECT name FROM sqlite_master WHERE type='table';");
-    match result {
-        Ok(mut stmt) => {
-            let column_names: Vec<String> =
-                stmt.column_names().iter().map(|c| c.to_string()).collect();
-            let rows: Vector<Expression> = stmt
-                .query_map([], |row| {
-                    let map = column_names.iter().enumerate().fold(
-                        HashMap::new(),
-                        |mut map, (i, name)| {
-                            match row.get_ref(i).unwrap().data_type() {
-                                rusqlite::types::Type::Text => {
-                                    map.insert(
-                                        Expression::Keyword(format!(":{}", name)),
-                                        Expression::String(row.get(i).unwrap()),
-                                    );
-                                }
-                                _ => panic!("Unsupported data type"),
-                            }
-                            map
-                        },
-                    );
-                    Ok(Expression::Map(map))
-                })
-                .unwrap()
-                .map(|row| row.unwrap())
-                .collect();
-            Ok((env, Expression::Array(rows)))
-        }
-        Err(e) => {
-            return Err(error(&format!("Failed to execute query: {}", e)));
-        }
-    }
+    let db = args[0].clone();
+    let (env, q) = evaluate_source(
+        env,
+        r#"
+        {:select [:name]
+         :from :sqlite_master
+         :where [:= :type "table"]}
+        "#,
+    )?;
+    query(env, vector![db, q])
 }
