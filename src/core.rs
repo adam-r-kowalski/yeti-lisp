@@ -135,6 +135,19 @@ pub fn environment() -> Environment {
                 }
               }
             ),
+            "let".to_string() => NativeFunction(
+              |env, args| {
+                let (bindings, body) = (args[0].clone(), args[1].clone());
+                let bindings = extract::array(bindings)?;
+                let env = bindings.iter().array_chunks().try_fold(env, |env, [name, value]| {
+                    let name = extract::symbol(name.clone())?;
+                    let (mut env, value) = crate::evaluate(env, value.clone())?;
+                    env.insert(name, value);
+                    Ok(env)
+                })?;
+                crate::evaluate(env, body)
+              }
+            ),
             "assoc".to_string() => NativeFunction(map::assoc),
             "dissoc".to_string() => NativeFunction(map::dissoc),
             "merge".to_string() => NativeFunction(map::merge),
