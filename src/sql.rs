@@ -133,7 +133,11 @@ fn insert_into(map: HashMap<Expression, Expression>, table_name: Expression) -> 
 }
 
 fn select(map: HashMap<Expression, Expression>, columns: Expression) -> Result<Expression> {
-    let columns = extract::array(columns)?;
+    let columns = match columns {
+        Expression::Array(a) => a,
+        Expression::Keyword(k) => vector![Expression::Keyword(k)],
+        _ => return Err(error("Expected array or keyword")),
+    };
     let string = "SELECT".to_string();
     let mut string = columns
         .iter()
@@ -154,15 +158,23 @@ fn select(map: HashMap<Expression, Expression>, columns: Expression) -> Result<E
     if let Some(where_clause) = map.get(&Expression::Keyword(":where".to_string())) {
         let where_clause = extract::array(where_clause.clone())?;
         let op = extract::keyword(where_clause[0].clone())?;
-        if op != ":=" {
-            return Err(error("Unsupported operator"));
-        }
+        let op = match op.as_ref() {
+            ":=" => "=",
+            ":!=" => "!=",
+            ":<" => "<",
+            ":<=" => "<=",
+            ":>" => ">",
+            ":>=" => ">=",
+            _ => return Err(error(&format!("Unsupported operator {}", op))),
+        };
         let lhs = extract::keyword(where_clause[1].clone())?;
         let lhs = &lhs[1..];
         let rhs = where_clause[2].clone();
         string.push_str(" WHERE ");
         string.push_str(lhs);
-        string.push_str(" = ?");
+        string.push_str(" ");
+        string.push_str(op);
+        string.push_str(" ?");
         let result = vector![Expression::String(string), rhs];
         Ok(Expression::Array(result))
     } else {

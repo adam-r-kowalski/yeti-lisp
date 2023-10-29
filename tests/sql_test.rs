@@ -93,6 +93,40 @@ async fn select_string() -> Result {
 }
 
 #[tokio::test]
+async fn select_single_column() -> Result {
+    let env = yeti::core::environment();
+    let (env, actual) = yeti::evaluate_source(
+        env,
+        r#"
+    (sql/string
+     {:select :a
+      :from :foo
+      :where [:= :a "baz"]})
+    "#,
+    )?;
+    let (_, expected) = yeti::evaluate_source(env, r#"["SELECT a FROM foo WHERE a = ?" "baz"]"#)?;
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[tokio::test]
+async fn select_not_equal() -> Result {
+    let env = yeti::core::environment();
+    let (env, actual) = yeti::evaluate_source(
+        env,
+        r#"
+    (sql/string
+     {:select :a
+      :from :foo
+      :where [:!= :a "baz"]})
+    "#,
+    )?;
+    let (_, expected) = yeti::evaluate_source(env, r#"["SELECT a FROM foo WHERE a != ?" "baz"]"#)?;
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[tokio::test]
 async fn insert_and_select() -> Result {
     let env = yeti::core::environment();
     let (env, _) = yeti::evaluate_source(env, r#"(def conn (sql/connect))"#)?;
