@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use yeti;
 use im::{hashmap, vector, HashMap};
 use rug::{Integer, Rational};
 use spin::Mutex;
+use yeti;
 
 type Result = std::result::Result<(), yeti::effect::Effect>;
 
@@ -133,10 +133,7 @@ fn evaluate_def() -> Result {
     let expected = yeti::Expression::Nil;
     assert_eq!(actual, expected);
     let mut expected_environment = environment;
-    expected_environment.insert(
-        "x".to_string(),
-        yeti::Expression::Integer(Integer::from(5)),
-    );
+    expected_environment.insert("x".to_string(), yeti::Expression::Integer(Integer::from(5)));
     assert_eq!(actual_environment.bindings, expected_environment.bindings);
     Ok(())
 }
@@ -320,5 +317,26 @@ fn evaluate_equality_of_floats() -> Result {
     let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
     let expected = yeti::Expression::Bool(true);
     assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[test]
+fn evaluate_assert_true_does_nothing() -> Result {
+    let tokens = yeti::Tokens::from_str("(assert true)");
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let expected = yeti::Expression::Nil;
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[test]
+fn evaluate_assert_false_raises_error() -> Result {
+    let tokens = yeti::Tokens::from_str("(assert false)");
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let result = yeti::evaluate(environment.clone(), expression);
+    assert!(result.is_err());
     Ok(())
 }

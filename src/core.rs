@@ -10,6 +10,14 @@ use alloc::string::ToString;
 use im::{hashmap, vector, HashMap};
 use rug;
 
+pub fn truthy(expression: &Expression) -> bool {
+    match expression {
+        Expression::Nil => false,
+        Expression::Bool(false) => false,
+        _ => true,
+    }
+}
+
 pub fn environment() -> Environment {
     Environment {
         bindings: hashmap! {
@@ -61,10 +69,7 @@ pub fn environment() -> Environment {
               |env, args| {
                 let (condition, then, otherwise) = (args[0].clone(), args[1].clone(), args[2].clone());
                 let (env, condition) = crate::evaluate(env, condition)?;
-                match condition {
-                    Expression::Nil | Expression::Bool(false) => crate::evaluate(env, otherwise),
-                    _ => crate::evaluate(env, then),
-                }
+                crate::evaluate(env, if truthy(&condition) { then } else { otherwise })
               }
             ),
             "def".to_string() => NativeFunction(
@@ -118,6 +123,16 @@ pub fn environment() -> Environment {
                 let tokens = crate::Tokens::from_str(&s);
                 let expression = crate::parse(tokens);
                 Ok((env, expression))
+              }
+            ),
+            "assert".to_string() => NativeFunction(
+              |env, args| {
+                let (env, arg) = crate::evaluate(env, args[0].clone())?;
+                if truthy(&arg) {
+                    Ok((env, Expression::Nil))
+                } else {
+                    Err(error("Assertion failed"))
+                }
               }
             ),
             "assoc".to_string() => NativeFunction(map::assoc),
