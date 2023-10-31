@@ -1,6 +1,6 @@
 extern crate alloc;
 use crate::effect::{error, Effect};
-use crate::expression::Sqlite;
+use crate::expression::{Call, Sqlite};
 use crate::Expression;
 use alloc::format;
 use alloc::string::{String, ToString};
@@ -47,6 +47,13 @@ pub fn array(expr: Expression) -> Result<Vector<Expression>> {
     match expr {
         Expression::Array(a) => Ok(a),
         _ => Err(error("Expected array")),
+    }
+}
+
+pub fn call(expr: Expression) -> Result<Call> {
+    match expr {
+        Expression::Call(call) => Ok(call),
+        _ => Err(error("Expected call")),
     }
 }
 

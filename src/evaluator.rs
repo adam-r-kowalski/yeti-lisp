@@ -1,7 +1,7 @@
 extern crate alloc;
 
 use crate::effect::{error, Effect};
-use crate::expression::{Environment, Result};
+use crate::expression::{Call, Environment, Pattern, Result};
 use crate::Expression;
 use alloc::format;
 use alloc::string::String;
@@ -31,9 +31,6 @@ fn pattern_match(
         }
         Expression::Keyword(k1) => match value {
             Expression::Keyword(k2) if k1 == k2 => Ok(env),
-            Expression::Keyword(k2) => {
-                Err(error(&format!("Cannot pattern match {} with {}", k1, k2)))
-            }
             _ => Err(error(&format!(
                 "Cannot pattern match {} with {}",
                 Expression::Keyword(k1),
@@ -42,12 +39,17 @@ fn pattern_match(
         },
         Expression::String(s1) => match value {
             Expression::String(s2) if s1 == s2 => Ok(env),
-            Expression::String(s2) => {
-                Err(error(&format!("Cannot pattern match {} with {}", s1, s2)))
-            }
             _ => Err(error(&format!(
                 "Cannot pattern match {} with {}",
                 Expression::String(s1),
+                value
+            ))),
+        },
+        Expression::Integer(i1) => match value {
+            Expression::Integer(i2) if i1 == i2 => Ok(env),
+            _ => Err(error(&format!(
+                "Cannot pattern match {} with {}",
+                Expression::Integer(i1),
                 value
             ))),
         },
@@ -96,21 +98,22 @@ fn pattern_match(
     }
 }
 
-fn evaluate_call(
-    environment: Environment,
-    function: Expression,
-    arguments: Vector<Expression>,
-) -> Result {
-    let (environment, function) = evaluate(environment.clone(), function)?;
+fn evaluate_call(environment: Environment, call: Call) -> Result {
+    let Call {
+        function,
+        arguments,
+    } = call;
+    let (environment, function) = evaluate(environment.clone(), *function)?;
     match function {
-        Expression::Function { parameters, body } => {
+        Expression::Function(patterns) => {
+            let Pattern { parameters, body } = &patterns[0];
             let (environment, arguments) = evaluate_expressions(environment, arguments)?;
             let environment = pattern_match(
                 environment,
-                Expression::Array(parameters),
+                Expression::Array(parameters.clone()),
                 Expression::Array(arguments),
             )?;
-            evaluate(environment, *body)
+            evaluate(environment, body.clone())
         }
         Expression::NativeFunction(f) => f(environment, arguments),
         Expression::Keyword(k) => {
@@ -145,10 +148,7 @@ fn evaluate_call(
 pub fn evaluate(environment: Environment, expression: Expression) -> Result {
     match expression {
         Expression::Symbol(s) => evaluate_symbol(environment, s),
-        Expression::Call {
-            function,
-            arguments,
-        } => evaluate_call(environment, *function, arguments),
+        Expression::Call(call) => evaluate_call(environment, call),
         Expression::Array(a) => {
             let (environment, a) = evaluate_expressions(environment, a)?;
             Ok((environment, Expression::Array(a)))

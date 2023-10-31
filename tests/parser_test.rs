@@ -1,6 +1,7 @@
-use yeti;
 use im::{hashmap, vector};
 use rug::{Integer, Rational};
+use yeti;
+use yeti::expression::Call;
 
 #[test]
 fn parse_symbol() {
@@ -70,13 +71,13 @@ fn parse_heterogenous_array() {
 fn parse_call() {
     let tokens = yeti::Tokens::from_str("(+ 1 2)");
     let actual = yeti::parse(tokens);
-    let expected = yeti::Expression::Call {
+    let expected = yeti::Expression::Call(Call {
         function: Box::new(yeti::Expression::Symbol("+".to_string())),
         arguments: vector![
             yeti::Expression::Integer(Integer::from(1)),
             yeti::Expression::Integer(Integer::from(2)),
         ],
-    };
+    });
     assert_eq!(actual, expected);
 }
 
@@ -98,19 +99,19 @@ fn parse_nested_array() {
 fn parse_nested_call() {
     let tokens = yeti::Tokens::from_str("(+ 3.14 (- 2 3))");
     let actual = yeti::parse(tokens);
-    let expected = yeti::Expression::Call {
+    let expected = yeti::Expression::Call(Call {
         function: Box::new(yeti::Expression::Symbol("+".to_string())),
         arguments: vector![
             yeti::Expression::Float(yeti::Float::from_str("3.14")),
-            yeti::Expression::Call {
+            yeti::Expression::Call(Call {
                 function: Box::new(yeti::Expression::Symbol("-".to_string())),
                 arguments: vector![
                     yeti::Expression::Integer(Integer::from(2)),
                     yeti::Expression::Integer(Integer::from(3)),
                 ]
-            }
+            })
         ],
-    };
+    });
     assert_eq!(actual, expected);
 }
 
@@ -120,13 +121,13 @@ fn parse_call_inside_array() {
     let actual = yeti::parse(tokens);
     let expected = yeti::Expression::Array(vector![
         yeti::Expression::Float(yeti::Float::from_str("3.14")),
-        yeti::Expression::Call {
+        yeti::Expression::Call(Call {
             function: Box::new(yeti::Expression::Symbol("+".to_string())),
             arguments: vector![
                 yeti::Expression::Integer(Integer::from(2)),
                 yeti::Expression::Integer(Integer::from(3)),
             ]
-        }
+        })
     ]);
     assert_eq!(actual, expected);
 }
@@ -135,7 +136,7 @@ fn parse_call_inside_array() {
 fn parse_array_inside_call() {
     let tokens = yeti::Tokens::from_str("(+ 3.14 [2 3])");
     let actual = yeti::parse(tokens);
-    let expected = yeti::Expression::Call {
+    let expected = yeti::Expression::Call(Call {
         function: Box::new(yeti::Expression::Symbol("+".to_string())),
         arguments: vector![
             yeti::Expression::Float(yeti::Float::from_str("3.14")),
@@ -144,7 +145,7 @@ fn parse_array_inside_call() {
                 yeti::Expression::Integer(Integer::from(3)),
             ])
         ],
-    };
+    });
     assert_eq!(actual, expected);
 }
 
@@ -195,9 +196,9 @@ fn parse_nil() {
 fn parse_quote() {
     let tokens = yeti::Tokens::from_str("'(1 2)");
     let actual = yeti::parse(tokens);
-    let expected = yeti::Expression::Quote(Box::new(yeti::Expression::Call {
+    let expected = yeti::Expression::Quote(Box::new(yeti::Expression::Call(Call {
         function: Box::new(yeti::Expression::Integer(Integer::from(1))),
         arguments: vector![yeti::Expression::Integer(Integer::from(2)),],
-    }));
+    })));
     assert_eq!(actual, expected);
 }

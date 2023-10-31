@@ -1,5 +1,6 @@
 extern crate alloc;
 
+use crate::expression::Call;
 use crate::Expression;
 use crate::{tokenizer::Token, Tokens};
 use alloc::boxed::Box;
@@ -52,10 +53,10 @@ impl<I: Iterator<Item = char>> Parser<I> {
                 }
             }
         }
-        Expression::Call {
+        Expression::Call(Call {
             function,
             arguments,
-        }
+        })
     }
 
     fn array(&mut self) -> Expression {

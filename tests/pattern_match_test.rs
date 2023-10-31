@@ -47,3 +47,29 @@ fn pattern_match_array_with_literal_string() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn pattern_match_array_with_literal_integer() -> Result {
+    let env = yeti::core::environment();
+    let (_, actual) = yeti::evaluate_source(env, r#"((fn [[7 y]] y) [7 2])"#)?;
+    let expected = yeti::Expression::Integer(Integer::from(2));
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[test]
+fn pattern_match_multiple_patterns() -> Result {
+    let env = yeti::core::environment();
+    let (_, actual) = yeti::evaluate_source(
+        env,
+        r#"
+        ((fn
+          ([:apple] "you picked apple")
+          ([:mango] "you selected mango"))
+          :apple)
+        "#,
+    )?;
+    let expected = yeti::Expression::String("you picked apple".to_string());
+    assert_eq!(actual, expected);
+    Ok(())
+}

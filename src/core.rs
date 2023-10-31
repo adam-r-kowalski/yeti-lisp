@@ -1,13 +1,13 @@
 extern crate alloc;
 
 use crate::effect::error;
-use crate::expression::Environment;
+use crate::expression::{Call, Environment, Pattern};
 use crate::Expression::{Integer, NativeFunction, Ratio};
 use crate::{array, evaluate_expressions, extract, html, map, ratio, server, sql, Expression};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::ToString;
-use im::{hashmap, vector, HashMap};
+use im::{hashmap, vector, HashMap, Vector};
 use rug;
 
 pub fn truthy(expression: &Expression) -> bool {
@@ -83,25 +83,37 @@ pub fn environment() -> Environment {
               }
             ),
             "fn".to_string() => NativeFunction(
-              |env, args| {
-                let (parameters, body) = (args[0].clone(), args[1].clone());
-                let parameters = extract::array(parameters)?;
-                let body = Box::new(body);
-                let function = Expression::Function{parameters, body};
-                Ok((env, function))
-              }
+                |env, args| {
+                    if let Expression::Array(array) = &args[0] {
+                        let parameters = array.clone();
+                        let body = args[1].clone();
+                        let function = Expression::Function(vector![Pattern { parameters, body }]);
+                        Ok((env, function))
+                    } else {
+                        let patterns = args.iter().try_fold(Vector::new(), |mut patterns, pattern| {
+                            let call = extract::call(pattern.clone())?;
+                            let parameters = extract::array(*call.function)?;
+                            let body = call.arguments[0].clone();
+                            patterns.push_back(Pattern { parameters, body });
+                            Ok(patterns)
+                        })?;
+                        let function = Expression::Function(patterns);
+                        Ok((env, function))
+                    }
+                }
             ),
+
             "defn".to_string() => NativeFunction(
               |env, args| {
                 let (name, parameters, body) = (args[0].clone(), args[1].clone(), args[2].clone());
-                let (env, function) = crate::evaluate(env, Expression::Call{
+                let (env, function) = crate::evaluate(env, Expression::Call(Call{
                     function: Box::new(Expression::Symbol("fn".to_string())),
                     arguments: vector![parameters, body],
-                })?;
-                crate::evaluate(env, Expression::Call{
+                }))?;
+                crate::evaluate(env, Expression::Call(Call{
                     function: Box::new(Expression::Symbol("def".to_string())),
                     arguments: vector![name, function],
-                })
+                }))
               }
             ),
             "eval".to_string() => NativeFunction(

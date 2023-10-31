@@ -8,7 +8,7 @@ pub mod array;
 pub mod core;
 pub mod effect;
 mod evaluator;
-mod expression;
+pub mod expression;
 pub mod extract;
 pub mod html;
 pub mod map;

@@ -82,6 +82,18 @@ impl Clone for Sqlite {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Pattern {
+    pub parameters: Expressions,
+    pub body: Expression,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Call {
+    pub function: Box<Expression>,
+    pub arguments: Expressions,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Expression {
     Symbol(String),
     Keyword(String),
@@ -93,14 +105,8 @@ pub enum Expression {
     Nil,
     Array(Expressions),
     Map(HashMap<Expression, Expression>),
-    Call {
-        function: Box<Expression>,
-        arguments: Expressions,
-    },
-    Function {
-        parameters: Expressions,
-        body: Box<Expression>,
-    },
+    Call(Call),
+    Function(Vector<Pattern>),
     NativeFunction(fn(Environment, Expressions) -> Result),
     Sqlite(Sqlite),
     Quote(Box<Expression>),
@@ -139,16 +145,28 @@ impl Display for Expression {
             Expression::Ratio(r) => write!(f, "{}/{}", r.numer(), r.denom()),
             Expression::Bool(b) => write!(f, "{}", if *b { "true" } else { "false" }),
             Expression::Nil => write!(f, "nil"),
-            Expression::Call {
+            Expression::Call(Call {
                 function,
                 arguments,
-            } => {
+            }) => {
                 let arg_strs: Vec<String> = arguments.iter().map(|e| format!("{}", e)).collect();
                 write!(f, "({} {})", function, arg_strs.join(" "))
             }
-            Expression::Function { parameters, body } => {
-                let param_strs: Vec<String> = parameters.iter().map(|e| format!("{}", e)).collect();
-                write!(f, "(fn [{}] {})", param_strs.join(" "), body)
+            Expression::Function(patterns) => {
+                if patterns.len() == 1 {
+                    let Pattern { parameters, body } = &patterns[0];
+                    let param_strs: Vec<String> =
+                        parameters.iter().map(|e| format!("{}", e)).collect();
+                    write!(f, "(fn [{}] {})", param_strs.join(" "), body)
+                } else {
+                    write!(f, "(fn")?;
+                    for Pattern { parameters, body } in patterns {
+                        let param_strs: Vec<String> =
+                            parameters.iter().map(|e| format!("{}", e)).collect();
+                        write!(f, "\n  ([{}] {})", param_strs.join(" "), body)?;
+                    }
+                    write!(f, ")")
+                }
             }
             Expression::NativeFunction(_) => write!(f, "#native_function"),
             Expression::Sqlite(s) => write!(f, "{:?}", s),
