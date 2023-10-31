@@ -105,14 +105,13 @@ pub fn environment() -> Environment {
 
             "defn".to_string() => NativeFunction(
               |env, args| {
-                let (name, parameters, body) = (args[0].clone(), args[1].clone(), args[2].clone());
                 let (env, function) = crate::evaluate(env, Expression::Call(Call{
                     function: Box::new(Expression::Symbol("fn".to_string())),
-                    arguments: vector![parameters, body],
+                    arguments: args.iter().skip(1).cloned().collect(),
                 }))?;
                 crate::evaluate(env, Expression::Call(Call{
                     function: Box::new(Expression::Symbol("def".to_string())),
-                    arguments: vector![name, function],
+                    arguments: vector![args[0].clone(), function],
                 }))
               }
             ),
