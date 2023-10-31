@@ -20,3 +20,12 @@ fn pattern_match_map() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn pattern_match_map_in_array() -> Result {
+    let env = yeti::core::environment();
+    let (_, actual) = yeti::evaluate_source(env, "((fn [[_ {:a a}]] a) [0 {:a 7}])")?;
+    let expected = yeti::Expression::Integer(Integer::from(7));
+    assert_eq!(actual, expected);
+    Ok(())
+}
