@@ -86,12 +86,6 @@ pub fn environment() -> Environment {
               |env, args| {
                 let (parameters, body) = (args[0].clone(), args[1].clone());
                 let parameters = extract::array(parameters)?;
-                for parameter in parameters.iter() {
-                    match parameter {
-                        Expression::Symbol(_) => {},
-                        _ => return Err(error("Expected symbol")),
-                    }
-                }
                 let body = Box::new(body);
                 let function = Expression::Function{parameters, body};
                 Ok((env, function))

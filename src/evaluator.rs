@@ -18,6 +18,62 @@ fn evaluate_symbol(environment: Environment, symbol: String) -> Result {
     }
 }
 
+fn pattern_match(
+    env: Environment,
+    pattern: Expression,
+    value: Expression,
+) -> core::result::Result<Environment, Effect> {
+    match pattern {
+        Expression::Symbol(s) => {
+            let mut env = env.clone();
+            env.insert(s, value);
+            Ok(env)
+        }
+        Expression::Array(patterns) => {
+            if let Expression::Array(values) = value {
+                let env = patterns
+                    .into_iter()
+                    .zip(values.into_iter())
+                    .try_fold(env, |env, (pattern, value)| {
+                        pattern_match(env, pattern, value)
+                    })?;
+                Ok(env)
+            } else {
+                Err(error(&format!(
+                    "Cannot pattern match {} with {}",
+                    Expression::Array(patterns),
+                    value
+                )))
+            }
+        }
+        Expression::Map(map) => {
+            if let Expression::Map(m) = value {
+                let env = map.into_iter().try_fold(env, |env, (pattern, value)| {
+                    if let Some(v) = m.get(&pattern) {
+                        pattern_match(env, value, v.clone())
+                    } else {
+                        Err(error(&format!(
+                            "Cannot pattern match {} with {}",
+                            pattern, value
+                        )))
+                    }
+                })?;
+                Ok(env)
+            } else {
+                Err(error(&format!(
+                    "Cannot pattern match {} with {}",
+                    Expression::Map(map),
+                    value
+                )))
+            }
+        }
+        _ => Err(error(&format!(
+            "Cannot pattern match {} with {}",
+            pattern, value
+        ))),
+    }
+}
+
 fn evaluate_call(
     environment: Environment,
     function: Expression,
@@ -27,16 +83,11 @@ fn evaluate_call(
     match function {
         Expression::Function { parameters, body } => {
             let (environment, arguments) = evaluate_expressions(environment, arguments)?;
-            let environment = parameters.into_iter().zip(arguments.into_iter()).fold(
+            let environment = pattern_match(
                 environment,
-                |mut environment, (parameter, argument)| match parameter {
-                    Expression::Symbol(s) => {
-                        environment.insert(s, argument);
-                        environment
-                    }
-                    _ => panic!("Invalid parameter type"),
-                },
-            );
+                Expression::Array(parameters),
+                Expression::Array(arguments),
+            )?;
             evaluate(environment, *body)
         }
         Expression::NativeFunction(f) => f(environment, arguments),
