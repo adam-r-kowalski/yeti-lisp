@@ -58,7 +58,7 @@ fn pattern_match_array_with_literal_integer() -> Result {
 }
 
 #[test]
-fn pattern_match_multiple_patterns() -> Result {
+fn pattern_match_multiple_patterns_first_taken() -> Result {
     let env = yeti::core::environment();
     let (_, actual) = yeti::evaluate_source(
         env,
@@ -70,6 +70,23 @@ fn pattern_match_multiple_patterns() -> Result {
         "#,
     )?;
     let expected = yeti::Expression::String("you picked apple".to_string());
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[test]
+fn pattern_match_multiple_patterns_second_taken() -> Result {
+    let env = yeti::core::environment();
+    let (_, actual) = yeti::evaluate_source(
+        env,
+        r#"
+        ((fn
+          ([:apple] "you picked apple")
+          ([:mango] "you selected mango"))
+          :mango)
+        "#,
+    )?;
+    let expected = yeti::Expression::String("you selected mango".to_string());
     assert_eq!(actual, expected);
     Ok(())
 }

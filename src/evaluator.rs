@@ -5,6 +5,7 @@ use crate::expression::{Call, Environment, Pattern, Result};
 use crate::Expression;
 use alloc::format;
 use alloc::string::String;
+use alloc::vec;
 use im::Vector;
 
 fn evaluate_symbol(environment: Environment, symbol: String) -> Result {
@@ -98,6 +99,30 @@ fn pattern_match(
     }
 }
 
+fn find_pattern_match(
+    env: Environment,
+    patterns: Vector<Pattern>,
+    arguments: Vector<Expression>,
+) -> core::result::Result<(Environment, Expression), Effect> {
+    let mut failures = vec![];
+    for Pattern { parameters, body } in patterns {
+        let result = pattern_match(
+            env.clone(),
+            Expression::Array(parameters.clone()),
+            Expression::Array(arguments.clone()),
+        );
+        match result {
+            Ok(env) => return Ok((env, body)),
+            Err(e) => failures.push(e),
+        };
+    }
+    let error_message = failures.iter().fold(String::new(), |mut s, e| {
+        s.push_str(&format!("{}\n", e));
+        s
+    });
+    Err(error(&error_message))
+}
+
 fn evaluate_call(environment: Environment, call: Call) -> Result {
     let Call {
         function,
@@ -106,13 +131,7 @@ fn evaluate_call(environment: Environment, call: Call) -> Result {
     let (environment, function) = evaluate(environment.clone(), *function)?;
     match function {
         Expression::Function(patterns) => {
-            let Pattern { parameters, body } = &patterns[0];
-            let (environment, arguments) = evaluate_expressions(environment, arguments)?;
-            let environment = pattern_match(
-                environment,
-                Expression::Array(parameters.clone()),
-                Expression::Array(arguments),
-            )?;
+            let (environment, body) = find_pattern_match(environment, patterns, arguments)?;
             evaluate(environment, body.clone())
         }
         Expression::NativeFunction(f) => f(environment, arguments),
