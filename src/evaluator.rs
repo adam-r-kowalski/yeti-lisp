@@ -29,6 +29,28 @@ fn pattern_match(
             env.insert(s, value);
             Ok(env)
         }
+        Expression::Keyword(k1) => match value {
+            Expression::Keyword(k2) if k1 == k2 => Ok(env),
+            Expression::Keyword(k2) => {
+                Err(error(&format!("Cannot pattern match {} with {}", k1, k2)))
+            }
+            _ => Err(error(&format!(
+                "Cannot pattern match {} with {}",
+                Expression::Keyword(k1),
+                value
+            ))),
+        },
+        Expression::String(s1) => match value {
+            Expression::String(s2) if s1 == s2 => Ok(env),
+            Expression::String(s2) => {
+                Err(error(&format!("Cannot pattern match {} with {}", s1, s2)))
+            }
+            _ => Err(error(&format!(
+                "Cannot pattern match {} with {}",
+                Expression::String(s1),
+                value
+            ))),
+        },
         Expression::Array(patterns) => {
             if let Expression::Array(values) = value {
                 let env = patterns

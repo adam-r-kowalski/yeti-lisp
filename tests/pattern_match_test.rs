@@ -29,3 +29,21 @@ fn pattern_match_map_in_array() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn pattern_match_array_with_literal_keyword() -> Result {
+    let env = yeti::core::environment();
+    let (_, actual) = yeti::evaluate_source(env, "((fn [[:foo y]] y) [:foo 2])")?;
+    let expected = yeti::Expression::Integer(Integer::from(2));
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[test]
+fn pattern_match_array_with_literal_string() -> Result {
+    let env = yeti::core::environment();
+    let (_, actual) = yeti::evaluate_source(env, r#"((fn [["foo" y]] y) ["foo" 2])"#)?;
+    let expected = yeti::Expression::Integer(Integer::from(2));
+    assert_eq!(actual, expected);
+    Ok(())
+}
