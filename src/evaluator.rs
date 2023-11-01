@@ -19,7 +19,7 @@ fn evaluate_symbol(environment: Environment, symbol: String) -> Result {
     }
 }
 
-fn pattern_match(
+pub fn pattern_match(
     env: Environment,
     pattern: Expression,
     value: Expression,

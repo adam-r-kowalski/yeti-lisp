@@ -3,7 +3,9 @@ extern crate alloc;
 use crate::effect::error;
 use crate::expression::{Call, Environment, Pattern};
 use crate::Expression::{Integer, NativeFunction, Ratio};
-use crate::{array, evaluate_expressions, extract, html, map, ratio, server, sql, Expression};
+use crate::{
+    array, evaluate_expressions, extract, html, map, pattern_match, ratio, server, sql, Expression,
+};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::ToString;
@@ -144,10 +146,9 @@ pub fn environment() -> Environment {
               |env, args| {
                 let (bindings, body) = (args[0].clone(), args[1].clone());
                 let bindings = extract::array(bindings)?;
-                let env = bindings.iter().array_chunks().try_fold(env, |env, [name, value]| {
-                    let name = extract::symbol(name.clone())?;
-                    let (mut env, value) = crate::evaluate(env, value.clone())?;
-                    env.insert(name, value);
+                let env = bindings.iter().array_chunks().try_fold(env, |env, [pattern, value]| {
+                    let (env, value) = crate::evaluate(env, value.clone())?;
+                    let env = pattern_match(env, pattern.clone(), value)?;
                     Ok(env)
                 })?;
                 crate::evaluate(env, body)
