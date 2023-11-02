@@ -154,6 +154,22 @@ pub fn environment() -> Environment {
                 crate::evaluate(env, body)
               }
             ),
+            "for".to_string() => NativeFunction(
+              |env, args| {
+                let (bindings, body) = (args[0].clone(), args[1].clone());
+                let bindings = extract::array(bindings)?;
+                let pattern = bindings[0].clone();
+                let (env, values) = crate::evaluate(env, bindings[1].clone())?;
+                let values = extract::array(values)?;
+                let result = values.iter().try_fold(Vector::new(), |mut result, value| {
+                    let env = pattern_match(env.clone(), pattern.clone(), value.clone())?;
+                    let (_, value) = crate::evaluate(env, body.clone())?;
+                    result.push_back(value);
+                    Ok(result)
+                })?;
+                crate::evaluate(env, Expression::Array(result))
+              }
+            ),
             "assoc".to_string() => NativeFunction(map::assoc),
             "dissoc".to_string() => NativeFunction(map::dissoc),
             "merge".to_string() => NativeFunction(map::merge),
