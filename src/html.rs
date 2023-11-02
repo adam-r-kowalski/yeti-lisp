@@ -52,6 +52,26 @@ fn style_tag(style_map: HashMap<Expression, Expression>, string: &mut String) ->
     Ok(())
 }
 
+fn is_array_of_array(expr: Expression) -> Option<Vector<Expression>> {
+    if let Expression::Array(a) = expr {
+        if let Some(Expression::Array(_)) = a.get(0) {
+            return Some(a);
+        }
+    }
+    None
+}
+
+fn build_children_string(children: Vector<Expression>, string: &mut String) -> Result<()> {
+    for child in children {
+        if let Some(children) = is_array_of_array(child.clone()) {
+            build_children_string(children, string)?;
+        } else {
+            build_string(child, string)?;
+        }
+    }
+    Ok(())
+}
+
 pub fn build_string(expr: Expression, string: &mut String) -> Result<()> {
     match expr {
         Expression::Array(a) => {
@@ -84,9 +104,7 @@ pub fn build_string(expr: Expression, string: &mut String) -> Result<()> {
                         Ok(())
                     } else {
                         string.push('>');
-                        for expr in a.iter().skip(2) {
-                            build_string(expr.clone(), string)?;
-                        }
+                        build_children_string(a.clone().split_off(2), string)?;
                         string.push_str("</");
                         string.push_str(keyword);
                         string.push('>');
@@ -97,9 +115,7 @@ pub fn build_string(expr: Expression, string: &mut String) -> Result<()> {
                     Ok(())
                 } else {
                     string.push('>');
-                    for expr in a.iter().skip(1) {
-                        build_string(expr.clone(), string)?;
-                    }
+                    build_children_string(a.clone().split_off(1), string)?;
                     string.push_str("</");
                     string.push_str(keyword);
                     string.push('>');

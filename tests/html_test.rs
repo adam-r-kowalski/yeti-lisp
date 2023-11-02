@@ -76,3 +76,14 @@ fn evaluate_html_with_css() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn evaluate_html_with_array_of_child() -> Result {
+    let tokens = yeti::Tokens::from_str(r#"(html/string [:ul [[:li "first"] [:li "second"]]])"#);
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let expected = yeti::Expression::String("<ul><li>first</li><li>second</li></ul>".to_string());
+    assert_eq!(actual, expected);
+    Ok(())
+}
