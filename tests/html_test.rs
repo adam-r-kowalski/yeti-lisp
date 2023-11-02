@@ -87,3 +87,14 @@ fn evaluate_html_with_array_of_child() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn evaluate_html_with_price() -> Result {
+    let tokens = yeti::Tokens::from_str(r#"(html/string [:ul [:li 1] [:li 2]])"#);
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let expected = yeti::Expression::String("<ul><li>1</li><li>2</li></ul>".to_string());
+    assert_eq!(actual, expected);
+    Ok(())
+}

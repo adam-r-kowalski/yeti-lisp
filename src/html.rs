@@ -5,6 +5,7 @@ use crate::evaluate_expressions;
 use crate::expression::Environment;
 use crate::extract;
 use crate::Expression;
+use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 use im::{HashMap, Vector};
@@ -133,6 +134,10 @@ pub fn build_string(expr: Expression, string: &mut String) -> Result<()> {
         }
         Expression::String(s) => {
             string.push_str(&s);
+            Ok(())
+        }
+        Expression::Integer(i) => {
+            string.push_str(&format!("{}", i));
             Ok(())
         }
         _ => Err(error("Expected keyword")),
