@@ -1,6 +1,6 @@
-use yeti;
-use im::hashmap;
+use im::ordmap;
 use rug::Integer;
+use yeti;
 
 type Result = std::result::Result<(), yeti::effect::Effect>;
 
@@ -76,8 +76,8 @@ fn evaluate_assoc() -> Result {
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
     let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
-    let expected = yeti::Expression::Map(hashmap! {
-        yeti::Expression::Keyword(":a".to_string()) => yeti::Expression::Integer(Integer::from(1)),
+    let expected = yeti::Expression::Map(ordmap! {
+        yeti::Expression::Keyword(":a".to_string()) => yeti::Expression::Integer(Integer::from(1))
     });
     assert_eq!(actual, expected);
     Ok(())
@@ -89,7 +89,7 @@ fn evaluate_dissoc() -> Result {
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
     let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
-    let expected = yeti::Expression::Map(hashmap! {});
+    let expected = yeti::Expression::Map(ordmap! {});
     assert_eq!(actual, expected);
     Ok(())
 }
@@ -100,9 +100,9 @@ fn evaluate_merge() -> Result {
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
     let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
-    let expected = yeti::Expression::Map(hashmap! {
+    let expected = yeti::Expression::Map(ordmap! {
         yeti::Expression::Keyword(":a".to_string()) => yeti::Expression::Integer(Integer::from(1)),
-        yeti::Expression::Keyword(":b".to_string()) => yeti::Expression::Integer(Integer::from(2)),
+        yeti::Expression::Keyword(":b".to_string()) => yeti::Expression::Integer(Integer::from(2))
     });
     assert_eq!(actual, expected);
     Ok(())

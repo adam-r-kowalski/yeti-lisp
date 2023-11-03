@@ -8,7 +8,7 @@ use crate::Expression;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
-use im::{HashMap, Vector};
+use im::{OrdMap, Vector};
 
 type Result<T> = core::result::Result<T, Effect>;
 
@@ -32,7 +32,7 @@ fn self_closing(tag: &str) -> bool {
     }
 }
 
-fn style_tag(style_map: HashMap<Expression, Expression>, string: &mut String) -> Result<()> {
+fn style_tag(style_map: OrdMap<Expression, Expression>, string: &mut String) -> Result<()> {
     string.push_str("<style>");
     for (k, v) in style_map {
         let selector = extract::keyword(k.clone())?;

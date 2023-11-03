@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use im::{hashmap, vector, HashMap};
+use im::{ordmap, vector, OrdMap};
 use rug::{Integer, Rational};
 use spin::Mutex;
 use yeti;
@@ -57,10 +57,10 @@ fn evaluate_symbol_bound_to_integer() -> Result {
     let tokens = yeti::Tokens::from_str("x");
     let expression = yeti::parse(tokens);
     let environment = yeti::Environment {
-        bindings: hashmap! {
-            "x".to_string() => yeti::Expression::Integer(Integer::from(5)),
+        bindings: ordmap! {
+            "x".to_string() => yeti::Expression::Integer(Integer::from(5))
         },
-        servers: Arc::new(Mutex::new(HashMap::new())),
+        servers: Arc::new(Mutex::new(OrdMap::new())),
     };
     let (_, actual) = yeti::evaluate(environment, expression)?;
     let expected = yeti::Expression::Integer(Integer::from(5));
@@ -73,7 +73,7 @@ fn evaluate_symbol_bound_to_function() -> Result {
     let tokens = yeti::Tokens::from_str("(double 5)");
     let expression = yeti::parse(tokens);
     let environment = yeti::Environment {
-        bindings: hashmap! {
+        bindings: ordmap! {
             "double".to_string() => yeti::Expression::NativeFunction(
               |env, args| {
                 let (env, args) = yeti::evaluate_expressions(env, args)?;
@@ -82,9 +82,9 @@ fn evaluate_symbol_bound_to_function() -> Result {
                   _ => panic!("Expected integer argument"),
                 }
               }
-            ),
+            )
         },
-        servers: Arc::new(Mutex::new(HashMap::new())),
+        servers: Arc::new(Mutex::new(OrdMap::new())),
     };
     let (_, actual) = yeti::evaluate(environment, expression)?;
     let expected = yeti::Expression::Integer(Integer::from(10));
@@ -159,9 +159,9 @@ fn evaluate_map() -> Result {
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
     let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
-    let expected = yeti::Expression::Map(hashmap! {
+    let expected = yeti::Expression::Map(ordmap! {
         yeti::Expression::Keyword(":a".to_string()) => yeti::Expression::Integer(Integer::from(3)),
-        yeti::Expression::Keyword(":b".to_string()) => yeti::Expression::Ratio(Rational::from((Integer::from(4), Integer::from(3)))),
+        yeti::Expression::Keyword(":b".to_string()) => yeti::Expression::Ratio(Rational::from((Integer::from(4), Integer::from(3))))
     });
     assert_eq!(actual, expected);
     Ok(())

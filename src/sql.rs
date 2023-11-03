@@ -11,16 +11,13 @@ use alloc::format;
 use alloc::string::String;
 use alloc::string::ToString;
 use alloc::vec::Vec;
-use im::{vector, HashMap, Vector};
+use im::{vector, OrdMap, Vector};
 use rusqlite::types::{FromSql, FromSqlResult, ToSqlOutput, Value, ValueRef};
 use rusqlite::{Connection, ToSql};
 
 type Result<T> = core::result::Result<T, Effect>;
 
-fn create_table(
-    map: HashMap<Expression, Expression>,
-    table_name: Expression,
-) -> Result<Expression> {
+fn create_table(map: OrdMap<Expression, Expression>, table_name: Expression) -> Result<Expression> {
     let table_name = &extract::keyword(table_name)?[1..];
     let string = format!("CREATE TABLE {} (", table_name).to_string();
     let columns = extract::array(extract::key(map, ":with-columns")?)?;
@@ -83,7 +80,7 @@ fn create_table(
     Ok(Expression::Array(vector![Expression::String(string)]))
 }
 
-fn insert_into(map: HashMap<Expression, Expression>, table_name: Expression) -> Result<Expression> {
+fn insert_into(map: OrdMap<Expression, Expression>, table_name: Expression) -> Result<Expression> {
     let table_name = &extract::keyword(table_name)?[1..];
     let string = format!("INSERT INTO {} (", table_name).to_string();
     let columns = extract::array(extract::key(map.clone(), ":columns")?)?;
@@ -132,7 +129,7 @@ fn insert_into(map: HashMap<Expression, Expression>, table_name: Expression) -> 
     Ok(Expression::Array(result))
 }
 
-fn select(map: HashMap<Expression, Expression>, columns: Expression) -> Result<Expression> {
+fn select(map: OrdMap<Expression, Expression>, columns: Expression) -> Result<Expression> {
     let columns = match columns {
         Expression::Array(a) => a,
         Expression::Keyword(k) => vector![Expression::Keyword(k)],
@@ -261,7 +258,7 @@ pub fn query(env: Environment, args: Vector<Expression>) -> Result<(Environment,
             let rows: Vector<Expression> = stmt
                 .query_map(&parameters[..], |row| {
                     let result = column_names.iter().enumerate().try_fold(
-                        HashMap::new(),
+                        OrdMap::new(),
                         |mut map, (i, name)| {
                             let value: Expression = row.get(i)?;
                             map.insert(Expression::Keyword(format!(":{}", name)), value);

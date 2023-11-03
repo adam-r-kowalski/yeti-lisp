@@ -175,7 +175,7 @@ pub fn evaluate(environment: Environment, expression: Expression) -> Result {
         }
         Expression::Map(m) => {
             let (environment, m) = m.into_iter().try_fold(
-                (environment, im::HashMap::new()),
+                (environment, im::OrdMap::new()),
                 |(environment, mut m), (k, v)| {
                     let (environment, k) = evaluate(environment, k)?;
                     let (environment, v) = evaluate(environment, v)?;

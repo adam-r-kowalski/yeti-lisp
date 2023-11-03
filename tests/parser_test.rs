@@ -1,4 +1,4 @@
-use im::{hashmap, vector};
+use im::{ordmap, vector};
 use rug::{Integer, Rational};
 use yeti;
 use yeti::expression::Call;
@@ -161,9 +161,9 @@ fn parse_rational() {
 fn parse_map() {
     let tokens = yeti::Tokens::from_str("{:a 1 :b 2}");
     let actual = yeti::parse(tokens);
-    let expected = yeti::Expression::Map(hashmap![
+    let expected = yeti::Expression::Map(ordmap![
         yeti::Expression::Keyword(":a".to_string()) => yeti::Expression::Integer(Integer::from(1)),
-        yeti::Expression::Keyword(":b".to_string()) => yeti::Expression::Integer(Integer::from(2)),
+        yeti::Expression::Keyword(":b".to_string()) => yeti::Expression::Integer(Integer::from(2))
     ]);
     assert_eq!(actual, expected);
 }

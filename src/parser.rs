@@ -6,7 +6,7 @@ use crate::{tokenizer::Token, Tokens};
 use alloc::boxed::Box;
 use alloc::string::String;
 use core::iter::Peekable;
-use im::{HashMap, Vector};
+use im::{OrdMap, Vector};
 
 fn symbol(s: String) -> Expression {
     match s.as_ref() {
@@ -76,7 +76,7 @@ impl<I: Iterator<Item = char>> Parser<I> {
     }
 
     fn map(&mut self) -> Expression {
-        let mut map = HashMap::new();
+        let mut map = OrdMap::new();
         while let Some(&ref token) = self.tokens.peek() {
             match token {
                 Token::RightBrace => {

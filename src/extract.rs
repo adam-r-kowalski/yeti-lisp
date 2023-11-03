@@ -4,18 +4,18 @@ use crate::expression::{Call, Sqlite};
 use crate::Expression;
 use alloc::format;
 use alloc::string::{String, ToString};
-use im::{HashMap, Vector};
+use im::{OrdMap, Vector};
 
 type Result<T> = core::result::Result<T, Effect>;
 
-pub fn map(expr: Expression) -> Result<HashMap<Expression, Expression>> {
+pub fn map(expr: Expression) -> Result<OrdMap<Expression, Expression>> {
     match expr {
         Expression::Map(m) => Ok(m),
         _ => Err(error("Expected map")),
     }
 }
 
-pub fn key(map: HashMap<Expression, Expression>, key: &str) -> Result<Expression> {
+pub fn key(map: OrdMap<Expression, Expression>, key: &str) -> Result<Expression> {
     match map.get(&Expression::Keyword(key.to_string())) {
         Some(expr) => Ok(expr.clone()),
         None => Err(error(&format!("Expected keyword {}", key))),

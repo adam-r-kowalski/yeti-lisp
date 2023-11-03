@@ -9,18 +9,19 @@ use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::fmt::{self, Display, Formatter};
 use core::hash::Hash;
-use im::{HashMap, Vector};
+use im::{OrdMap, Vector};
 use rug::{Integer, Rational};
 use rusqlite::Connection;
 use spin::Mutex;
 use tokio::sync::broadcast::Sender;
+use uuid::Uuid;
 
 type Expressions = Vector<Expression>;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
-    pub bindings: HashMap<String, Expression>,
-    pub servers: Arc<Mutex<HashMap<u16, Sender<()>>>>,
+    pub bindings: OrdMap<String, Expression>,
+    pub servers: Arc<Mutex<OrdMap<u16, Sender<()>>>>,
 }
 
 impl Environment {
@@ -34,8 +35,8 @@ impl Environment {
 
     pub fn new() -> Environment {
         Environment {
-            bindings: HashMap::new(),
-            servers: Arc::new(Mutex::new(HashMap::new())),
+            bindings: OrdMap::new(),
+            servers: Arc::new(Mutex::new(OrdMap::new())),
         }
     }
 }
@@ -43,57 +44,72 @@ pub type Result = core::result::Result<(Environment, Expression), Effect>;
 
 pub struct Sqlite {
     pub connection: Arc<Mutex<Connection>>,
+    uuid: Uuid,
 }
 
 impl Sqlite {
     pub fn new(connection: Connection) -> Sqlite {
         Sqlite {
             connection: Arc::new(Mutex::new(connection)),
+            uuid: Uuid::new_v4(),
         }
     }
 }
 
 impl PartialEq for Sqlite {
     fn eq(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.connection, &other.connection)
+        self.uuid == other.uuid
     }
 }
 
 impl core::hash::Hash for Sqlite {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        Arc::as_ptr(&self.connection).hash(state)
+        self.uuid.hash(state);
     }
 }
 
 impl core::fmt::Debug for Sqlite {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "#sqlite({:?})", Arc::as_ptr(&self.connection))
+        write!(f, "#sqlite({})", self.uuid)
     }
 }
 
 impl Eq for Sqlite {}
 
+impl PartialOrd for Sqlite {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        self.uuid.partial_cmp(&other.uuid)
+    }
+}
+
+impl Ord for Sqlite {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        self.uuid.cmp(&other.uuid)
+    }
+}
+
 impl Clone for Sqlite {
     fn clone(&self) -> Self {
         Sqlite {
             connection: self.connection.clone(),
+            uuid: self.uuid,
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Pattern {
     pub parameters: Expressions,
     pub body: Expression,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Call {
     pub function: Box<Expression>,
     pub arguments: Expressions,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Expression {
     Symbol(String),
     Keyword(String),
@@ -104,7 +120,7 @@ pub enum Expression {
     Bool(bool),
     Nil,
     Array(Expressions),
-    Map(HashMap<Expression, Expression>),
+    Map(OrdMap<Expression, Expression>),
     Call(Call),
     Function(Vector<Pattern>),
     NativeFunction(fn(Environment, Expressions) -> Result),

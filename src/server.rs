@@ -14,7 +14,7 @@ use core::net::IpAddr;
 use core::net::Ipv4Addr;
 use core::net::SocketAddr;
 use hyper::Body;
-use im::{hashmap, vector, Vector};
+use im::{ordmap, vector, Vector};
 use tokio::sync::broadcast;
 
 type Result<T> = core::result::Result<T, Effect>;
@@ -56,11 +56,11 @@ pub fn start(env: Environment, args: Vector<Expression>) -> Result<(Environment,
                                 env,
                                 Expression::Call(Call {
                                     function: Box::new(Expression::Function(patterns.clone())),
-                                    arguments: vector![Expression::Map(hashmap![
+                                    arguments: vector![Expression::Map(ordmap![
                                         Expression::Keyword(":method".to_string()) =>
                                             Expression::String(method),
                                         Expression::Keyword(":url".to_string()) =>
-                                            Expression::String(url),
+                                            Expression::String(url)
                                     ])],
                                 }),
                             )

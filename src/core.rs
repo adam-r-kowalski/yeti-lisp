@@ -9,7 +9,7 @@ use crate::{
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::{String, ToString};
-use im::{hashmap, vector, HashMap, Vector};
+use im::{ordmap, vector, OrdMap, Vector};
 use rug;
 
 pub fn truthy(expression: &Expression) -> bool {
@@ -22,7 +22,7 @@ pub fn truthy(expression: &Expression) -> bool {
 
 pub fn environment() -> Environment {
     Environment {
-        bindings: hashmap! {
+        bindings: ordmap! {
             "=".to_string() => NativeFunction(
               |env, args| {
                 let (env, args) = evaluate_expressions(env, args)?;
@@ -193,8 +193,8 @@ pub fn environment() -> Environment {
             "sql/string".to_string() => NativeFunction(sql::string),
             "sql/query".to_string() => NativeFunction(sql::query),
             "sql/execute!".to_string() => NativeFunction(sql::execute),
-            "sql/tables".to_string() => NativeFunction(sql::tables),
+            "sql/tables".to_string() => NativeFunction(sql::tables)
         },
-        servers: alloc::sync::Arc::new(spin::Mutex::new(HashMap::new())),
+        servers: alloc::sync::Arc::new(spin::Mutex::new(OrdMap::new())),
     }
 }
