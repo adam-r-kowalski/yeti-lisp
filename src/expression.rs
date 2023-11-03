@@ -42,13 +42,13 @@ impl Environment {
 pub type Result = core::result::Result<(Environment, Expression), Effect>;
 
 pub struct Sqlite {
-    pub connection: Arc<Connection>,
+    pub connection: Arc<Mutex<Connection>>,
 }
 
 impl Sqlite {
     pub fn new(connection: Connection) -> Sqlite {
         Sqlite {
-            connection: Arc::new(connection),
+            connection: Arc::new(Mutex::new(connection)),
         }
     }
 }

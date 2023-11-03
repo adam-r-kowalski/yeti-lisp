@@ -3,6 +3,7 @@
 #![feature(ip_in_core)]
 #![feature(error_in_core)]
 #![feature(iter_array_chunks)]
+#![feature(async_closure)]
 
 pub mod array;
 pub mod core;

@@ -252,7 +252,8 @@ pub fn query(env: Environment, args: Vector<Expression>) -> Result<(Environment,
         .skip(1)
         .map(|p| p as &dyn ToSql)
         .collect::<Vec<_>>();
-    let result = db.connection.prepare(&string);
+    let connection = db.connection.lock();
+    let result = connection.prepare(&string);
     match result {
         Ok(mut stmt) => {
             let column_names: Vec<String> =
@@ -291,7 +292,8 @@ pub fn execute(env: Environment, args: Vector<Expression>) -> Result<(Environmen
         .skip(1)
         .map(|p| p as &dyn ToSql)
         .collect::<Vec<_>>();
-    match db.connection.execute(&string, &parameters[..]) {
+    let connection = db.connection.lock();
+    match connection.execute(&string, &parameters[..]) {
         Ok(_) => Ok((env, Expression::Nil)),
         Err(e) => Err(error(&format!("Failed to execute query: {}", e))),
     }

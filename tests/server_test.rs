@@ -67,6 +67,29 @@ async fn evaluate_server_with_html_route() -> Result {
 }
 
 #[tokio::test]
+async fn evaluate_server_with_function_route() -> Result {
+    let tokens = yeti::Tokens::from_str(
+        r#"
+        (server/start {:port 8080
+                       :routes {"/" (fn [req] [:ul [:li "first"] [:li "second"]])}})
+        "#,
+    );
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let expected = yeti::Expression::Nil;
+    assert_eq!(actual, expected);
+    let body = reqwest::get("http://localhost:8080")
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    assert_eq!(body, "<ul><li>first</li><li>second</li></ul>");
+    Ok(())
+}
+
+#[tokio::test]
 async fn evaluate_stop() -> Result {
     let tokens = yeti::Tokens::from_str("(server/start {:port 9090})");
     let expression = yeti::parse(tokens);

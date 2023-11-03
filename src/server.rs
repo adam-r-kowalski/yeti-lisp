@@ -1,17 +1,20 @@
 extern crate alloc;
 
-use core::net::IpAddr;
-use core::net::Ipv4Addr;
-use core::net::SocketAddr;
-
 use crate::effect::{error, Effect};
-use crate::expression::Environment;
+use crate::evaluate;
+use crate::expression::{Call, Environment};
 use crate::{extract, html, Expression};
+use alloc::boxed::Box;
 use alloc::string::{String, ToString};
+use axum::http::Request;
 use axum::response::Html;
 use axum::routing::get;
 use axum::Router;
-use im::Vector;
+use core::net::IpAddr;
+use core::net::Ipv4Addr;
+use core::net::SocketAddr;
+use hyper::Body;
+use im::{vector, HashMap, Vector};
 use tokio::sync::broadcast;
 
 type Result<T> = core::result::Result<T, Effect>;
@@ -41,6 +44,25 @@ pub fn start(env: Environment, args: Vector<Expression>) -> Result<(Environment,
                     let mut string = String::new();
                     html::build_string(v.clone(), &mut string)?;
                     app = app.route(&path, get(|| async { Html(string) }))
+                }
+                Expression::Function(patterns) => {
+                    let env = env.clone();
+                    app = app.route(
+                        &path,
+                        get(async move |_req: Request<Body>| {
+                            let (_env, expr) = evaluate(
+                                env,
+                                Expression::Call(Call {
+                                    function: Box::new(Expression::Function(patterns.clone())),
+                                    arguments: vector![Expression::Map(HashMap::new())],
+                                }),
+                            )
+                            .unwrap();
+                            let mut string = String::new();
+                            html::build_string(expr, &mut string).unwrap();
+                            Html(string)
+                        }),
+                    )
                 }
                 _ => return Err(error("Expected string for route")),
             }

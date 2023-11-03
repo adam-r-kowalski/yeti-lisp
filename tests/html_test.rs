@@ -89,7 +89,7 @@ fn evaluate_html_with_array_of_child() -> Result {
 }
 
 #[test]
-fn evaluate_html_with_price() -> Result {
+fn evaluate_html_with_int() -> Result {
     let tokens = yeti::Tokens::from_str(r#"(html/string [:ul [:li 1] [:li 2]])"#);
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
