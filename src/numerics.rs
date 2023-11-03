@@ -10,16 +10,8 @@ pub fn bits_to_decimal_digits(bits: u32) -> usize {
     (bits as f64 / 3.322).floor() as usize
 }
 
-#[derive(Clone, PartialEq)]
-pub struct Float(rug::Float);
-
-impl Eq for Float {}
-
-impl core::hash::Hash for Float {
-    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        OrdFloat::from(self.0.clone()).hash(state)
-    }
-}
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Float(OrdFloat);
 
 impl Float {
     pub fn from_str(s: &str) -> Float {
@@ -28,33 +20,35 @@ impl Float {
         let bits = decimal_digits_to_bits(digits);
         let parsed = rug::Float::parse(s).unwrap();
         let float = rug::Float::with_val(bits, parsed);
-        Float(float)
+        Float(OrdFloat::from(float))
     }
 
     pub fn to_f64(&self) -> f64 {
-        self.0.to_f64()
+        self.0.as_float().to_f64()
     }
 
     pub fn from_f64(f: f64) -> Float {
         let bits = f64::MANTISSA_DIGITS;
         let float = rug::Float::with_val(bits, f);
-        Float(float)
+        Float(OrdFloat::from(float))
     }
 }
 
 impl core::fmt::Debug for Float {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let bits = self.0.prec();
+        let float = self.0.as_float();
+        let bits = float.prec();
         let digits = bits_to_decimal_digits(bits);
-        write!(f, "{:.*}", digits, self.0)
+        write!(f, "{:.*}", digits, float)
     }
 }
 
 impl core::fmt::Display for Float {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let bits = self.0.prec();
+        let float = self.0.as_float();
+        let bits = float.prec();
         let digits = bits_to_decimal_digits(bits);
-        write!(f, "{:.*}", digits, self.0)
+        write!(f, "{:.*}", digits, float)
     }
 }
 
