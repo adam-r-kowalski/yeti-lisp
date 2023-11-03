@@ -8,7 +8,7 @@ use crate::{
 };
 use alloc::boxed::Box;
 use alloc::format;
-use alloc::string::ToString;
+use alloc::string::{String, ToString};
 use im::{hashmap, vector, HashMap, Vector};
 use rug;
 
@@ -168,6 +168,16 @@ pub fn environment() -> Environment {
                     Ok(result)
                 })?;
                 crate::evaluate(env, Expression::Array(result))
+              }
+            ),
+            "str".to_string() => NativeFunction(
+              |env, args| {
+                let (env, args) = evaluate_expressions(env, args)?;
+                let result = args.iter().fold(String::new(), |mut result, arg| {
+                    result.push_str(&format!("{}", arg));
+                    result
+                });
+                Ok((env, Expression::String(result)))
               }
             ),
             "assoc".to_string() => NativeFunction(map::assoc),

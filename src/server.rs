@@ -14,7 +14,7 @@ use core::net::IpAddr;
 use core::net::Ipv4Addr;
 use core::net::SocketAddr;
 use hyper::Body;
-use im::{vector, HashMap, Vector};
+use im::{hashmap, vector, Vector};
 use tokio::sync::broadcast;
 
 type Result<T> = core::result::Result<T, Effect>;
@@ -49,12 +49,19 @@ pub fn start(env: Environment, args: Vector<Expression>) -> Result<(Environment,
                     let env = env.clone();
                     app = app.route(
                         &path,
-                        get(async move |_req: Request<Body>| {
-                            let (_env, expr) = evaluate(
+                        get(async move |req: Request<Body>| {
+                            let method = req.method().to_string();
+                            let url = req.uri().to_string();
+                            let (_, expr) = evaluate(
                                 env,
                                 Expression::Call(Call {
                                     function: Box::new(Expression::Function(patterns.clone())),
-                                    arguments: vector![Expression::Map(HashMap::new())],
+                                    arguments: vector![Expression::Map(hashmap![
+                                        Expression::Keyword(":method".to_string()) =>
+                                            Expression::String(method),
+                                        Expression::Keyword(":url".to_string()) =>
+                                            Expression::String(url),
+                                    ])],
                                 }),
                             )
                             .unwrap();

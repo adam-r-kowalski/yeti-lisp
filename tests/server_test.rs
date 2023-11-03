@@ -90,6 +90,29 @@ async fn evaluate_server_with_function_route() -> Result {
 }
 
 #[tokio::test]
+async fn evaluate_server_show_request_as_str() -> Result {
+    let tokens = yeti::Tokens::from_str(
+        r#"
+        (server/start {:port 10080
+                       :routes {"/" (fn [req] [:p (str req)])}})
+        "#,
+    );
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let expected = yeti::Expression::Nil;
+    assert_eq!(actual, expected);
+    let body = reqwest::get("http://localhost:10080")
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    assert_eq!(body, r#"<p>{:method "GET", :url "/"}</p>"#);
+    Ok(())
+}
+
+#[tokio::test]
 async fn evaluate_stop() -> Result {
     let tokens = yeti::Tokens::from_str("(server/start {:port 9090})");
     let expression = yeti::parse(tokens);
