@@ -7,7 +7,6 @@ use crate::extract;
 use crate::Expression;
 use alloc::format;
 use alloc::string::String;
-use alloc::vec::Vec;
 use im::{OrdMap, Vector};
 
 type Result<T> = core::result::Result<T, Effect>;
@@ -86,17 +85,12 @@ pub fn build_string(expr: Expression, string: &mut String) -> Result<()> {
             string.push_str(keyword);
             if a.len() > 1 {
                 if let Expression::Map(m) = &a[1] {
-                    let mut entries = Vec::new();
                     for (k, v) in m.iter() {
                         let k = extract::keyword(k.clone())?;
-                        entries.push((k, v.clone()));
-                    }
-                    entries.sort_by_key(|entry| entry.0.clone());
-                    for (k, v) in entries {
                         string.push(' ');
                         string.push_str(&k[1..]);
                         string.push_str("=\"");
-                        let s = extract::string(v)?;
+                        let s = extract::string(v.clone())?;
                         string.push_str(&s);
                         string.push('"');
                     }
