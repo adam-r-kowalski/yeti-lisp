@@ -22,6 +22,53 @@ use tokio::sync::broadcast;
 
 type Result<T> = core::result::Result<T, Effect>;
 
+fn request_map(route_path: &str, req: Request<Body>) -> Expression {
+    let method = req.method().to_string();
+    let path_and_query = req.uri().path_and_query().unwrap();
+    let actual_path = path_and_query.path().to_string();
+    let headers = req.headers().iter().fold(OrdMap::new(), |mut m, (k, v)| {
+        m.insert(
+            Expression::Keyword(format!(":{}", k.to_string())),
+            Expression::String(v.to_str().unwrap().to_string()),
+        );
+        m
+    });
+    let query = path_and_query.query().unwrap_or("");
+    let query_parameters: BTreeMap<String, String> = serde_qs::from_str(query).unwrap();
+    let query_parameters = query_parameters
+        .iter()
+        .fold(OrdMap::new(), |mut m, (k, v)| {
+            m.insert(
+                Expression::Keyword(format!(":{}", k.to_string())),
+                Expression::String(v.to_string()),
+            );
+            m
+        });
+    let url_parmaeters = route_path
+        .split('/')
+        .zip(actual_path.split('/'))
+        .filter(|(a, _)| a.starts_with(':'))
+        .fold(OrdMap::new(), |mut m, (a, b)| {
+            m.insert(
+                Expression::Keyword(a.to_string()),
+                Expression::String(b.to_string()),
+            );
+            m
+        });
+    Expression::Map(ordmap![
+        Expression::Keyword(":method".to_string()) =>
+            Expression::String(method),
+        Expression::Keyword(":path".to_string()) =>
+            Expression::String(actual_path),
+        Expression::Keyword(":headers".to_string()) =>
+            Expression::Map(headers),
+        Expression::Keyword(":query-parameters".to_string()) =>
+            Expression::Map(query_parameters),
+        Expression::Keyword(":url-parameters".to_string()) =>
+            Expression::Map(url_parmaeters)
+    ])
+}
+
 pub fn start(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
     let (env, arg) = crate::evaluate(env, args[0].clone())?;
     let m = extract::map(arg)?;
@@ -51,46 +98,13 @@ pub fn start(env: Environment, args: Vector<Expression>) -> Result<(Environment,
                 Expression::Function(patterns) => {
                     let env = env.clone();
                     app = app.route(
-                        &path,
+                        &path.clone(),
                         get(async move |req: Request<Body>| {
-                            let method = req.method().to_string();
-                            let path_and_query = req.uri().path_and_query().unwrap();
-                            let path = path_and_query.path().to_string();
-                            let query = path_and_query.query().unwrap_or("");
-                            let query_parameters: BTreeMap<String, String> =
-                                serde_qs::from_str(query).unwrap();
-                            let query_parameters =
-                                query_parameters
-                                    .iter()
-                                    .fold(OrdMap::new(), |mut m, (k, v)| {
-                                        m.insert(
-                                            Expression::Keyword(format!(":{}", k.to_string())),
-                                            Expression::String(v.to_string()),
-                                        );
-                                        m
-                                    });
-                            let headers =
-                                req.headers().iter().fold(OrdMap::new(), |mut m, (k, v)| {
-                                    m.insert(
-                                        Expression::Keyword(format!(":{}", k.to_string())),
-                                        Expression::String(v.to_str().unwrap().to_string()),
-                                    );
-                                    m
-                                });
                             let (_, expr) = evaluate(
                                 env,
                                 Expression::Call(Call {
                                     function: Box::new(Expression::Function(patterns.clone())),
-                                    arguments: vector![Expression::Map(ordmap![
-                                        Expression::Keyword(":method".to_string()) =>
-                                            Expression::String(method),
-                                        Expression::Keyword(":path".to_string()) =>
-                                            Expression::String(path),
-                                        Expression::Keyword(":headers".to_string()) =>
-                                            Expression::Map(headers),
-                                        Expression::Keyword(":query-parameters".to_string()) =>
-                                            Expression::Map(query_parameters)
-                                    ])],
+                                    arguments: vector![request_map(&path, req)],
                                 }),
                             )
                             .unwrap();

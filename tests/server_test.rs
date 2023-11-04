@@ -110,7 +110,7 @@ async fn evaluate_server_show_request_as_str() -> Result {
         .unwrap();
     assert_eq!(
         body,
-        r#"<p>{:headers {:accept "*/*", :host "localhost:10080"}, :method "GET", :path "/", :query-parameters {}}</p>"#
+        r#"<p>{:headers {:accept "*/*", :host "localhost:10080"}, :method "GET", :path "/", :query-parameters {}, :url-parameters {}}</p>"#
     );
     Ok(())
 }
@@ -136,7 +136,33 @@ async fn evaluate_server_query_parameters() -> Result {
         .unwrap();
     assert_eq!(
         body,
-        r#"<p>{:headers {:accept "*/*", :host "localhost:10090"}, :method "GET", :path "/", :query-parameters {:baz "qux", :foo "bar"}}</p>"#
+        r#"<p>{:headers {:accept "*/*", :host "localhost:10090"}, :method "GET", :path "/", :query-parameters {:baz "qux", :foo "bar"}, :url-parameters {}}</p>"#
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn evaluate_server_url_parameters() -> Result {
+    let tokens = yeti::Tokens::from_str(
+        r#"
+        (server/start {:port 10070
+                       :routes {"/hello/:name" (fn [req] [:p (str req)])}})
+        "#,
+    );
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let expected = yeti::Expression::Nil;
+    assert_eq!(actual, expected);
+    let body = reqwest::get("http://localhost:10070/hello/joe")
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    assert_eq!(
+        body,
+        r#"<p>{:headers {:accept "*/*", :host "localhost:10070"}, :method "GET", :path "/hello/joe", :query-parameters {}, :url-parameters {:name "joe"}}</p>"#
     );
     Ok(())
 }
