@@ -5,6 +5,8 @@ use crate::evaluate;
 use crate::expression::{Call, Environment};
 use crate::{extract, html, Expression};
 use alloc::boxed::Box;
+use alloc::collections::BTreeMap;
+use alloc::format;
 use alloc::string::{String, ToString};
 use axum::http::Request;
 use axum::response::Html;
@@ -14,7 +16,8 @@ use core::net::IpAddr;
 use core::net::Ipv4Addr;
 use core::net::SocketAddr;
 use hyper::Body;
-use im::{ordmap, vector, Vector};
+use im::{ordmap, vector, OrdMap, Vector};
+use serde_qs;
 use tokio::sync::broadcast;
 
 type Result<T> = core::result::Result<T, Effect>;
@@ -51,7 +54,29 @@ pub fn start(env: Environment, args: Vector<Expression>) -> Result<(Environment,
                         &path,
                         get(async move |req: Request<Body>| {
                             let method = req.method().to_string();
-                            let url = req.uri().to_string();
+                            let path_and_query = req.uri().path_and_query().unwrap();
+                            let path = path_and_query.path().to_string();
+                            let query = path_and_query.query().unwrap_or("");
+                            let query_parameters: BTreeMap<String, String> =
+                                serde_qs::from_str(query).unwrap();
+                            let query_parameters =
+                                query_parameters
+                                    .iter()
+                                    .fold(OrdMap::new(), |mut m, (k, v)| {
+                                        m.insert(
+                                            Expression::Keyword(format!(":{}", k.to_string())),
+                                            Expression::String(v.to_string()),
+                                        );
+                                        m
+                                    });
+                            let headers =
+                                req.headers().iter().fold(OrdMap::new(), |mut m, (k, v)| {
+                                    m.insert(
+                                        Expression::Keyword(format!(":{}", k.to_string())),
+                                        Expression::String(v.to_str().unwrap().to_string()),
+                                    );
+                                    m
+                                });
                             let (_, expr) = evaluate(
                                 env,
                                 Expression::Call(Call {
@@ -59,8 +84,12 @@ pub fn start(env: Environment, args: Vector<Expression>) -> Result<(Environment,
                                     arguments: vector![Expression::Map(ordmap![
                                         Expression::Keyword(":method".to_string()) =>
                                             Expression::String(method),
-                                        Expression::Keyword(":url".to_string()) =>
-                                            Expression::String(url)
+                                        Expression::Keyword(":path".to_string()) =>
+                                            Expression::String(path),
+                                        Expression::Keyword(":headers".to_string()) =>
+                                            Expression::Map(headers),
+                                        Expression::Keyword(":query-parameters".to_string()) =>
+                                            Expression::Map(query_parameters)
                                     ])],
                                 }),
                             )

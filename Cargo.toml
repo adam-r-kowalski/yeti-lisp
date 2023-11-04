@@ -14,3 +14,5 @@ rusqlite = { version = "0.29.0", features = ["bundled"] }
 crossterm = "0.27"
 hyper = { version = "0.14.24", features = ["stream"] }
 uuid = { version = "1.5.0", features = ["v4"] }
+serde = "1.0.190"
+serde_qs = "0.12"
