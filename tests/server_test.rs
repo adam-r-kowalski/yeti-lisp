@@ -110,7 +110,7 @@ async fn evaluate_server_show_request_as_str() -> Result {
         .unwrap();
     assert_eq!(
         body,
-        r#"<p>{:headers {:accept "*/*", :host "localhost:10080"}, :method "GET", :path "/", :query-parameters {}, :url-parameters {}}</p>"#
+        r#"<p>{:headers {:accept "*/*", :host "localhost:10080"}, :method "GET", :params {}, :path "/", :query {}}</p>"#
     );
     Ok(())
 }
@@ -136,7 +136,7 @@ async fn evaluate_server_query_parameters() -> Result {
         .unwrap();
     assert_eq!(
         body,
-        r#"<p>{:headers {:accept "*/*", :host "localhost:10090"}, :method "GET", :path "/", :query-parameters {:baz "qux", :foo "bar"}, :url-parameters {}}</p>"#
+        r#"<p>{:headers {:accept "*/*", :host "localhost:10090"}, :method "GET", :params {}, :path "/", :query {:baz "qux", :foo "bar"}}</p>"#
     );
     Ok(())
 }
@@ -162,7 +162,7 @@ async fn evaluate_server_url_parameters() -> Result {
         .unwrap();
     assert_eq!(
         body,
-        r#"<p>{:headers {:accept "*/*", :host "localhost:10070"}, :method "GET", :path "/hello/joe", :query-parameters {}, :url-parameters {:name "joe"}}</p>"#
+        r#"<p>{:headers {:accept "*/*", :host "localhost:10070"}, :method "GET", :params {:name "joe"}, :path "/hello/joe", :query {}}</p>"#
     );
     Ok(())
 }

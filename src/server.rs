@@ -34,17 +34,15 @@ fn request_map(route_path: &str, req: Request<Body>) -> Expression {
         m
     });
     let query = path_and_query.query().unwrap_or("");
-    let query_parameters: BTreeMap<String, String> = serde_qs::from_str(query).unwrap();
-    let query_parameters = query_parameters
-        .iter()
-        .fold(OrdMap::new(), |mut m, (k, v)| {
-            m.insert(
-                Expression::Keyword(format!(":{}", k.to_string())),
-                Expression::String(v.to_string()),
-            );
-            m
-        });
-    let url_parmaeters = route_path
+    let query: BTreeMap<String, String> = serde_qs::from_str(query).unwrap();
+    let query = query.iter().fold(OrdMap::new(), |mut m, (k, v)| {
+        m.insert(
+            Expression::Keyword(format!(":{}", k.to_string())),
+            Expression::String(v.to_string()),
+        );
+        m
+    });
+    let params = route_path
         .split('/')
         .zip(actual_path.split('/'))
         .filter(|(a, _)| a.starts_with(':'))
@@ -62,10 +60,10 @@ fn request_map(route_path: &str, req: Request<Body>) -> Expression {
             Expression::String(actual_path),
         Expression::Keyword(":headers".to_string()) =>
             Expression::Map(headers),
-        Expression::Keyword(":query-parameters".to_string()) =>
-            Expression::Map(query_parameters),
-        Expression::Keyword(":url-parameters".to_string()) =>
-            Expression::Map(url_parmaeters)
+        Expression::Keyword(":query".to_string()) =>
+            Expression::Map(query),
+        Expression::Keyword(":params".to_string()) =>
+            Expression::Map(params)
     ])
 }
 
