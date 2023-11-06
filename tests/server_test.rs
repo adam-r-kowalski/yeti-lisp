@@ -1,10 +1,12 @@
+use std::collections::HashMap;
+
 use yeti;
 
 type Result = std::result::Result<(), yeti::effect::Effect>;
 
 #[tokio::test]
 async fn evaluate_server_with_string_route_and_no_port() -> Result {
-    let tokens = yeti::Tokens::from_str(r#"(server/start {:routes {"/" "Hello Forge"}})"#);
+    let tokens = yeti::Tokens::from_str(r#"(server/start {:routes {"/" "Hello Yeti"}})"#);
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
     let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
@@ -16,7 +18,7 @@ async fn evaluate_server_with_string_route_and_no_port() -> Result {
         .text()
         .await
         .unwrap();
-    assert_eq!(body, "Hello Forge");
+    assert_eq!(body, "Hello Yeti");
     Ok(())
 }
 
@@ -25,7 +27,7 @@ async fn evaluate_server_with_string_route() -> Result {
     let tokens = yeti::Tokens::from_str(
         r#"
         (server/start {:port 4000
-                       :routes {"/" "Hello Forge"}})
+                       :routes {"/" "Hello Yeti"}})
         "#,
     );
     let expression = yeti::parse(tokens);
@@ -39,7 +41,7 @@ async fn evaluate_server_with_string_route() -> Result {
         .text()
         .await
         .unwrap();
-    assert_eq!(body, "Hello Forge");
+    assert_eq!(body, "Hello Yeti");
     Ok(())
 }
 
@@ -110,7 +112,7 @@ async fn evaluate_server_show_request_as_str() -> Result {
         .unwrap();
     assert_eq!(
         body,
-        r#"<p>{:headers {:accept "*/*", :host "localhost:10080"}, :method "GET", :params {}, :path "/", :query {}}</p>"#
+        r#"<p>{:headers {:accept "*/*", :host "localhost:10080"}, :method "GET", :path "/"}</p>"#
     );
     Ok(())
 }
@@ -136,7 +138,7 @@ async fn evaluate_server_query_parameters() -> Result {
         .unwrap();
     assert_eq!(
         body,
-        r#"<p>{:headers {:accept "*/*", :host "localhost:10090"}, :method "GET", :params {}, :path "/", :query {:baz "qux", :foo "bar"}}</p>"#
+        r#"<p>{:headers {:accept "*/*", :host "localhost:10090"}, :method "GET", :path "/", :query {:baz "qux", :foo "bar"}}</p>"#
     );
     Ok(())
 }
@@ -162,7 +164,70 @@ async fn evaluate_server_url_parameters() -> Result {
         .unwrap();
     assert_eq!(
         body,
-        r#"<p>{:headers {:accept "*/*", :host "localhost:10070"}, :method "GET", :params {:name "joe"}, :path "/hello/joe", :query {}}</p>"#
+        r#"<p>{:headers {:accept "*/*", :host "localhost:10070"}, :method "GET", :params {:name "joe"}, :path "/hello/joe"}</p>"#
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn evaluate_server_form_data() -> Result {
+    let tokens = yeti::Tokens::from_str(
+        r#"
+        (server/start {:port 10040
+                       :routes {"/" (fn [req] [:p (str req)])}})
+        "#,
+    );
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let expected = yeti::Expression::Nil;
+    assert_eq!(actual, expected);
+    let client = reqwest::Client::new();
+    let body = client
+        .post("http://localhost:10040")
+        .form(&[("foo", "bar"), ("baz", "qux")])
+        .send()
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    assert_eq!(
+        body,
+        r#"<p>{:form {:baz "qux", :foo "bar"}, :headers {:accept "*/*", :content-length "15", :content-type "application/x-www-form-urlencoded", :host "localhost:10040"}, :method "POST", :path "/"}</p>"#
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn evaluate_server_post_json_data() -> Result {
+    let tokens = yeti::Tokens::from_str(
+        r#"
+        (server/start {:port 10030
+                       :routes {"/" (fn [req] [:p (str req)])}})
+        "#,
+    );
+    let expression = yeti::parse(tokens);
+    let environment = yeti::core::environment();
+    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let expected = yeti::Expression::Nil;
+    assert_eq!(actual, expected);
+    let client = reqwest::Client::new();
+    let mut map = HashMap::new();
+    map.insert("foo", "bar");
+    map.insert("baz", "qux");
+    let body = client
+        .post("http://localhost:10030")
+        .json(&map)
+        .send()
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    assert_eq!(
+        body,
+        r#"<p>{:headers {:accept "*/*", :content-length "25", :content-type "application/json", :host "localhost:10030"}, :json {:baz "qux", :foo "bar"}, :method "POST", :path "/"}</p>"#
     );
     Ok(())
 }

@@ -1596,6 +1596,7 @@ dependencies = [
  "rug",
  "rusqlite",
  "serde",
+ "serde_json",
  "serde_qs",
  "spin",
  "tokio",

@@ -1,1 +1,1 @@
-![Forge Lisp Logo](assets/logo.png)
+![Yeti Lisp Logo](assets/logo.png)
