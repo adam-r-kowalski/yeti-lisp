@@ -58,6 +58,15 @@ fn pattern_match_array_with_literal_integer() -> Result {
 }
 
 #[test]
+fn pattern_match_array_with_literal_nil() -> Result {
+    let env = yeti::core::environment();
+    let (_, actual) = yeti::evaluate_source(env, "((fn [[nil y]] y) [nil 2])")?;
+    let expected = yeti::Expression::Integer(Integer::from(2));
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[test]
 fn pattern_match_multiple_patterns_first_taken() -> Result {
     let env = yeti::core::environment();
     let (_, actual) = yeti::evaluate_source(

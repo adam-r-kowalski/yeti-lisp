@@ -54,6 +54,14 @@ pub fn pattern_match(
                 value
             ))),
         },
+        Expression::Nil => match value {
+            Expression::Nil => Ok(env),
+            _ => Err(error(&format!(
+                "Cannot pattern match {} with {}",
+                Expression::Nil,
+                value
+            ))),
+        },
         Expression::Array(patterns) => {
             if let Expression::Array(values) = value {
                 let env = patterns
