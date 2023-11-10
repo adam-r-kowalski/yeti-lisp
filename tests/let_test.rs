@@ -35,3 +35,14 @@ fn let_binding_with_pattern_match() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn let_binding_removes_bindings_after_scope() -> Result {
+    let env = yeti::core::environment();
+    let (env, actual) = yeti::evaluate_source(env, "(let [x 5] x)")?;
+    let expected = yeti::Expression::Integer(Integer::from(5));
+    assert_eq!(actual, expected);
+    let result = yeti::evaluate_source(env, "x");
+    assert!(matches!(result, Err(yeti::effect::Effect::Error(_))));
+    Ok(())
+}

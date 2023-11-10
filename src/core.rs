@@ -144,6 +144,7 @@ pub fn environment() -> Environment {
             ),
             "let".to_string() => NativeFunction(
               |env, args| {
+                let original_env = env.clone();
                 let (bindings, body) = (args[0].clone(), args[1].clone());
                 let bindings = extract::array(bindings)?;
                 let env = bindings.iter().array_chunks().try_fold(env, |env, [pattern, value]| {
@@ -151,7 +152,8 @@ pub fn environment() -> Environment {
                     let env = pattern_match(env, pattern.clone(), value)?;
                     Ok(env)
                 })?;
-                crate::evaluate(env, body)
+                let (_, value) = crate::evaluate(env, body)?;
+                Ok((original_env, value))
               }
             ),
             "for".to_string() => NativeFunction(
