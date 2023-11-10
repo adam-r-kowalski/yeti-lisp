@@ -1,6 +1,6 @@
 extern crate alloc;
 
-use crate::effect::error;
+use crate::effect::{error, Effect};
 use crate::expression::{Call, Environment, Pattern};
 use crate::Expression::{Integer, NativeFunction, Ratio};
 use crate::{
@@ -20,6 +20,8 @@ pub fn truthy(expression: &Expression) -> bool {
     }
 }
 
+pub type Result = core::result::Result<(Environment, Expression), Effect>;
+
 pub fn environment() -> Environment {
     Environment {
         bindings: ordmap! {
@@ -31,40 +33,62 @@ pub fn environment() -> Environment {
             ),
             "+".to_string() => NativeFunction(
               |env, args| {
-                let (env, args) = evaluate_expressions(env, args)?;
-                match (&args[0], &args[1]) {
-                  (Integer(lhs), Integer(rhs)) => Ok((env, Integer((lhs + rhs).into()))),
-                  _ => Err(error("Expected integer argument")),
+                if args.len() == 0 {
+                    return Ok((env, Integer(0.into())));
                 }
+                let (env, args) = evaluate_expressions(env, args)?;
+                let (initial, args) = args.split_at(1);
+                let result = args.iter().try_fold(initial[0].clone(), |lhs, rhs| {
+                    match (lhs, rhs) {
+                        (Integer(lhs), Integer(rhs)) => Ok(Integer((lhs + rhs).into())),
+                        _ => Err(error("Expected integer argument")),
+                    }
+                })?;
+                Ok((env, result))
               }
             ),
             "-".to_string() => NativeFunction(
               |env, args| {
                 let (env, args) = evaluate_expressions(env, args)?;
-                match (&args[0], &args[1]) {
-                  (Integer(lhs), Integer(rhs)) => Ok((env, Integer((lhs - rhs).into()))),
-                  _ => Err(error("Expected integer argument")),
-                }
+                let (initial, args) = args.split_at(1);
+                let result = args.iter().try_fold(initial[0].clone(), |lhs, rhs| {
+                    match (lhs, rhs) {
+                      (Integer(lhs), Integer(rhs)) => Ok(Integer((lhs - rhs).into())),
+                      _ => Err(error("Expected integer argument")),
+                    }
+                })?;
+                Ok((env, result))
               }
             ),
             "*".to_string() => NativeFunction(
               |env, args| {
-                let (env, args) = evaluate_expressions(env, args)?;
-                match (&args[0], &args[1]) {
-                  (Integer(lhs), Integer(rhs)) => Ok((env, Integer((lhs * rhs).into()))),
-                  (Integer(lhs), Ratio(rhs)) => Ok((env, ratio((lhs * rhs).into()))),
-                  (Ratio(lhs), Integer(rhs)) => Ok((env, ratio((lhs * rhs).into()))),
-                  (lhs, rhs) => Err(error(&format!("Cannot multiply {} and {}", lhs, rhs))),
+                if args.len() == 0 {
+                    return Ok((env, Integer(1.into())));
                 }
+                let (env, args) = evaluate_expressions(env, args)?;
+                let (initial, args) = args.split_at(1);
+                let result = args.iter().try_fold(initial[0].clone(), |lhs, rhs| {
+                    match (lhs, rhs) {
+                      (Integer(lhs), Integer(rhs)) => Ok(Integer((lhs * rhs).into())),
+                      (Integer(lhs), Ratio(rhs)) => Ok(ratio((lhs * rhs).into())),
+                      (Ratio(lhs), Integer(rhs)) => Ok(ratio((lhs * rhs).into())),
+                      (lhs, rhs) => Err(error(&format!("Cannot multiply {} and {}", lhs, rhs))),
+                    }
+                })?;
+                Ok((env, result))
               }
             ),
             "/".to_string() => NativeFunction(
               |env, args| {
                 let (env, args) = evaluate_expressions(env, args)?;
-                match (&args[0], &args[1]) {
-                  (Integer(lhs), Integer(rhs)) => Ok((env, ratio(rug::Rational::from((lhs, rhs))))),
-                  _ => Err(error("Expected integer argument")),
-                }
+                let (initial, args) = args.split_at(1);
+                let result = args.iter().try_fold(initial[0].clone(), |lhs, rhs| {
+                    match (lhs, rhs) {
+                      (Integer(lhs), Integer(rhs)) => Ok(ratio(rug::Rational::from((lhs, rhs)))),
+                      _ => Err(error("Expected integer argument")),
+                    }
+                })?;
+                Ok((env, result))
               }
             ),
             "if".to_string() => NativeFunction(
