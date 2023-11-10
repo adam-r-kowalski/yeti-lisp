@@ -100,7 +100,7 @@ impl Clone for Sqlite {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Pattern {
     pub parameters: Expressions,
-    pub body: Expression,
+    pub body: Vector<Expression>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -173,13 +173,17 @@ impl Display for Expression {
                     let Pattern { parameters, body } = &patterns[0];
                     let param_strs: Vec<String> =
                         parameters.iter().map(|e| format!("{}", e)).collect();
-                    write!(f, "(fn [{}] {})", param_strs.join(" "), body)
+                    write!(f, "(fn [{}] ", param_strs.join(" "))?;
+                    body.iter().try_for_each(|e| write!(f, "{} ", e))?;
+                    write!(f, ")")
                 } else {
                     write!(f, "(fn")?;
                     for Pattern { parameters, body } in patterns {
                         let param_strs: Vec<String> =
                             parameters.iter().map(|e| format!("{}", e)).collect();
-                        write!(f, "\n  ([{}] {})", param_strs.join(" "), body)?;
+                        write!(f, "\n  ([{}] ", param_strs.join(" "))?;
+                        body.iter().try_for_each(|e| write!(f, "{} ", e))?;
+                        write!(f, ")")?;
                     }
                     write!(f, ")")
                 }

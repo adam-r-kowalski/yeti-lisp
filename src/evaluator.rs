@@ -111,7 +111,7 @@ fn find_pattern_match(
     env: Environment,
     patterns: Vector<Pattern>,
     arguments: Vector<Expression>,
-) -> core::result::Result<(Environment, Expression), Effect> {
+) -> core::result::Result<(Environment, Vector<Expression>), Effect> {
     let mut failures = vec![];
     for Pattern { parameters, body } in patterns {
         let result = pattern_match(
@@ -142,7 +142,10 @@ fn evaluate_call(environment: Environment, call: Call) -> Result {
             let original_environment = environment.clone();
             let (environment, arguments) = evaluate_expressions(environment, arguments)?;
             let (environment, body) = find_pattern_match(environment, patterns, arguments)?;
-            let (_, value) = evaluate(environment, body.clone())?;
+            let (_, value) = body.iter().try_fold(
+                (environment, Expression::Nil),
+                |(environment, _), expression| evaluate(environment, expression.clone()),
+            )?;
             Ok((original_environment, value))
         }
         Expression::NativeFunction(f) => f(environment, arguments),

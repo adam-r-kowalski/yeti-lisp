@@ -217,13 +217,13 @@ fn evaluate_fn() -> Result {
     let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
     let expected = yeti::Expression::Function(vector![yeti::expression::Pattern {
         parameters: vector![yeti::Expression::Symbol("x".to_string()),],
-        body: yeti::Expression::Call(Call {
+        body: vector![yeti::Expression::Call(Call {
             function: Box::new(yeti::Expression::Symbol("*".to_string())),
             arguments: vector![
                 yeti::Expression::Symbol("x".to_string()),
                 yeti::Expression::Integer(Integer::from(2)),
             ],
-        }),
+        })],
     }]);
     assert_eq!(actual, expected);
     Ok(())
@@ -253,13 +253,13 @@ fn evaluate_defn() -> Result {
         "double".to_string(),
         yeti::Expression::Function(vector![yeti::expression::Pattern {
             parameters: vector![yeti::Expression::Symbol("x".to_string()),],
-            body: yeti::Expression::Call(Call {
+            body: vector![yeti::Expression::Call(Call {
                 function: Box::new(yeti::Expression::Symbol("*".to_string())),
                 arguments: vector![
                     yeti::Expression::Symbol("x".to_string()),
                     yeti::Expression::Integer(Integer::from(2)),
                 ],
-            }),
+            })],
         }]),
     );
     assert_eq!(actual_environment.bindings, expected_environment.bindings);

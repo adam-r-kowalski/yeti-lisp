@@ -112,14 +112,14 @@ pub fn environment() -> Environment {
                 |env, args| {
                     if let Expression::Array(array) = &args[0] {
                         let parameters = array.clone();
-                        let body = args[1].clone();
+                        let body = args.skip(1);
                         let function = Expression::Function(vector![Pattern { parameters, body }]);
                         Ok((env, function))
                     } else {
                         let patterns = args.iter().try_fold(Vector::new(), |mut patterns, pattern| {
                             let call = extract::call(pattern.clone())?;
                             let parameters = extract::array(*call.function)?;
-                            let body = call.arguments[0].clone();
+                            let body = call.arguments;
                             patterns.push_back(Pattern { parameters, body });
                             Ok(patterns)
                         })?;
