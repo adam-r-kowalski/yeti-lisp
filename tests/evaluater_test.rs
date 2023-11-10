@@ -53,10 +53,8 @@ fn evaluate_float() -> Result {
 fn evaluate_symbol_bound_to_integer() -> Result {
     let tokens = yeti::Tokens::from_str("x");
     let expression = yeti::parse(tokens);
-    let environment = yeti::Environment {
-        bindings: ordmap! {
-            "x".to_string() => yeti::Expression::Integer(Integer::from(5))
-        },
+    let environment = ordmap! {
+        "x".to_string() => yeti::Expression::Integer(Integer::from(5))
     };
     let (_, actual) = yeti::evaluate(environment, expression)?;
     let expected = yeti::Expression::Integer(Integer::from(5));
@@ -68,18 +66,16 @@ fn evaluate_symbol_bound_to_integer() -> Result {
 fn evaluate_symbol_bound_to_function() -> Result {
     let tokens = yeti::Tokens::from_str("(double 5)");
     let expression = yeti::parse(tokens);
-    let environment = yeti::Environment {
-        bindings: ordmap! {
-            "double".to_string() => yeti::Expression::NativeFunction(
-              |env, args| {
-                let (env, args) = yeti::evaluate_expressions(env, args)?;
-                match &args[0] {
-                  yeti::Expression::Integer(i) => Ok((env, yeti::Expression::Integer(i * Integer::from(2)))),
-                  _ => panic!("Expected integer argument"),
-                }
-              }
-            )
-        },
+    let environment = ordmap! {
+        "double".to_string() => yeti::Expression::NativeFunction(
+          |env, args| {
+            let (env, args) = yeti::evaluate_expressions(env, args)?;
+            match &args[0] {
+              yeti::Expression::Integer(i) => Ok((env, yeti::Expression::Integer(i * Integer::from(2)))),
+              _ => panic!("Expected integer argument"),
+            }
+          }
+        )
     };
     let (_, actual) = yeti::evaluate(environment, expression)?;
     let expected = yeti::Expression::Integer(Integer::from(10));
@@ -130,7 +126,7 @@ fn evaluate_def() -> Result {
     assert_eq!(actual, expected);
     let mut expected_environment = environment;
     expected_environment.insert("x".to_string(), yeti::Expression::Integer(Integer::from(5)));
-    assert_eq!(actual_environment.bindings, expected_environment.bindings);
+    assert_eq!(actual_environment, expected_environment);
     Ok(())
 }
 
@@ -257,7 +253,7 @@ fn evaluate_defn() -> Result {
             })],
         }]),
     );
-    assert_eq!(actual_environment.bindings, expected_environment.bindings);
+    assert_eq!(actual_environment, expected_environment);
     Ok(())
 }
 

@@ -14,26 +14,8 @@ use rug::{Integer, Rational};
 
 type Expressions = Vector<Expression>;
 
-#[derive(Debug, Clone)]
-pub struct Environment {
-    pub bindings: OrdMap<String, Expression>,
-}
+pub type Environment = OrdMap<String, Expression>;
 
-impl Environment {
-    pub fn get(&self, key: &str) -> Option<Expression> {
-        self.bindings.get(key).cloned()
-    }
-
-    pub fn insert(&mut self, key: String, value: Expression) {
-        self.bindings.insert(key, value);
-    }
-
-    pub fn new() -> Environment {
-        Environment {
-            bindings: OrdMap::new(),
-        }
-    }
-}
 pub type Result = core::result::Result<(Environment, Expression), Effect>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
