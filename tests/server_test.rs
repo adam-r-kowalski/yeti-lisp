@@ -49,7 +49,7 @@ async fn evaluate_server_with_string_route() -> Result {
 async fn evaluate_server_with_html_route() -> Result {
     let tokens = yeti::Tokens::from_str(
         r#"
-        (server/start {:port 8080
+        (server/start {:port 3030
                        :routes {"/" [:ul [:li "first"] [:li "second"]]}})
         "#,
     );
@@ -58,7 +58,7 @@ async fn evaluate_server_with_html_route() -> Result {
     let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
     let expected = yeti::Expression::Nil;
     assert_eq!(actual, expected);
-    let body = reqwest::get("http://localhost:8080")
+    let body = reqwest::get("http://localhost:3030")
         .await
         .unwrap()
         .text()

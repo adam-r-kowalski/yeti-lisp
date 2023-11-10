@@ -169,14 +169,16 @@ pub fn environment() -> Environment {
             "let".to_string() => NativeFunction(
               |env, args| {
                 let original_env = env.clone();
-                let (bindings, body) = (args[0].clone(), args[1].clone());
-                let bindings = extract::array(bindings)?;
+                let (bindings, body) = args.split_at(1);
+                let bindings = extract::array(bindings[0].clone())?;
                 let env = bindings.iter().array_chunks().try_fold(env, |env, [pattern, value]| {
                     let (env, value) = crate::evaluate(env, value.clone())?;
                     let env = pattern_match(env, pattern.clone(), value)?;
                     Ok(env)
                 })?;
-                let (_, value) = crate::evaluate(env, body)?;
+                let (_, value) = body.iter().try_fold((env, Expression::Nil), |(env, _), expression| {
+                    crate::evaluate(env, expression.clone())
+                })?;
                 Ok((original_env, value))
               }
             ),

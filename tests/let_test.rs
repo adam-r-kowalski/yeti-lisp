@@ -46,3 +46,19 @@ fn let_binding_removes_bindings_after_scope() -> Result {
     assert!(matches!(result, Err(yeti::effect::Effect::Error(_))));
     Ok(())
 }
+
+#[test]
+fn let_binding_multi_line_body() -> Result {
+    let env = yeti::core::environment();
+    let (_, actual) = yeti::evaluate_source(
+        env,
+        r#"
+        (let [x 5]
+         (+ 1 2)
+         (+ x 2))
+        "#,
+    )?;
+    let expected = yeti::Expression::Integer(Integer::from(7));
+    assert_eq!(actual, expected);
+    Ok(())
+}
