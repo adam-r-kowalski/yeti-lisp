@@ -1,7 +1,7 @@
 extern crate alloc;
 use crate::effect::{error, Effect};
-use crate::expression::{Call, Sqlite};
-use crate::Expression;
+use crate::expression::Call;
+use crate::{Expression, NativeType};
 use alloc::format;
 use alloc::string::{String, ToString};
 use im::{OrdMap, Vector};
@@ -64,9 +64,9 @@ pub fn integer(expr: Expression) -> Result<rug::Integer> {
     }
 }
 
-pub fn sqlite(expr: Expression) -> Result<Sqlite> {
+pub fn native_type(expr: Expression) -> Result<NativeType> {
     match expr {
-        Expression::Sqlite(s) => Ok(s),
-        _ => Err(error("Expected sqlite database")),
+        Expression::NativeType(t) => Ok(t),
+        _ => Err(error("Expected native type")),
     }
 }

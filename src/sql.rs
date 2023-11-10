@@ -1,10 +1,11 @@
 extern crate alloc;
 
 use crate::effect::{error, Effect};
-use crate::expression::{Environment, Sqlite};
+use crate::expression::Environment;
 use crate::extract;
 use crate::numerics::Float;
 use crate::Expression;
+use crate::NativeType;
 use crate::{evaluate_expressions, evaluate_source};
 use alloc::boxed::Box;
 use alloc::format;
@@ -195,7 +196,10 @@ fn sql_string(expr: Expression) -> Result<Expression> {
 
 pub fn connect(env: Environment, _args: Vector<Expression>) -> Result<(Environment, Expression)> {
     match Connection::open_in_memory() {
-        Ok(db) => Ok((env, Expression::Sqlite(Sqlite::new(db)))),
+        Ok(db) => Ok((
+            env,
+            Expression::NativeType(NativeType::new(db, "sqlite".to_string())),
+        )),
         Err(_) => Err(error("Failed to open SQLite database")),
     }
 }
@@ -241,7 +245,7 @@ impl FromSql for Expression {
 
 pub fn query(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
     let (env, args) = evaluate_expressions(env, args)?;
-    let db = extract::sqlite(args[0].clone())?;
+    let db = extract::native_type(args[0].clone())?;
     let array = extract::array(sql_string(args[1].clone())?)?;
     let string = extract::string(array[0].clone())?;
     let parameters = array
@@ -249,7 +253,10 @@ pub fn query(env: Environment, args: Vector<Expression>) -> Result<(Environment,
         .skip(1)
         .map(|p| p as &dyn ToSql)
         .collect::<Vec<_>>();
-    let connection = db.connection.lock();
+    let connection = db.value.lock();
+    let connection = connection
+        .downcast_ref::<Connection>()
+        .ok_or_else(|| error("Expected SQLite database connection"))?;
     let result = connection.prepare(&string);
     match result {
         Ok(mut stmt) => {
@@ -281,7 +288,7 @@ pub fn query(env: Environment, args: Vector<Expression>) -> Result<(Environment,
 
 pub fn execute(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
     let (env, args) = evaluate_expressions(env, args)?;
-    let db = extract::sqlite(args[0].clone())?;
+    let db = extract::native_type(args[0].clone())?;
     let array = extract::array(sql_string(args[1].clone())?)?;
     let string = extract::string(array[0].clone())?;
     let parameters = array
@@ -289,7 +296,10 @@ pub fn execute(env: Environment, args: Vector<Expression>) -> Result<(Environmen
         .skip(1)
         .map(|p| p as &dyn ToSql)
         .collect::<Vec<_>>();
-    let connection = db.connection.lock();
+    let connection = db.value.lock();
+    let connection = connection
+        .downcast_ref::<Connection>()
+        .ok_or_else(|| error("Expected SQLite database connection"))?;
     match connection.execute(&string, &parameters[..]) {
         Ok(_) => Ok((env, Expression::Nil)),
         Err(e) => Err(error(&format!("Failed to execute query: {}", e))),

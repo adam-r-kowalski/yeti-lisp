@@ -6,7 +6,7 @@ type Result = std::result::Result<(), yeti::effect::Effect>;
 async fn sql_connect() -> Result {
     let env = yeti::core::environment();
     let (_, actual) = yeti::evaluate_source(env, r#"(sql/connect)"#)?;
-    assert!(matches!(actual, yeti::Expression::Sqlite(_)));
+    assert!(matches!(actual, yeti::Expression::NativeType(_)));
     Ok(())
 }
 

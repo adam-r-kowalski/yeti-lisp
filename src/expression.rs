@@ -2,6 +2,7 @@ extern crate alloc;
 
 use crate::effect::Effect;
 use crate::numerics::Float;
+use crate::NativeType;
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::String;
@@ -11,10 +12,8 @@ use core::fmt::{self, Display, Formatter};
 use core::hash::Hash;
 use im::{OrdMap, Vector};
 use rug::{Integer, Rational};
-use rusqlite::Connection;
 use spin::Mutex;
 use tokio::sync::broadcast::Sender;
-use uuid::Uuid;
 
 type Expressions = Vector<Expression>;
 
@@ -42,61 +41,6 @@ impl Environment {
 }
 pub type Result = core::result::Result<(Environment, Expression), Effect>;
 
-pub struct Sqlite {
-    pub connection: Arc<Mutex<Connection>>,
-    uuid: Uuid,
-}
-
-impl Sqlite {
-    pub fn new(connection: Connection) -> Sqlite {
-        Sqlite {
-            connection: Arc::new(Mutex::new(connection)),
-            uuid: Uuid::new_v4(),
-        }
-    }
-}
-
-impl PartialEq for Sqlite {
-    fn eq(&self, other: &Self) -> bool {
-        self.uuid == other.uuid
-    }
-}
-
-impl core::hash::Hash for Sqlite {
-    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        self.uuid.hash(state);
-    }
-}
-
-impl core::fmt::Debug for Sqlite {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "#sqlite({})", self.uuid)
-    }
-}
-
-impl Eq for Sqlite {}
-
-impl PartialOrd for Sqlite {
-    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        self.uuid.partial_cmp(&other.uuid)
-    }
-}
-
-impl Ord for Sqlite {
-    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        self.uuid.cmp(&other.uuid)
-    }
-}
-
-impl Clone for Sqlite {
-    fn clone(&self) -> Self {
-        Sqlite {
-            connection: self.connection.clone(),
-            uuid: self.uuid,
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Pattern {
     pub parameters: Expressions,
@@ -123,9 +67,9 @@ pub enum Expression {
     Map(OrdMap<Expression, Expression>),
     Call(Call),
     Function(Vector<Pattern>),
-    NativeFunction(fn(Environment, Expressions) -> Result),
-    Sqlite(Sqlite),
     Quote(Box<Expression>),
+    NativeFunction(fn(Environment, Expressions) -> Result),
+    NativeType(NativeType),
 }
 
 impl Display for Expression {
@@ -189,7 +133,7 @@ impl Display for Expression {
                 }
             }
             Expression::NativeFunction(_) => write!(f, "#native_function"),
-            Expression::Sqlite(s) => write!(f, "{:?}", s),
+            Expression::NativeType(t) => write!(f, "{}", t),
             Expression::Quote(e) => write!(f, "'{}", e),
         }
     }

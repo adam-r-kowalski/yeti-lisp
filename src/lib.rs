@@ -13,6 +13,7 @@ pub mod expression;
 pub mod extract;
 pub mod html;
 pub mod map;
+mod native_type;
 mod numerics;
 mod parser;
 mod peeking_take_while;
@@ -22,6 +23,7 @@ mod tokenizer;
 
 pub use evaluator::{evaluate, evaluate_expressions, evaluate_source, pattern_match};
 pub use expression::{Environment, Expression};
+pub use native_type::NativeType;
 pub use numerics::{bits_to_decimal_digits, decimal_digits_to_bits, ratio, Float};
 pub use parser::parse;
 pub use peeking_take_while::PeekableExt;
