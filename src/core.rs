@@ -207,6 +207,37 @@ pub fn environment() -> Environment {
             Ok((env, Expression::String(result)))
           }
         ),
+        "bound?".to_string() => NativeFunction(
+            |env, args| {
+                let (env, args) = evaluate_expressions(env, args)?;
+                let name = extract::symbol(args[0].clone())?;
+                let result = env.contains_key(&name);
+                Ok((env, Expression::Bool(result)))
+            }
+        ),
+        "do".to_string() => NativeFunction(
+            |env, args| {
+                let original_env = env.clone();
+                let (_, result) = args.iter().try_fold((env, Expression::Nil), |(env, _), expression| {
+                    crate::evaluate(env, expression.clone())
+                })?;
+                Ok((original_env, result))
+            }
+        ),
+        "when".to_string() => NativeFunction(
+            |env, args| {
+                let (condition, body) = args.split_at(1);
+                let (env, condition) = crate::evaluate(env, condition[0].clone())?;
+                if truthy(&condition) {
+                    crate::evaluate(env, Expression::Call(Call{
+                        function: Box::new(Expression::Symbol("do".to_string())),
+                        arguments: body,
+                    }))
+                } else {
+                    Ok((env, Expression::Nil))
+                }
+            }
+        ),
         "assoc".to_string() => NativeFunction(map::assoc),
         "dissoc".to_string() => NativeFunction(map::dissoc),
         "merge".to_string() => NativeFunction(map::merge),
