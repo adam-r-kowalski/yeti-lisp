@@ -9,7 +9,7 @@ use crate::{
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::{String, ToString};
-use im::{ordmap, vector, OrdMap, Vector};
+use im::{ordmap, vector, Vector};
 use rug;
 
 pub fn truthy(expression: &Expression) -> bool {
@@ -223,6 +223,5 @@ pub fn environment() -> Environment {
             "sql/execute!".to_string() => NativeFunction(sql::execute),
             "sql/tables".to_string() => NativeFunction(sql::tables)
         },
-        servers: alloc::sync::Arc::new(spin::Mutex::new(OrdMap::new())),
     }
 }

@@ -1,8 +1,5 @@
-use std::sync::Arc;
-
-use im::{ordmap, vector, OrdMap};
+use im::{ordmap, vector};
 use rug::{Integer, Rational};
-use spin::Mutex;
 use yeti;
 use yeti::expression::Call;
 
@@ -60,7 +57,6 @@ fn evaluate_symbol_bound_to_integer() -> Result {
         bindings: ordmap! {
             "x".to_string() => yeti::Expression::Integer(Integer::from(5))
         },
-        servers: Arc::new(Mutex::new(OrdMap::new())),
     };
     let (_, actual) = yeti::evaluate(environment, expression)?;
     let expected = yeti::Expression::Integer(Integer::from(5));
@@ -84,7 +80,6 @@ fn evaluate_symbol_bound_to_function() -> Result {
               }
             )
         },
-        servers: Arc::new(Mutex::new(OrdMap::new())),
     };
     let (_, actual) = yeti::evaluate(environment, expression)?;
     let expected = yeti::Expression::Integer(Integer::from(10));

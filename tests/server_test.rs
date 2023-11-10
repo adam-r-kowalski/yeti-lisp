@@ -10,8 +10,7 @@ async fn evaluate_server_with_string_route_and_no_port() -> Result {
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
     let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
-    let expected = yeti::Expression::Nil;
-    assert_eq!(actual, expected);
+    assert!(matches!(actual, yeti::Expression::NativeType(_)));
     let body = reqwest::get("http://localhost:3000")
         .await
         .unwrap()
@@ -33,8 +32,7 @@ async fn evaluate_server_with_string_route() -> Result {
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
     let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
-    let expected = yeti::Expression::Nil;
-    assert_eq!(actual, expected);
+    assert!(matches!(actual, yeti::Expression::NativeType(_)));
     let body = reqwest::get("http://localhost:4000")
         .await
         .unwrap()
@@ -56,8 +54,7 @@ async fn evaluate_server_with_html_route() -> Result {
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
     let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
-    let expected = yeti::Expression::Nil;
-    assert_eq!(actual, expected);
+    assert!(matches!(actual, yeti::Expression::NativeType(_)));
     let body = reqwest::get("http://localhost:3030")
         .await
         .unwrap()
@@ -79,8 +76,7 @@ async fn evaluate_server_with_function_route() -> Result {
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
     let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
-    let expected = yeti::Expression::Nil;
-    assert_eq!(actual, expected);
+    assert!(matches!(actual, yeti::Expression::NativeType(_)));
     let body = reqwest::get("http://localhost:8080")
         .await
         .unwrap()
@@ -102,8 +98,7 @@ async fn evaluate_server_show_request_as_str() -> Result {
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
     let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
-    let expected = yeti::Expression::Nil;
-    assert_eq!(actual, expected);
+    assert!(matches!(actual, yeti::Expression::NativeType(_)));
     let body = reqwest::get("http://localhost:10080")
         .await
         .unwrap()
@@ -128,8 +123,7 @@ async fn evaluate_server_query_parameters() -> Result {
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
     let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
-    let expected = yeti::Expression::Nil;
-    assert_eq!(actual, expected);
+    assert!(matches!(actual, yeti::Expression::NativeType(_)));
     let body = reqwest::get("http://localhost:10090?foo=bar&baz=qux")
         .await
         .unwrap()
@@ -154,8 +148,7 @@ async fn evaluate_server_url_parameters() -> Result {
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
     let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
-    let expected = yeti::Expression::Nil;
-    assert_eq!(actual, expected);
+    assert!(matches!(actual, yeti::Expression::NativeType(_)));
     let body = reqwest::get("http://localhost:10070/hello/joe")
         .await
         .unwrap()
@@ -180,8 +173,7 @@ async fn evaluate_server_form_data() -> Result {
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
     let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
-    let expected = yeti::Expression::Nil;
-    assert_eq!(actual, expected);
+    assert!(matches!(actual, yeti::Expression::NativeType(_)));
     let client = reqwest::Client::new();
     let body = client
         .post("http://localhost:10040")
@@ -210,8 +202,7 @@ async fn evaluate_server_post_json_data() -> Result {
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
     let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
-    let expected = yeti::Expression::Nil;
-    assert_eq!(actual, expected);
+    assert!(matches!(actual, yeti::Expression::NativeType(_)));
     let client = reqwest::Client::new();
     let mut map = HashMap::new();
     map.insert("foo", "bar");
@@ -234,13 +225,11 @@ async fn evaluate_server_post_json_data() -> Result {
 
 #[tokio::test]
 async fn evaluate_stop() -> Result {
-    let tokens = yeti::Tokens::from_str("(server/start {:port 9090})");
+    let tokens = yeti::Tokens::from_str("(def s (server/start {:port 9090}))");
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
-    let (environment, actual) = yeti::evaluate(environment, expression)?;
-    let expected = yeti::Expression::Nil;
-    assert_eq!(actual, expected);
-    let tokens = yeti::Tokens::from_str("(server/stop {:port 9090})");
+    let (environment, _) = yeti::evaluate(environment, expression)?;
+    let tokens = yeti::Tokens::from_str("(server/stop s)");
     let expression = yeti::parse(tokens);
     let (_, actual) = yeti::evaluate(environment, expression)?;
     let expected = yeti::Expression::Nil;

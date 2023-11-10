@@ -6,21 +6,17 @@ use crate::NativeType;
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::String;
-use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::fmt::{self, Display, Formatter};
 use core::hash::Hash;
 use im::{OrdMap, Vector};
 use rug::{Integer, Rational};
-use spin::Mutex;
-use tokio::sync::broadcast::Sender;
 
 type Expressions = Vector<Expression>;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
     pub bindings: OrdMap<String, Expression>,
-    pub servers: Arc<Mutex<OrdMap<u16, Sender<()>>>>,
 }
 
 impl Environment {
@@ -35,7 +31,6 @@ impl Environment {
     pub fn new() -> Environment {
         Environment {
             bindings: OrdMap::new(),
-            servers: Arc::new(Mutex::new(OrdMap::new())),
         }
     }
 }

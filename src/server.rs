@@ -2,6 +2,7 @@ extern crate alloc;
 
 use crate::effect::{error, Effect};
 use crate::expression::{Call, Environment};
+use crate::NativeType;
 use crate::{evaluate, Float};
 use crate::{extract, html, Expression};
 use alloc::boxed::Box;
@@ -22,6 +23,10 @@ use rug::Integer;
 use serde_json::Value as JsonValue;
 use serde_qs;
 use tokio::sync::broadcast;
+
+struct Server {
+    tx: broadcast::Sender<()>,
+}
 
 type Result<T> = core::result::Result<T, Effect>;
 
@@ -173,9 +178,6 @@ pub fn start(env: Environment, args: Vector<Expression>) -> Result<(Environment,
         None => 3000,
         _ => return Err(error("Expected integer for :port")),
     };
-    if let Some(tx) = env.servers.lock().get(&port) {
-        tx.send(()).unwrap();
-    }
     let mut app = Router::new();
     if let Some(routes) = m.get(&Expression::Keyword(":routes".to_string())) {
         let m = extract::map(routes.clone())?;
@@ -222,29 +224,19 @@ pub fn start(env: Environment, args: Vector<Expression>) -> Result<(Environment,
             .await
             .unwrap();
     });
-    {
-        let mut servers = env.servers.lock();
-        servers.insert(port, tx.clone());
-    }
-    Ok((env, Expression::Nil))
+    Ok((
+        env,
+        Expression::NativeType(NativeType::new(Server { tx }, "server".to_string())),
+    ))
 }
 
 pub fn shutdown(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
     let (env, arg) = crate::evaluate(env, args[0].clone())?;
-    let m = extract::map(arg)?;
-    let port_expr = m.get(&Expression::Keyword(":port".to_string()));
-    let port = match port_expr {
-        Some(Expression::Integer(i)) => i
-            .to_u16()
-            .ok_or_else(|| error("Port number out of range"))?,
-        _ => return Err(error("Expected integer for :port")),
-    };
-    {
-        let mut servers = env.servers.lock();
-        if let Some(tx) = servers.get(&port) {
-            tx.send(()).unwrap();
-            servers.remove(&port);
-        }
-    }
+    let server = extract::native_type(arg)?;
+    let server = server.value.lock();
+    let server = server
+        .downcast_ref::<Server>()
+        .ok_or_else(|| error("Expected server"))?;
+    server.tx.send(()).unwrap();
     Ok((env, Expression::Nil))
 }
