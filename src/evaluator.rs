@@ -139,9 +139,11 @@ fn evaluate_call(environment: Environment, call: Call) -> Result {
     let (environment, function) = evaluate(environment.clone(), *function)?;
     match function {
         Expression::Function(patterns) => {
+            let original_environment = environment.clone();
             let (environment, arguments) = evaluate_expressions(environment, arguments)?;
             let (environment, body) = find_pattern_match(environment, patterns, arguments)?;
-            evaluate(environment, body.clone())
+            let (_, value) = evaluate(environment, body.clone())?;
+            Ok((original_environment, value))
         }
         Expression::NativeFunction(f) => f(environment, arguments),
         Expression::Keyword(k) => {
