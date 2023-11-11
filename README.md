@@ -1,6 +1,6 @@
 ![Yeti Lisp Logo](assets/logo.png)
 
-```clj
+```yeti
 ; this is a comment
 
 5 ; this is an integer
