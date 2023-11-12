@@ -242,7 +242,7 @@ pub fn shutdown(env: Environment, args: Vector<Expression>) -> Result<(Environme
     Ok((env, Expression::Nil))
 }
 
-pub fn module() -> Environment {
+pub fn environment() -> Environment {
     ordmap! {
         "*name*".to_string() => Expression::String("server".to_string()),
         "start".to_string() => NativeFunction(start),

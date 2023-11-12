@@ -9,6 +9,7 @@ use crate::{
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::{String, ToString};
+use alloc::vec;
 use im::{ordmap, vector, Vector};
 use rug;
 
@@ -238,14 +239,37 @@ pub fn environment() -> Environment {
                 }
             }
         ),
+        "import".to_string() => NativeFunction(
+            |env, args| {
+                let name = extract::symbol(args[0].clone())?;
+                let path = format!("{}.yeti", name);
+                let (mut env, source) = crate::evaluate(env, Expression::Call(Call{
+                    function: Box::new(Expression::NamespacedSymbol(vec![
+                        "io".to_string(),
+                        "read-file-sync".to_string()
+                    ])),
+                    arguments: vector![Expression::String(path)],
+                }))?;
+                let source = extract::string(source)?;
+                let tokens = crate::Tokens::from_str(&source);
+                let expressions = crate::parse_module(tokens);
+                let mut module = expressions.iter().try_fold(environment(), |env, expression| {
+                    let (env, _) = crate::evaluate(env, expression.clone())?;
+                    Ok(env)
+                })?;
+                module.insert("*name*".to_string(), Expression::String(name.clone()));
+                env.insert(name, Expression::Module(module));
+                Ok((env, Expression::Nil))
+            }
+        ),
         "assoc".to_string() => NativeFunction(map::assoc),
         "dissoc".to_string() => NativeFunction(map::dissoc),
         "merge".to_string() => NativeFunction(map::merge),
         "get".to_string() => NativeFunction(map::get),
         "nth".to_string() => NativeFunction(array::nth),
         "count".to_string() => NativeFunction(array::count),
-        "html".to_string() => Module(html::module()),
-        "server".to_string() => Module(server::module()),
-        "sql".to_string() => Module(sql::module())
+        "html".to_string() => Module(html::environment()),
+        "server".to_string() => Module(server::environment()),
+        "sql".to_string() => Module(sql::environment())
     }
 }

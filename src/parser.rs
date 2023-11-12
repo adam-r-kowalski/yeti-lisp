@@ -5,6 +5,7 @@ use crate::Expression;
 use crate::{tokenizer::Token, Tokens};
 use alloc::boxed::Box;
 use alloc::string::String;
+use alloc::vec::Vec;
 use core::iter::Peekable;
 use im::{OrdMap, Vector};
 
@@ -104,4 +105,15 @@ pub fn parse<I: Iterator<Item = char>>(tokens: Tokens<I>) -> Expression {
         tokens: tokens.peekable(),
     };
     parser.expression()
+}
+
+pub fn parse_module<I: Iterator<Item = char>>(tokens: Tokens<I>) -> Vec<Expression> {
+    let mut parser = Parser {
+        tokens: tokens.peekable(),
+    };
+    let mut expressions = Vec::new();
+    while parser.tokens.peek().is_some() {
+        expressions.push(parser.expression());
+    }
+    expressions
 }

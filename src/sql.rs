@@ -319,7 +319,7 @@ pub fn tables(env: Environment, args: Vector<Expression>) -> Result<(Environment
     query(env, vector![db, q])
 }
 
-pub fn module() -> Environment {
+pub fn environment() -> Environment {
     ordmap! {
         "*name*".to_string() => Expression::String("sql".to_string()),
         "connect".to_string() => NativeFunction(connect),

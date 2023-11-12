@@ -145,7 +145,7 @@ pub fn string(env: Environment, args: Vector<Expression>) -> Result<(Environment
     Ok((env, Expression::String(string)))
 }
 
-pub fn module() -> Environment {
+pub fn environment() -> Environment {
     ordmap! {
         "*name*".to_string() => Expression::String("html".to_string()),
         "string".to_string() => NativeFunction(string)
