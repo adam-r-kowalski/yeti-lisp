@@ -253,11 +253,13 @@ pub fn environment() -> Environment {
                 let source = extract::string(source)?;
                 let tokens = crate::Tokens::from_str(&source);
                 let expressions = crate::parse_module(tokens);
-                let mut module = expressions.iter().try_fold(environment(), |env, expression| {
+                let mut module = environment();
+                module.insert("*name*".to_string(), Expression::String(name.clone()));
+                module.insert("io".to_string(), env.get("io").unwrap().clone());
+                let module = expressions.iter().try_fold(module, |env, expression| {
                     let (env, _) = crate::evaluate(env, expression.clone())?;
                     Ok(env)
                 })?;
-                module.insert("*name*".to_string(), Expression::String(name.clone()));
                 env.insert(name, Expression::Module(module));
                 Ok((env, Expression::Nil))
             }

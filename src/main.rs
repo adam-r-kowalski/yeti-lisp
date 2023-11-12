@@ -3,6 +3,7 @@ use crossterm::style::{
     Color::{self, Reset},
     Colors, Print, SetColors,
 };
+use im::ordmap;
 use std::io::{self, Write};
 use yeti;
 
@@ -80,9 +81,32 @@ fn print(expression: yeti::Expression) -> io::Result<()> {
     Ok(())
 }
 
+fn repl_environment() -> yeti::Environment {
+    let mut environment = yeti::core::environment();
+    environment.insert(
+        "*name*".to_string(),
+        yeti::Expression::String("repl".to_string()),
+    );
+    environment.insert(
+        "io".to_string(),
+        yeti::Expression::Module(ordmap! {
+            "read-file-sync".to_string() => yeti::Expression::NativeFunction(
+                |env, args| {
+                    let (env, args) = yeti::evaluate_expressions(env, args)?;
+                    let path = yeti::extract::string(args[0].clone())?;
+                    let contents = std::fs::read_to_string(path)
+                        .map_err(|_| yeti::effect::error("Could not read file"))?;
+                    Ok((env, yeti::Expression::String(contents)))
+                }
+            )
+        }),
+    );
+    environment
+}
+
 #[tokio::main]
 async fn main() -> io::Result<()> {
-    let mut environment = yeti::core::environment();
+    let mut environment = repl_environment();
     let mut iterator = StdinIterator::new();
     loop {
         let expression = read(&mut iterator)?;
