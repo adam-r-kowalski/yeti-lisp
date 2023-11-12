@@ -25,6 +25,12 @@ pub struct Pattern {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Function {
+    pub env: Environment,
+    pub patterns: Vector<Pattern>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Call {
     pub function: Box<Expression>,
     pub arguments: Expressions,
@@ -44,7 +50,7 @@ pub enum Expression {
     Array(Expressions),
     Map(OrdMap<Expression, Expression>),
     Call(Call),
-    Function(Vector<Pattern>),
+    Function(Function),
     Quote(Box<Expression>),
     NativeFunction(fn(Environment, Expressions) -> Result),
     NativeType(NativeType),
@@ -92,9 +98,9 @@ impl Display for Expression {
                 let arg_strs: Vec<String> = arguments.iter().map(|e| format!("{}", e)).collect();
                 write!(f, "({} {})", function, arg_strs.join(" "))
             }
-            Expression::Function(patterns) => {
-                if patterns.len() == 1 {
-                    let Pattern { parameters, body } = &patterns[0];
+            Expression::Function(function) => {
+                if function.patterns.len() == 1 {
+                    let Pattern { parameters, body } = &function.patterns[0];
                     let param_strs: Vec<String> =
                         parameters.iter().map(|e| format!("{}", e)).collect();
                     write!(f, "(fn [{}] ", param_strs.join(" "))?;
@@ -102,7 +108,7 @@ impl Display for Expression {
                     write!(f, ")")
                 } else {
                     write!(f, "(fn")?;
-                    for Pattern { parameters, body } in patterns {
+                    for Pattern { parameters, body } in &function.patterns {
                         let param_strs: Vec<String> =
                             parameters.iter().map(|e| format!("{}", e)).collect();
                         write!(f, "\n  ([{}] ", param_strs.join(" "))?;

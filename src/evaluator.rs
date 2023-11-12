@@ -151,14 +151,15 @@ fn evaluate_call(environment: Environment, call: Call) -> Result {
     } = call;
     let (environment, function) = evaluate(environment.clone(), *function)?;
     match function {
-        Expression::Function(patterns) => {
+        Expression::Function(function) => {
             let original_environment = environment.clone();
-            let (environment, arguments) = evaluate_expressions(environment, arguments)?;
-            let (environment, body) = find_pattern_match(environment, patterns, arguments)?;
-            let (_, value) = body.iter().try_fold(
-                (environment, Expression::Nil),
-                |(environment, _), expression| evaluate(environment, expression.clone()),
-            )?;
+            let (_, arguments) = evaluate_expressions(environment, arguments)?;
+            let (env, body) = find_pattern_match(function.env, function.patterns, arguments)?;
+            let (_, value) = body
+                .iter()
+                .try_fold((env, Expression::Nil), |(env, _), expression| {
+                    evaluate(env, expression.clone())
+                })?;
             Ok((original_environment, value))
         }
         Expression::NativeFunction(f) => f(environment, arguments),

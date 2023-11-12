@@ -32,3 +32,20 @@ fn multi_line_function() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[test]
+fn closure() -> Result {
+    let env = yeti::core::environment();
+    let (env, _) = yeti::evaluate_source(
+        env,
+        r#"
+         (defn add [x]
+          (fn [y] (+ x y)))
+        "#,
+    )?;
+    let (env, _) = yeti::evaluate_source(env, "(def add-5 (add 5))")?;
+    let (_, actual) = yeti::evaluate_source(env, "(add-5 10)")?;
+    let expected = yeti::Expression::Integer(Integer::from(15));
+    assert_eq!(actual, expected);
+    Ok(())
+}

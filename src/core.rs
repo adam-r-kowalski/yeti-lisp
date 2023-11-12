@@ -1,7 +1,7 @@
 extern crate alloc;
 
 use crate::effect::{error, Effect};
-use crate::expression::{Call, Environment, Pattern};
+use crate::expression::{Call, Environment, Function, Pattern};
 use crate::Expression::{Integer, Module, NativeFunction, Ratio};
 use crate::{
     array, evaluate_expressions, extract, html, map, pattern_match, ratio, server, sql, Expression,
@@ -113,7 +113,10 @@ pub fn environment() -> Environment {
                 if let Expression::Array(array) = &args[0] {
                     let parameters = array.clone();
                     let body = args.skip(1);
-                    let function = Expression::Function(vector![Pattern { parameters, body }]);
+                    let function = Expression::Function(Function{
+                        env: env.clone(),
+                        patterns: vector![Pattern { parameters, body }]
+                    });
                     Ok((env, function))
                 } else {
                     let patterns = args.iter().try_fold(Vector::new(), |mut patterns, pattern| {
@@ -123,7 +126,10 @@ pub fn environment() -> Environment {
                         patterns.push_back(Pattern { parameters, body });
                         Ok(patterns)
                     })?;
-                    let function = Expression::Function(patterns);
+                    let function = Expression::Function(Function{
+                        env: env.clone(),
+                        patterns
+                    });
                     Ok((env, function))
                 }
             }
