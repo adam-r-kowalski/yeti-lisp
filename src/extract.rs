@@ -1,7 +1,7 @@
 extern crate alloc;
 use crate::effect::{error, Effect};
-use crate::expression::{Call, Module};
-use crate::{Expression, NativeType};
+use crate::expression::Call;
+use crate::{Environment, Expression, NativeType};
 use alloc::format;
 use alloc::string::{String, ToString};
 use im::{OrdMap, Vector};
@@ -71,7 +71,7 @@ pub fn native_type(expr: Expression) -> Result<NativeType> {
     }
 }
 
-pub fn module(expr: Expression) -> Result<Module> {
+pub fn module(expr: Expression) -> Result<Environment> {
     match expr {
         Expression::Module(m) => Ok(m),
         _ => Err(error("Expected module")),

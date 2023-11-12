@@ -2,7 +2,7 @@ extern crate alloc;
 
 use crate::effect::{error, Effect};
 use crate::evaluate_expressions;
-use crate::expression::{Environment, Module};
+use crate::expression::Environment;
 use crate::extract;
 use crate::Expression::{self, NativeFunction};
 use alloc::format;
@@ -145,11 +145,9 @@ pub fn string(env: Environment, args: Vector<Expression>) -> Result<(Environment
     Ok((env, Expression::String(string)))
 }
 
-pub fn module() -> Module {
-    Module {
-        name: "html".to_string(),
-        environment: ordmap! {
-            "string".to_string() => NativeFunction(string)
-        },
+pub fn module() -> Environment {
+    ordmap! {
+        "*name*".to_string() => Expression::String("html".to_string()),
+        "string".to_string() => NativeFunction(string)
     }
 }

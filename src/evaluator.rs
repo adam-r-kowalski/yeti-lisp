@@ -27,7 +27,7 @@ fn evaluate_namespaced_symbol(environment: Environment, symbol: &[String]) -> Re
         Ok((environment, value))
     } else {
         let module = extract::module(value)?;
-        let (_, value) = evaluate_namespaced_symbol(module.environment, rest)?;
+        let (_, value) = evaluate_namespaced_symbol(module, rest)?;
         Ok((environment, value))
     }
 }

@@ -1,7 +1,7 @@
 extern crate alloc;
 
 use crate::effect::{error, Effect};
-use crate::expression::{Call, Environment, Module};
+use crate::expression::{Call, Environment};
 use crate::Expression::NativeFunction;
 use crate::NativeType;
 use crate::{evaluate, Float};
@@ -242,12 +242,10 @@ pub fn shutdown(env: Environment, args: Vector<Expression>) -> Result<(Environme
     Ok((env, Expression::Nil))
 }
 
-pub fn module() -> Module {
-    Module {
-        name: "server".to_string(),
-        environment: ordmap! {
-            "start".to_string() => NativeFunction(start),
-            "stop".to_string() => NativeFunction(shutdown)
-        },
+pub fn module() -> Environment {
+    ordmap! {
+        "*name*".to_string() => Expression::String("server".to_string()),
+        "start".to_string() => NativeFunction(start),
+        "stop".to_string() => NativeFunction(shutdown)
     }
 }

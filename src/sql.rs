@@ -1,7 +1,7 @@
 extern crate alloc;
 
 use crate::effect::{error, Effect};
-use crate::expression::{Environment, Module};
+use crate::expression::Environment;
 use crate::extract;
 use crate::numerics::Float;
 use crate::Expression::{self, NativeFunction};
@@ -319,15 +319,13 @@ pub fn tables(env: Environment, args: Vector<Expression>) -> Result<(Environment
     query(env, vector![db, q])
 }
 
-pub fn module() -> Module {
-    Module {
-        name: "sql".to_string(),
-        environment: ordmap! {
-            "connect".to_string() => NativeFunction(connect),
-            "string".to_string() => NativeFunction(string),
-            "query".to_string() => NativeFunction(query),
-            "execute!".to_string() => NativeFunction(execute),
-            "tables".to_string() => NativeFunction(tables)
-        },
+pub fn module() -> Environment {
+    ordmap! {
+        "*name*".to_string() => Expression::String("sql".to_string()),
+        "connect".to_string() => NativeFunction(connect),
+        "string".to_string() => NativeFunction(string),
+        "query".to_string() => NativeFunction(query),
+        "execute!".to_string() => NativeFunction(execute),
+        "tables".to_string() => NativeFunction(tables)
     }
 }
