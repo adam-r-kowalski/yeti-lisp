@@ -1,7 +1,8 @@
 extern crate alloc;
 
 use crate::effect::{error, Effect};
-use crate::expression::{Call, Environment};
+use crate::expression::{Call, Environment, Module};
+use crate::Expression::NativeFunction;
 use crate::NativeType;
 use crate::{evaluate, Float};
 use crate::{extract, html, Expression};
@@ -239,4 +240,14 @@ pub fn shutdown(env: Environment, args: Vector<Expression>) -> Result<(Environme
         .ok_or_else(|| error("Expected server"))?;
     server.tx.send(()).unwrap();
     Ok((env, Expression::Nil))
+}
+
+pub fn module() -> Module {
+    Module {
+        name: "server".to_string(),
+        environment: ordmap! {
+            "start".to_string() => NativeFunction(start),
+            "stop".to_string() => NativeFunction(shutdown)
+        },
+    }
 }

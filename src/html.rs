@@ -2,12 +2,12 @@ extern crate alloc;
 
 use crate::effect::{error, Effect};
 use crate::evaluate_expressions;
-use crate::expression::Environment;
+use crate::expression::{Environment, Module};
 use crate::extract;
-use crate::Expression;
+use crate::Expression::{self, NativeFunction};
 use alloc::format;
-use alloc::string::String;
-use im::{OrdMap, Vector};
+use alloc::string::{String, ToString};
+use im::{ordmap, OrdMap, Vector};
 
 type Result<T> = core::result::Result<T, Effect>;
 
@@ -143,4 +143,13 @@ pub fn string(env: Environment, args: Vector<Expression>) -> Result<(Environment
     let mut string = String::new();
     build_string(args[0].clone(), &mut string)?;
     Ok((env, Expression::String(string)))
+}
+
+pub fn module() -> Module {
+    Module {
+        name: "html".to_string(),
+        environment: ordmap! {
+            "string".to_string() => NativeFunction(string)
+        },
+    }
 }

@@ -2,6 +2,7 @@ extern crate alloc;
 
 use crate::effect::{error, Effect};
 use crate::expression::{Call, Environment, Pattern, Result};
+use crate::extract;
 use crate::Expression;
 use alloc::format;
 use alloc::string::String;
@@ -16,6 +17,18 @@ fn evaluate_symbol(environment: Environment, symbol: String) -> Result {
             "Symbol {} not found in environment",
             symbol
         )))
+    }
+}
+
+fn evaluate_namespaced_symbol(environment: Environment, symbol: &[String]) -> Result {
+    let (first, rest) = symbol.split_first().unwrap();
+    let (environment, value) = evaluate_symbol(environment, first.clone())?;
+    if rest.is_empty() {
+        Ok((environment, value))
+    } else {
+        let module = extract::module(value)?;
+        let (_, value) = evaluate_namespaced_symbol(module.environment, rest)?;
+        Ok((environment, value))
     }
 }
 
@@ -181,6 +194,7 @@ fn evaluate_call(environment: Environment, call: Call) -> Result {
 pub fn evaluate(environment: Environment, expression: Expression) -> Result {
     match expression {
         Expression::Symbol(s) => evaluate_symbol(environment, s),
+        Expression::NamespacedSymbol(s) => evaluate_namespaced_symbol(environment, &s),
         Expression::Call(call) => evaluate_call(environment, call),
         Expression::Array(a) => {
             let (environment, a) = evaluate_expressions(environment, a)?;

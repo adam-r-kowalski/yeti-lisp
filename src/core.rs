@@ -2,7 +2,7 @@ extern crate alloc;
 
 use crate::effect::{error, Effect};
 use crate::expression::{Call, Environment, Pattern};
-use crate::Expression::{Integer, NativeFunction, Ratio};
+use crate::Expression::{Integer, Module, NativeFunction, Ratio};
 use crate::{
     array, evaluate_expressions, extract, html, map, pattern_match, ratio, server, sql, Expression,
 };
@@ -244,13 +244,8 @@ pub fn environment() -> Environment {
         "get".to_string() => NativeFunction(map::get),
         "nth".to_string() => NativeFunction(array::nth),
         "count".to_string() => NativeFunction(array::count),
-        "html/string".to_string() => NativeFunction(html::string),
-        "server/start".to_string() => NativeFunction(server::start),
-        "server/stop".to_string() => NativeFunction(server::shutdown),
-        "sql/connect".to_string() => NativeFunction(sql::connect),
-        "sql/string".to_string() => NativeFunction(sql::string),
-        "sql/query".to_string() => NativeFunction(sql::query),
-        "sql/execute!".to_string() => NativeFunction(sql::execute),
-        "sql/tables".to_string() => NativeFunction(sql::tables)
+        "html".to_string() => Module(html::module()),
+        "server".to_string() => Module(server::module()),
+        "sql".to_string() => Module(sql::module())
     }
 }

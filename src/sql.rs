@@ -1,10 +1,10 @@
 extern crate alloc;
 
 use crate::effect::{error, Effect};
-use crate::expression::Environment;
+use crate::expression::{Environment, Module};
 use crate::extract;
 use crate::numerics::Float;
-use crate::Expression;
+use crate::Expression::{self, NativeFunction};
 use crate::NativeType;
 use crate::{evaluate_expressions, evaluate_source};
 use alloc::boxed::Box;
@@ -12,7 +12,7 @@ use alloc::format;
 use alloc::string::String;
 use alloc::string::ToString;
 use alloc::vec::Vec;
-use im::{vector, OrdMap, Vector};
+use im::{ordmap, vector, OrdMap, Vector};
 use rusqlite::types::{FromSql, FromSqlResult, ToSqlOutput, Value, ValueRef};
 use rusqlite::{Connection, ToSql};
 
@@ -317,4 +317,17 @@ pub fn tables(env: Environment, args: Vector<Expression>) -> Result<(Environment
         "#,
     )?;
     query(env, vector![db, q])
+}
+
+pub fn module() -> Module {
+    Module {
+        name: "sql".to_string(),
+        environment: ordmap! {
+            "connect".to_string() => NativeFunction(connect),
+            "string".to_string() => NativeFunction(string),
+            "query".to_string() => NativeFunction(query),
+            "execute!".to_string() => NativeFunction(execute),
+            "tables".to_string() => NativeFunction(tables)
+        },
+    }
 }

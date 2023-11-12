@@ -31,8 +31,15 @@ pub struct Call {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Module {
+    pub name: String,
+    pub environment: Environment,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Expression {
     Symbol(String),
+    NamespacedSymbol(Vec<String>),
     Keyword(String),
     String(String),
     Integer(Integer),
@@ -47,6 +54,7 @@ pub enum Expression {
     Quote(Box<Expression>),
     NativeFunction(fn(Environment, Expressions) -> Result),
     NativeType(NativeType),
+    Module(Module),
 }
 
 impl Display for Expression {
@@ -75,6 +83,7 @@ impl Display for Expression {
                 write!(f, "]")
             }
             Expression::Symbol(s) => write!(f, "{}", s),
+            Expression::NamespacedSymbol(s) => write!(f, "{}", s.join("/")),
             Expression::Keyword(k) => write!(f, "{}", k),
             Expression::String(s) => write!(f, "\"{}\"", s),
             Expression::Integer(i) => write!(f, "{}", i),
@@ -112,6 +121,7 @@ impl Display for Expression {
             Expression::NativeFunction(_) => write!(f, "#native_function"),
             Expression::NativeType(t) => write!(f, "{}", t),
             Expression::Quote(e) => write!(f, "'{}", e),
+            Expression::Module(Module { name, .. }) => write!(f, "#module({})", name),
         }
     }
 }

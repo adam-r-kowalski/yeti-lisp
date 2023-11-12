@@ -25,6 +25,7 @@ impl<I: Iterator<Item = char>> Parser<I> {
     fn expression(&mut self) -> Expression {
         match self.tokens.next() {
             Some(Token::Symbol(s)) => symbol(s),
+            Some(Token::NamespacedSymbol(s)) => Expression::NamespacedSymbol(s),
             Some(Token::Keyword(s)) => Expression::Keyword(s),
             Some(Token::String(s)) => Expression::String(s),
             Some(Token::Integer(i)) => Expression::Integer(i),

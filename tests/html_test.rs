@@ -3,11 +3,17 @@ use yeti;
 type Result = std::result::Result<(), yeti::effect::Effect>;
 
 #[test]
+fn evaluate_html_is_module() -> Result {
+    let env = yeti::core::environment();
+    let (_, actual) = yeti::evaluate_source(env, "html")?;
+    assert!(matches!(actual, yeti::Expression::Module(_)));
+    Ok(())
+}
+
+#[test]
 fn evaluate_html_with_only_tag() -> Result {
-    let tokens = yeti::Tokens::from_str("(html/string [:div])");
-    let expression = yeti::parse(tokens);
-    let environment = yeti::core::environment();
-    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let env = yeti::core::environment();
+    let (_, actual) = yeti::evaluate_source(env, "(html/string [:div])")?;
     let expected = yeti::Expression::String("<div></div>".to_string());
     assert_eq!(actual, expected);
     Ok(())

@@ -1,5 +1,5 @@
-use yeti;
 use rug::{Integer, Rational};
+use yeti;
 
 #[test]
 fn tokenize_symbol() {
@@ -13,7 +13,7 @@ fn tokenize_symbol() {
         yeti::Token::Symbol("kebab-case".to_string()),
         yeti::Token::Symbol("camelCase".to_string()),
         yeti::Token::Symbol("predicate?".to_string()),
-        yeti::Token::Symbol("namespaced/symbol".to_string()),
+        yeti::Token::NamespacedSymbol(vec!["namespaced".to_string(), "symbol".to_string()]),
     ];
     assert_eq!(actual, expected);
 }

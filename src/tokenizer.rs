@@ -4,6 +4,7 @@ use crate::numerics::Float;
 use crate::peeking_take_while::PeekableExt;
 use alloc::format;
 use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 use core::iter::Peekable;
 use core::str::Chars;
 use rug::{Integer, Rational};
@@ -11,6 +12,7 @@ use rug::{Integer, Rational};
 #[derive(PartialEq, Debug)]
 pub enum Token {
     Symbol(String),
+    NamespacedSymbol(Vec<String>),
     Keyword(String),
     String(String),
     Integer(Integer),
@@ -134,7 +136,12 @@ impl<I: Iterator<Item = char>> Tokens<I> {
             .iterator
             .peeking_take_while(|&c| !reserved_character(c))
             .collect();
-        Token::Symbol(symbol)
+        let parts: Vec<String> = symbol.split('/').map(|s| s.to_string()).collect();
+        if parts.len() > 1 {
+            Token::NamespacedSymbol(parts)
+        } else {
+            Token::Symbol(symbol)
+        }
     }
 }
 
