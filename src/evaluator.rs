@@ -5,7 +5,7 @@ use crate::expression::{Call, Environment, Pattern, Result};
 use crate::extract;
 use crate::Expression;
 use alloc::format;
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::vec;
 use im::Vector;
 
@@ -154,7 +154,15 @@ fn evaluate_call(environment: Environment, call: Call) -> Result {
         Expression::Function(function) => {
             let original_environment = environment.clone();
             let (_, arguments) = evaluate_expressions(environment, arguments)?;
-            let (env, body) = find_pattern_match(function.env, function.patterns, arguments)?;
+            let cloned_function = function.clone();
+            let (mut env, body) = find_pattern_match(function.env, function.patterns, arguments)?;
+            env.insert(
+                "recur".to_string(),
+                Expression::Function(cloned_function.clone()),
+            );
+            if let Some(Expression::Symbol(name)) = env.get("*self*") {
+                env.insert(name.to_string(), Expression::Function(cloned_function));
+            }
             let (_, value) = body
                 .iter()
                 .try_fold((env, Expression::Nil), |(env, _), expression| {

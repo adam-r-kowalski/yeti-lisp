@@ -23,6 +23,28 @@ pub fn truthy(expression: &Expression) -> bool {
 
 pub type Result = core::result::Result<(Environment, Expression), Effect>;
 
+fn function(env: Environment, args: Vector<Expression>) -> core::result::Result<Function, Effect> {
+    if let Expression::Array(array) = &args[0] {
+        let parameters = array.clone();
+        let body = args.skip(1);
+        Ok(Function {
+            env,
+            patterns: vector![Pattern { parameters, body }],
+        })
+    } else {
+        let patterns = args
+            .iter()
+            .try_fold(Vector::new(), |mut patterns, pattern| {
+                let call = extract::call(pattern.clone())?;
+                let parameters = extract::array(*call.function)?;
+                let body = call.arguments;
+                patterns.push_back(Pattern { parameters, body });
+                Ok(patterns)
+            })?;
+        Ok(Function { env, patterns })
+    }
+}
+
 pub fn environment() -> Environment {
     ordmap! {
         "=".to_string() => NativeFunction(
@@ -110,40 +132,20 @@ pub fn environment() -> Environment {
         ),
         "fn".to_string() => NativeFunction(
             |env, args| {
-                if let Expression::Array(array) = &args[0] {
-                    let parameters = array.clone();
-                    let body = args.skip(1);
-                    let function = Expression::Function(Function{
-                        env: env.clone(),
-                        patterns: vector![Pattern { parameters, body }]
-                    });
-                    Ok((env, function))
-                } else {
-                    let patterns = args.iter().try_fold(Vector::new(), |mut patterns, pattern| {
-                        let call = extract::call(pattern.clone())?;
-                        let parameters = extract::array(*call.function)?;
-                        let body = call.arguments;
-                        patterns.push_back(Pattern { parameters, body });
-                        Ok(patterns)
-                    })?;
-                    let function = Expression::Function(Function{
-                        env: env.clone(),
-                        patterns
-                    });
-                    Ok((env, function))
-                }
+                let f = function(env.clone(), args)?;
+                Ok((env, Expression::Function(f)))
             }
         ),
-
         "defn".to_string() => NativeFunction(
           |env, args| {
-            let (env, function) = crate::evaluate(env, Expression::Call(Call{
-                function: Box::new(Expression::Symbol("fn".to_string())),
-                arguments: args.iter().skip(1).cloned().collect(),
-            }))?;
-            crate::evaluate(env, Expression::Call(Call{
+            let (name, args) = args.split_at(1);
+            let original_env = env.clone();
+            let Function{mut env, patterns} = function(env, args)?;
+            env.insert("*self*".to_string(), name[0].clone());
+            let f = Function{env, patterns};
+            crate::evaluate(original_env, Expression::Call(Call{
                 function: Box::new(Expression::Symbol("def".to_string())),
-                arguments: vector![args[0].clone(), function],
+                arguments: vector![name[0].clone(), Expression::Function(f)],
             }))
           }
         ),

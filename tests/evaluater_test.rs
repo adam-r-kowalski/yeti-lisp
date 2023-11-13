@@ -236,30 +236,13 @@ fn evaluate_call_fn() -> Result {
 
 #[test]
 fn evaluate_defn() -> Result {
-    let tokens = yeti::Tokens::from_str("(defn double [x] (* x 2))");
-    let expression = yeti::parse(tokens);
-    let environment = yeti::core::environment();
-    let (actual_environment, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let env = yeti::core::environment();
+    let (env, actual) = yeti::evaluate_source(env, "(defn double [x] (* x 2))")?;
     let expected = yeti::Expression::Nil;
     assert_eq!(actual, expected);
-    let mut expected_environment = environment.clone();
-    expected_environment.insert(
-        "double".to_string(),
-        yeti::Expression::Function(yeti::expression::Function {
-            env: environment,
-            patterns: vector![yeti::expression::Pattern {
-                parameters: vector![yeti::Expression::Symbol("x".to_string()),],
-                body: vector![yeti::Expression::Call(Call {
-                    function: Box::new(yeti::Expression::Symbol("*".to_string())),
-                    arguments: vector![
-                        yeti::Expression::Symbol("x".to_string()),
-                        yeti::Expression::Integer(Integer::from(2)),
-                    ],
-                })],
-            }],
-        }),
-    );
-    assert_eq!(actual_environment, expected_environment);
+    let (_, actual) = yeti::evaluate_source(env, "(double 5)")?;
+    let expected = yeti::Expression::Integer(Integer::from(10));
+    assert_eq!(actual, expected);
     Ok(())
 }
 
