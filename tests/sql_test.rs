@@ -1,4 +1,3 @@
-/*
 use yeti;
 
 type Result = std::result::Result<(), yeti::effect::Effect>;
@@ -6,7 +5,7 @@ type Result = std::result::Result<(), yeti::effect::Effect>;
 #[tokio::test]
 async fn sql_connect() -> Result {
     let env = yeti::core::environment();
-    let (_, actual) = yeti::evaluate_source(env, r#"(sql/connect)"#)?;
+    let (_, actual) = yeti::evaluate_source(env, r#"(sql/connect)"#).await?;
     assert!(matches!(actual, yeti::Expression::NativeType(_)));
     Ok(())
 }
@@ -23,11 +22,13 @@ async fn create_table_string() -> Result {
                      [:name [:varchar 32] [:not nil]]
                      [:cost :float :null]]})
     "#,
-    )?;
+    )
+    .await?;
     let (_, expected) = yeti::evaluate_source(
         env,
         r#"["CREATE TABLE fruit (id INT NOT NULL, name VARCHAR(32) NOT NULL, cost FLOAT NULL)"]"#,
-    )?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     Ok(())
 }
@@ -35,7 +36,7 @@ async fn create_table_string() -> Result {
 #[tokio::test]
 async fn get_all_table_names() -> Result {
     let env = yeti::core::environment();
-    let (env, _) = yeti::evaluate_source(env, r#"(def conn (sql/connect))"#)?;
+    let (env, _) = yeti::evaluate_source(env, r#"(def conn (sql/connect))"#).await?;
     let (env, _) = yeti::evaluate_source(
         env,
         r#"
@@ -45,9 +46,10 @@ async fn get_all_table_names() -> Result {
                      [:name [:varchar 32] [:not nil]]
                      [:cost :float :null]]})
     "#,
-    )?;
-    let (env, actual) = yeti::evaluate_source(env, "(sql/tables conn)")?;
-    let (_, expected) = yeti::evaluate_source(env, r#"[{:name "fruit"}]"#)?;
+    )
+    .await?;
+    let (env, actual) = yeti::evaluate_source(env, "(sql/tables conn)").await?;
+    let (_, expected) = yeti::evaluate_source(env, r#"[{:name "fruit"}]"#).await?;
     assert_eq!(actual, expected);
     Ok(())
 }
@@ -65,12 +67,14 @@ async fn insert_into_vector_syntax_string() -> Result {
                ["Andrew" "Cooper" 12]
                ["Jane" "Daniels" 56]]})
     "#,
-    )?;
+    )
+    .await?;
     let (_, expected) = yeti::evaluate_source(
         env,
         r#"["INSERT INTO properties (name, surname, age) VALUES (?, ?, ?), (?, ?, ?), (?, ?, ?)"
             "Jon" "Smith" 34 "Andrew" "Cooper" 12 "Jane" "Daniels" 56]"#,
-    )?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     Ok(())
 }
@@ -86,9 +90,10 @@ async fn select_string() -> Result {
       :from :foo
       :where [:= :foo.a "baz"]})
     "#,
-    )?;
+    )
+    .await?;
     let (_, expected) =
-        yeti::evaluate_source(env, r#"["SELECT a, b, c FROM foo WHERE foo.a = ?" "baz"]"#)?;
+        yeti::evaluate_source(env, r#"["SELECT a, b, c FROM foo WHERE foo.a = ?" "baz"]"#).await?;
     assert_eq!(actual, expected);
     Ok(())
 }
@@ -104,8 +109,10 @@ async fn select_single_column() -> Result {
       :from :foo
       :where [:= :a "baz"]})
     "#,
-    )?;
-    let (_, expected) = yeti::evaluate_source(env, r#"["SELECT a FROM foo WHERE a = ?" "baz"]"#)?;
+    )
+    .await?;
+    let (_, expected) =
+        yeti::evaluate_source(env, r#"["SELECT a FROM foo WHERE a = ?" "baz"]"#).await?;
     assert_eq!(actual, expected);
     Ok(())
 }
@@ -121,8 +128,10 @@ async fn select_not_equal() -> Result {
       :from :foo
       :where [:!= :a "baz"]})
     "#,
-    )?;
-    let (_, expected) = yeti::evaluate_source(env, r#"["SELECT a FROM foo WHERE a != ?" "baz"]"#)?;
+    )
+    .await?;
+    let (_, expected) =
+        yeti::evaluate_source(env, r#"["SELECT a FROM foo WHERE a != ?" "baz"]"#).await?;
     assert_eq!(actual, expected);
     Ok(())
 }
@@ -130,7 +139,7 @@ async fn select_not_equal() -> Result {
 #[tokio::test]
 async fn insert_and_select() -> Result {
     let env = yeti::core::environment();
-    let (env, _) = yeti::evaluate_source(env, r#"(def conn (sql/connect))"#)?;
+    let (env, _) = yeti::evaluate_source(env, r#"(def conn (sql/connect))"#).await?;
     let (env, _) = yeti::evaluate_source(
         env,
         r#"
@@ -140,7 +149,8 @@ async fn insert_and_select() -> Result {
                      [:surname [:varchar 32] [:not nil]]
                      [:age :int [:not nil]]]})
     "#,
-    )?;
+    )
+    .await?;
     let (env, _) = yeti::evaluate_source(
         env,
         r#"
@@ -151,7 +161,8 @@ async fn insert_and_select() -> Result {
                ["Andrew" "Cooper" 12]
                ["Jane" "Daniels" 56]]})
     "#,
-    )?;
+    )
+    .await?;
     let (env, actual) = yeti::evaluate_source(
         env,
         r#"
@@ -160,9 +171,9 @@ async fn insert_and_select() -> Result {
       :from :properties
       :where [:= :age 34]})
     "#,
-    )?;
-    let (_, expected) = yeti::evaluate_source(env, r#"[{:name "Jon" :surname "Smith"}]"#)?;
+    )
+    .await?;
+    let (_, expected) = yeti::evaluate_source(env, r#"[{:name "Jon" :surname "Smith"}]"#).await?;
     assert_eq!(actual, expected);
     Ok(())
 }
-*/

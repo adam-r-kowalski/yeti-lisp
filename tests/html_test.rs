@@ -1,73 +1,72 @@
-/*
 use yeti;
 
 type Result = std::result::Result<(), yeti::effect::Effect>;
 
-#[test]
-fn evaluate_html_is_module() -> Result {
+#[tokio::test]
+async fn evaluate_html_is_module() -> Result {
     let env = yeti::core::environment();
-    let (_, actual) = yeti::evaluate_source(env, "html")?;
+    let (_, actual) = yeti::evaluate_source(env, "html").await?;
     assert!(matches!(actual, yeti::Expression::Module(_)));
     Ok(())
 }
 
-#[test]
-fn evaluate_html_with_only_tag() -> Result {
+#[tokio::test]
+async fn evaluate_html_with_only_tag() -> Result {
     let env = yeti::core::environment();
-    let (_, actual) = yeti::evaluate_source(env, "(html/string [:div])")?;
+    let (_, actual) = yeti::evaluate_source(env, "(html/string [:div])").await?;
     let expected = yeti::Expression::String("<div></div>".to_string());
     assert_eq!(actual, expected);
     Ok(())
 }
 
-#[test]
-fn evaluate_html_with_child() -> Result {
+#[tokio::test]
+async fn evaluate_html_with_child() -> Result {
     let tokens = yeti::Tokens::from_str(r#"(html/string [:ul [:li "hello"]])"#);
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
-    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let (_, actual) = yeti::evaluate(environment.clone(), expression).await?;
     let expected = yeti::Expression::String("<ul><li>hello</li></ul>".to_string());
     assert_eq!(actual, expected);
     Ok(())
 }
 
-#[test]
-fn evaluate_html_with_two_children() -> Result {
+#[tokio::test]
+async fn evaluate_html_with_two_children() -> Result {
     let tokens = yeti::Tokens::from_str(r#"(html/string [:ul [:li "first"] [:li "second"]])"#);
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
-    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let (_, actual) = yeti::evaluate(environment.clone(), expression).await?;
     let expected = yeti::Expression::String("<ul><li>first</li><li>second</li></ul>".to_string());
     assert_eq!(actual, expected);
     Ok(())
 }
 
-#[test]
-fn evaluate_html_with_attribute() -> Result {
+#[tokio::test]
+async fn evaluate_html_with_attribute() -> Result {
     let tokens = yeti::Tokens::from_str(r#"(html/string [:div {:class "red"}])"#);
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
-    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let (_, actual) = yeti::evaluate(environment.clone(), expression).await?;
     let expected = yeti::Expression::String(r#"<div class="red"></div>"#.to_string());
     assert_eq!(actual, expected);
     Ok(())
 }
 
-#[test]
-fn evaluate_html_with_attribute_and_doesnt_need_closing_tag() -> Result {
+#[tokio::test]
+async fn evaluate_html_with_attribute_and_doesnt_need_closing_tag() -> Result {
     let tokens =
         yeti::Tokens::from_str(r#"(html/string [:input {:type "checkbox" :name "agree"}])"#);
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
-    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let (_, actual) = yeti::evaluate(environment.clone(), expression).await?;
     let expected =
         yeti::Expression::String(r#"<input name="agree" type="checkbox" />"#.to_string());
     assert_eq!(actual, expected);
     Ok(())
 }
 
-#[test]
-fn evaluate_html_with_css() -> Result {
+#[tokio::test]
+async fn evaluate_html_with_css() -> Result {
     let tokens = yeti::Tokens::from_str(
         r#"
         (html/string
@@ -77,32 +76,31 @@ fn evaluate_html_with_css() -> Result {
     );
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
-    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let (_, actual) = yeti::evaluate(environment.clone(), expression).await?;
     let expected_html = "<style>body { background-color: red; }</style>".to_string();
     let expected = yeti::Expression::String(expected_html);
     assert_eq!(actual, expected);
     Ok(())
 }
 
-#[test]
-fn evaluate_html_with_array_of_child() -> Result {
+#[tokio::test]
+async fn evaluate_html_with_array_of_child() -> Result {
     let tokens = yeti::Tokens::from_str(r#"(html/string [:ul [[:li "first"] [:li "second"]]])"#);
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
-    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let (_, actual) = yeti::evaluate(environment.clone(), expression).await?;
     let expected = yeti::Expression::String("<ul><li>first</li><li>second</li></ul>".to_string());
     assert_eq!(actual, expected);
     Ok(())
 }
 
-#[test]
-fn evaluate_html_with_int() -> Result {
+#[tokio::test]
+async fn evaluate_html_with_int() -> Result {
     let tokens = yeti::Tokens::from_str(r#"(html/string [:ul [:li 1] [:li 2]])"#);
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
-    let (_, actual) = yeti::evaluate(environment.clone(), expression)?;
+    let (_, actual) = yeti::evaluate(environment.clone(), expression).await?;
     let expected = yeti::Expression::String("<ul><li>1</li><li>2</li></ul>".to_string());
     assert_eq!(actual, expected);
     Ok(())
 }
-*/

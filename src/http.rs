@@ -1,10 +1,10 @@
 extern crate alloc;
 
 use crate::effect::error;
+use crate::evaluate_expressions;
 use crate::expression::Environment;
 use crate::extract;
 use crate::Expression::{self, NativeFunction};
-use crate::{evaluate_expressions, NativeType};
 use alloc::boxed::Box;
 use alloc::string::ToString;
 use im::ordmap;
@@ -24,8 +24,7 @@ pub fn environment() -> Environment {
                         .await
                         .map_err(|_| error("Could not get text from response"))
                         .map(|text| Expression::String(text))?;
-                    let result = Expression::NativeType(NativeType::new(response, "response".to_string()));
-                    Ok((env, result))
+                    Ok((env, response))
                 })
             }
         )
