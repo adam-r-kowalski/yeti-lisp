@@ -4,7 +4,8 @@ use crate::effect::{error, Effect};
 use crate::expression::{Call, Environment, Function, Pattern};
 use crate::Expression::{Integer, Module, NativeFunction, Ratio};
 use crate::{
-    array, evaluate_expressions, extract, html, map, pattern_match, ratio, server, sql, Expression,
+    array, evaluate_expressions, extract, html, http, map, pattern_match, ratio, server, sql,
+    Expression,
 };
 use alloc::boxed::Box;
 use alloc::format;
@@ -49,16 +50,19 @@ pub fn environment() -> Environment {
     ordmap! {
         "=".to_string() => NativeFunction(
           |env, args| {
-            let (env, args) = evaluate_expressions(env, args)?;
-            Ok((env, Expression::Bool(args[0] == args[1])))
+              Box::pin(async move {
+                  let (env, args) = evaluate_expressions(env, args).await?;
+                  Ok((env, Expression::Bool(args[0] == args[1])))
+              })
           }
         ),
         "+".to_string() => NativeFunction(
           |env, args| {
+              Box::pin(async move {
             if args.len() == 0 {
                 return Ok((env, Integer(0.into())));
             }
-            let (env, args) = evaluate_expressions(env, args)?;
+            let (env, args) = evaluate_expressions(env, args).await?;
             let (initial, args) = args.split_at(1);
             let result = args.iter().try_fold(initial[0].clone(), |lhs, rhs| {
                 match (lhs, rhs) {
@@ -67,11 +71,13 @@ pub fn environment() -> Environment {
                 }
             })?;
             Ok((env, result))
+              })
           }
         ),
         "-".to_string() => NativeFunction(
           |env, args| {
-            let (env, args) = evaluate_expressions(env, args)?;
+              Box::pin(async move {
+            let (env, args) = evaluate_expressions(env, args).await?;
             let (initial, args) = args.split_at(1);
             let result = args.iter().try_fold(initial[0].clone(), |lhs, rhs| {
                 match (lhs, rhs) {
@@ -80,14 +86,16 @@ pub fn environment() -> Environment {
                 }
             })?;
             Ok((env, result))
+              })
           }
         ),
         "*".to_string() => NativeFunction(
           |env, args| {
+              Box::pin(async move {
             if args.len() == 0 {
                 return Ok((env, Integer(1.into())));
             }
-            let (env, args) = evaluate_expressions(env, args)?;
+            let (env, args) = evaluate_expressions(env, args).await?;
             let (initial, args) = args.split_at(1);
             let result = args.iter().try_fold(initial[0].clone(), |lhs, rhs| {
                 match (lhs, rhs) {
@@ -98,11 +106,13 @@ pub fn environment() -> Environment {
                 }
             })?;
             Ok((env, result))
+              })
           }
         ),
         "/".to_string() => NativeFunction(
           |env, args| {
-            let (env, args) = evaluate_expressions(env, args)?;
+              Box::pin(async move {
+            let (env, args) = evaluate_expressions(env, args).await?;
             let (initial, args) = args.split_at(1);
             let result = args.iter().try_fold(initial[0].clone(), |lhs, rhs| {
                 match (lhs, rhs) {
@@ -111,144 +121,179 @@ pub fn environment() -> Environment {
                 }
             })?;
             Ok((env, result))
+              })
           }
         ),
         "if".to_string() => NativeFunction(
           |env, args| {
+              Box::pin(async move {
             let (condition, then, otherwise) = (args[0].clone(), args[1].clone(), args[2].clone());
-            let (env, condition) = crate::evaluate(env, condition)?;
-            crate::evaluate(env, if truthy(&condition) { then } else { otherwise })
+            let (env, condition) = crate::evaluate(env, condition).await?;
+            crate::evaluate(env, if truthy(&condition) { then } else { otherwise }).await
+              })
           }
         ),
         "def".to_string() => NativeFunction(
           |env, args| {
+              Box::pin(async move {
             let (name, value) = (args[0].clone(), args[1].clone());
-            let (env, value) = crate::evaluate(env, value)?;
+            let (env, value) = crate::evaluate(env, value).await?;
             let name = extract::symbol(name)?;
             let mut new_env = env.clone();
             new_env.insert(name, value);
             Ok((new_env, Expression::Nil))
+              })
           }
         ),
         "fn".to_string() => NativeFunction(
             |env, args| {
+              Box::pin(async move {
                 let f = function(env.clone(), args)?;
                 Ok((env, Expression::Function(f)))
+              })
             }
         ),
         "defn".to_string() => NativeFunction(
           |env, args| {
-            let (name, args) = args.split_at(1);
-            let original_env = env.clone();
-            let Function{mut env, patterns} = function(env, args)?;
-            env.insert("*self*".to_string(), name[0].clone());
-            let f = Function{env, patterns};
-            crate::evaluate(original_env, Expression::Call(Call{
-                function: Box::new(Expression::Symbol("def".to_string())),
-                arguments: vector![name[0].clone(), Expression::Function(f)],
-            }))
+              Box::pin(async move {
+                let (name, args) = args.split_at(1);
+                let original_env = env.clone();
+                let Function{mut env, patterns} = function(env, args)?;
+                env.insert("*self*".to_string(), name[0].clone());
+                let f = Function{env, patterns};
+                crate::evaluate(original_env, Expression::Call(Call{
+                    function: Box::new(Expression::Symbol("def".to_string())),
+                    arguments: vector![name[0].clone(), Expression::Function(f)],
+                })).await
+              })
           }
         ),
         "eval".to_string() => NativeFunction(
           |env, args| {
-            let (env, arg) = crate::evaluate(env, args[0].clone())?;
-            crate::evaluate(env, arg)
+              Box::pin(async move {
+                let (env, arg) = crate::evaluate(env, args[0].clone()).await?;
+                crate::evaluate(env, arg).await
+              })
           }
         ),
         "read-string".to_string() => NativeFunction(
           |env, args| {
-            let (env, arg) = crate::evaluate(env, args[0].clone())?;
+              Box::pin(async move {
+            let (env, arg) = crate::evaluate(env, args[0].clone()).await?;
             let s = extract::string(arg)?;
             let tokens = crate::Tokens::from_str(&s);
             let expression = crate::parse(tokens);
             Ok((env, expression))
+              })
           }
         ),
         "assert".to_string() => NativeFunction(
           |env, args| {
-            let (env, arg) = crate::evaluate(env, args[0].clone())?;
+              Box::pin(async move {
+            let (env, arg) = crate::evaluate(env, args[0].clone()).await?;
             if truthy(&arg) {
                 Ok((env, Expression::Nil))
             } else {
                 Err(error("Assertion failed"))
             }
+              })
           }
         ),
         "let".to_string() => NativeFunction(
           |env, args| {
-            let original_env = env.clone();
-            let (bindings, body) = args.split_at(1);
-            let bindings = extract::array(bindings[0].clone())?;
-            let env = bindings.iter().array_chunks().try_fold(env, |env, [pattern, value]| {
-                let (env, value) = crate::evaluate(env, value.clone())?;
-                let env = pattern_match(env, pattern.clone(), value)?;
-                Ok(env)
-            })?;
-            let (_, value) = body.iter().try_fold((env, Expression::Nil), |(env, _), expression| {
-                crate::evaluate(env, expression.clone())
-            })?;
-            Ok((original_env, value))
+              Box::pin(async move {
+                let original_env = env.clone();
+                let (bindings, body) = args.split_at(1);
+                let bindings = extract::array(bindings[0].clone())?;
+                let mut let_env = env;
+                for [pattern, value] in bindings.iter().array_chunks() {
+                    let (e, value) = crate::evaluate(let_env, value.clone()).await?;
+                    let_env = pattern_match(e, pattern.clone(), value)?;
+                }
+                let mut value = Expression::Nil;
+                for expression in body.iter() {
+                    let (e, v) = crate::evaluate(let_env, expression.clone()).await?;
+                    let_env = e;
+                    value = v;
+                }
+                Ok((original_env, value))
+              })
           }
         ),
         "for".to_string() => NativeFunction(
           |env, args| {
-            let (bindings, body) = (args[0].clone(), args[1].clone());
-            let bindings = extract::array(bindings)?;
-            let pattern = bindings[0].clone();
-            let (env, values) = crate::evaluate(env, bindings[1].clone())?;
-            let values = extract::array(values)?;
-            let result = values.iter().try_fold(Vector::new(), |mut result, value| {
-                let env = pattern_match(env.clone(), pattern.clone(), value.clone())?;
-                let (_, value) = crate::evaluate(env, body.clone())?;
-                result.push_back(value);
-                Ok(result)
-            })?;
-            crate::evaluate(env, Expression::Array(result))
+              Box::pin(async move {
+                let (bindings, body) = (args[0].clone(), args[1].clone());
+                let bindings = extract::array(bindings)?;
+                let pattern = bindings[0].clone();
+                let (env, values) = crate::evaluate(env, bindings[1].clone()).await?;
+                let values = extract::array(values)?;
+                let mut result = Vector::new();
+                for value in values.iter() {
+                    let env = pattern_match(env.clone(), pattern.clone(), value.clone())?;
+                    let (_, value) = crate::evaluate(env, body.clone()).await?;
+                    result.push_back(value);
+                }
+                crate::evaluate(env, Expression::Array(result)).await
+              })
           }
         ),
         "str".to_string() => NativeFunction(
           |env, args| {
-            let (env, args) = evaluate_expressions(env, args)?;
+              Box::pin(async move {
+            let (env, args) = evaluate_expressions(env, args).await?;
             let result = args.iter().fold(String::new(), |mut result, arg| {
                 result.push_str(&format!("{}", arg));
                 result
             });
             Ok((env, Expression::String(result)))
+              })
           }
         ),
         "bound?".to_string() => NativeFunction(
             |env, args| {
-                let (env, args) = evaluate_expressions(env, args)?;
+              Box::pin(async move {
+                let (env, args) = evaluate_expressions(env, args).await?;
                 let name = extract::symbol(args[0].clone())?;
                 let result = env.contains_key(&name);
                 Ok((env, Expression::Bool(result)))
+              })
             }
         ),
         "do".to_string() => NativeFunction(
             |env, args| {
+              Box::pin(async move {
                 let original_env = env.clone();
-                let (_, result) = args.iter().try_fold((env, Expression::Nil), |(env, _), expression| {
-                    crate::evaluate(env, expression.clone())
-                })?;
+                let mut result = Expression::Nil;
+                let mut env = env;
+                for expression in args.iter() {
+                    let (e, v) = crate::evaluate(env, expression.clone()).await?;
+                    env = e;
+                    result = v;
+                }
                 Ok((original_env, result))
+              })
             }
         ),
         "when".to_string() => NativeFunction(
             |env, args| {
+              Box::pin(async move {
                 let (condition, body) = args.split_at(1);
-                let (env, condition) = crate::evaluate(env, condition[0].clone())?;
+                let (env, condition) = crate::evaluate(env, condition[0].clone()).await?;
                 if truthy(&condition) {
                     crate::evaluate(env, Expression::Call(Call{
                         function: Box::new(Expression::Symbol("do".to_string())),
                         arguments: body,
-                    }))
+                    })).await
                 } else {
                     Ok((env, Expression::Nil))
                 }
+              })
             }
         ),
         "import".to_string() => NativeFunction(
             |env, args| {
+              Box::pin(async move {
                 let name = extract::symbol(args[0].clone())?;
                 let path = format!("{}.yeti", name);
                 let (mut env, source) = crate::evaluate(env, Expression::Call(Call{
@@ -257,29 +302,31 @@ pub fn environment() -> Environment {
                         "read-file-sync".to_string()
                     ])),
                     arguments: vector![Expression::String(path)],
-                }))?;
+                })).await?;
                 let source = extract::string(source)?;
                 let tokens = crate::Tokens::from_str(&source);
                 let expressions = crate::parse_module(tokens);
                 let mut module = environment();
                 module.insert("*name*".to_string(), Expression::String(name.clone()));
                 module.insert("io".to_string(), env.get("io").unwrap().clone());
-                let module = expressions.iter().try_fold(module, |env, expression| {
-                    let (env, _) = crate::evaluate(env, expression.clone())?;
-                    Ok(env)
-                })?;
+                for expression in expressions.iter() {
+                    let (env, _) = crate::evaluate(module, expression.clone()).await?;
+                    module = env;
+                }
                 env.insert(name, Expression::Module(module));
                 Ok((env, Expression::Nil))
+              })
             }
         ),
-        "assoc".to_string() => NativeFunction(map::assoc),
-        "dissoc".to_string() => NativeFunction(map::dissoc),
-        "merge".to_string() => NativeFunction(map::merge),
-        "get".to_string() => NativeFunction(map::get),
-        "nth".to_string() => NativeFunction(array::nth),
-        "count".to_string() => NativeFunction(array::count),
+        "assoc".to_string() => NativeFunction(|env, args| Box::pin(map::assoc(env, args))),
+        "dissoc".to_string() => NativeFunction(|env, args| Box::pin(map::dissoc(env, args))),
+        "merge".to_string() => NativeFunction(|env, args| Box::pin(map::merge(env, args))),
+        "get".to_string() => NativeFunction(|env, args| Box::pin(map::get(env, args))),
+        "nth".to_string() => NativeFunction(|env, args| Box::pin(array::nth(env, args))),
+        "count".to_string() => NativeFunction(|env, args| Box::pin(array::count(env, args))),
         "html".to_string() => Module(html::environment()),
         "server".to_string() => Module(server::environment()),
-        "sql".to_string() => Module(sql::environment())
+        "sql".to_string() => Module(sql::environment()),
+        "http".to_string() => Module(http::environment())
     }
 }

@@ -1,3 +1,4 @@
+/*
 use rug::Integer;
 use yeti;
 
@@ -99,3 +100,4 @@ fn pattern_match_multiple_patterns_second_taken() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+*/

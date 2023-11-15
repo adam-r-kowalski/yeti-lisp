@@ -194,22 +194,6 @@ fn sql_string(expr: Expression) -> Result<Expression> {
     }
 }
 
-pub fn connect(env: Environment, _args: Vector<Expression>) -> Result<(Environment, Expression)> {
-    match Connection::open_in_memory() {
-        Ok(db) => Ok((
-            env,
-            Expression::NativeType(NativeType::new(db, "sqlite".to_string())),
-        )),
-        Err(_) => Err(error("Failed to open SQLite database")),
-    }
-}
-
-pub fn string(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
-    let (env, args) = evaluate_expressions(env, args)?;
-    let expr = sql_string(args[0].clone())?;
-    Ok((env, expr))
-}
-
 impl ToSql for Expression {
     fn to_sql(&self) -> rusqlite::Result<ToSqlOutput> {
         match self {
@@ -243,8 +227,8 @@ impl FromSql for Expression {
     }
 }
 
-pub fn query(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
-    let (env, args) = evaluate_expressions(env, args)?;
+async fn query(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
+    let (env, args) = evaluate_expressions(env, args).await?;
     let db = extract::native_type(args[0].clone())?;
     let array = extract::array(sql_string(args[1].clone())?)?;
     let string = extract::string(array[0].clone())?;
@@ -286,46 +270,70 @@ pub fn query(env: Environment, args: Vector<Expression>) -> Result<(Environment,
     }
 }
 
-pub fn execute(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
-    let (env, args) = evaluate_expressions(env, args)?;
-    let db = extract::native_type(args[0].clone())?;
-    let array = extract::array(sql_string(args[1].clone())?)?;
-    let string = extract::string(array[0].clone())?;
-    let parameters = array
-        .iter()
-        .skip(1)
-        .map(|p| p as &dyn ToSql)
-        .collect::<Vec<_>>();
-    let connection = db.value.lock();
-    let connection = connection
-        .downcast_ref::<Connection>()
-        .ok_or_else(|| error("Expected SQLite database connection"))?;
-    match connection.execute(&string, &parameters[..]) {
-        Ok(_) => Ok((env, Expression::Nil)),
-        Err(e) => Err(error(&format!("Failed to execute query: {}", e))),
-    }
-}
-
-pub fn tables(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
-    let db = args[0].clone();
-    let (env, q) = evaluate_source(
-        env,
-        r#"
-        {:select [:name]
-         :from :sqlite_master
-         :where [:= :type "table"]}
-        "#,
-    )?;
-    query(env, vector![db, q])
-}
-
 pub fn environment() -> Environment {
     ordmap! {
         "*name*".to_string() => Expression::String("sql".to_string()),
-        "connect".to_string() => NativeFunction(connect),
-        "string".to_string() => NativeFunction(string),
-        "query".to_string() => NativeFunction(query),
-        "execute!".to_string() => NativeFunction(execute),
-        "tables".to_string() => NativeFunction(tables)
+        "connect".to_string() => NativeFunction(
+            |env, _args| {
+                Box::pin(async move {
+                    match Connection::open_in_memory() {
+                        Ok(db) => Ok((
+                            env,
+                            Expression::NativeType(NativeType::new(db, "sqlite".to_string())),
+                        )),
+                        Err(_) => Err(error("Failed to open SQLite database")),
+                    }
+                })
+            }
+        ),
+        "string".to_string() => NativeFunction(
+            |env, args| {
+                Box::pin(async move {
+                    let (env, args) = evaluate_expressions(env, args).await?;
+                    let expr = sql_string(args[0].clone())?;
+                    Ok((env, expr))
+                })
+            }
+        ),
+        "query".to_string() => NativeFunction(|env, args| Box::pin(query(env, args))),
+        "execute!".to_string() => NativeFunction(
+            |env, args| {
+                Box::pin(async move {
+                    let (env, args) = evaluate_expressions(env, args).await?;
+                    let db = extract::native_type(args[0].clone())?;
+                    let array = extract::array(sql_string(args[1].clone())?)?;
+                    let string = extract::string(array[0].clone())?;
+                    let parameters = array
+                        .iter()
+                        .skip(1)
+                        .map(|p| p as &dyn ToSql)
+                        .collect::<Vec<_>>();
+                    let connection = db.value.lock();
+                    let connection = connection
+                        .downcast_ref::<Connection>()
+                        .ok_or_else(|| error("Expected SQLite database connection"))?;
+                    match connection.execute(&string, &parameters[..]) {
+                        Ok(_) => Ok((env, Expression::Nil)),
+                        Err(e) => Err(error(&format!("Failed to execute query: {}", e))),
+                    }
+                })
+            }
+        ),
+        "tables".to_string() => NativeFunction(
+            |env, args| {
+                Box::pin(async move {
+                    let db = args[0].clone();
+                    let (env, q) = evaluate_source(
+                        env,
+                        r#"
+                        {:select [:name]
+                         :from :sqlite_master
+                         :where [:= :type "table"]}
+                        "#,
+                    ).await?;
+                    query(env, vector![db, q]).await
+                })
+            }
+        )
     }
 }

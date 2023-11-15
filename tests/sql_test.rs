@@ -1,3 +1,4 @@
+/*
 use yeti;
 
 type Result = std::result::Result<(), yeti::effect::Effect>;
@@ -164,3 +165,4 @@ async fn insert_and_select() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+*/

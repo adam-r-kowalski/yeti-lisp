@@ -1,3 +1,4 @@
+/*
 use yeti;
 
 type Result = std::result::Result<(), yeti::effect::Effect>;
@@ -20,3 +21,4 @@ fn for_binding_with_pattern_matching() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+*/

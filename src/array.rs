@@ -9,8 +9,8 @@ use im::Vector;
 
 type Result<T> = core::result::Result<T, Effect>;
 
-pub fn nth(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
-    let (env, args) = evaluate_expressions(env, args)?;
+pub async fn nth(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
+    let (env, args) = evaluate_expressions(env, args).await?;
     let arr = extract::array(args[0].clone())?;
     let idx = extract::integer(args[1].clone())?
         .to_usize()
@@ -24,8 +24,11 @@ pub fn nth(env: Environment, args: Vector<Expression>) -> Result<(Environment, E
     }
 }
 
-pub fn count(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
-    let (env, args) = evaluate_expressions(env, args)?;
+pub async fn count(
+    env: Environment,
+    args: Vector<Expression>,
+) -> Result<(Environment, Expression)> {
+    let (env, args) = evaluate_expressions(env, args).await?;
     let arr = extract::array(args[0].clone())?;
     Ok((env, Expression::Integer(arr.len().into())))
 }

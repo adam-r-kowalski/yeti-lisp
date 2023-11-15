@@ -168,84 +168,88 @@ async fn request_map(route_path: &str, req: Request<Body>) -> Result<Expression>
     Ok(Expression::Map(map))
 }
 
-pub fn start(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
-    let (env, arg) = crate::evaluate(env, args[0].clone())?;
-    let m = extract::map(arg)?;
-    let port_expr = m.get(&Expression::Keyword(":port".to_string()));
-    let port = match port_expr {
-        Some(Expression::Integer(i)) => i
-            .to_u16()
-            .ok_or_else(|| error("Port number out of range"))?,
-        None => 3000,
-        _ => return Err(error("Expected integer for :port")),
-    };
-    let mut app = Router::new();
-    if let Some(routes) = m.get(&Expression::Keyword(":routes".to_string())) {
-        let m = extract::map(routes.clone())?;
-        for (k, v) in m.iter() {
-            let path = extract::string(k.clone())?;
-            match v.clone() {
-                Expression::String(text) => app = app.route(&path, get(|| async { text })),
-                Expression::Array(_) => {
-                    let mut string = String::new();
-                    html::build_string(v.clone(), &mut string)?;
-                    app = app.route(&path, get(|| async { Html(string) }))
-                }
-                Expression::Function(patterns) => {
-                    let env = env.clone();
-                    let cloned_path = path.clone();
-                    let handler = async move |req: Request<Body>| {
-                        let (_, expr) = evaluate(
-                            env,
-                            Expression::Call(Call {
-                                function: Box::new(Expression::Function(patterns.clone())),
-                                arguments: vector![request_map(&cloned_path, req).await.unwrap()],
-                            }),
-                        )
-                        .unwrap();
-                        let mut string = String::new();
-                        html::build_string(expr, &mut string).unwrap();
-                        Html(string)
-                    };
-                    app = app.route(&path, get(handler.clone()));
-                    app = app.route(&path, post(handler));
-                }
-                _ => return Err(error("Expected string for route")),
-            }
-        }
-    }
-    let (tx, mut rx) = broadcast::channel(1);
-    tokio::spawn(async move {
-        let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port);
-        axum::Server::bind(&socket)
-            .serve(app.into_make_service())
-            .with_graceful_shutdown(async {
-                rx.recv().await.ok();
-            })
-            .await
-            .unwrap();
-    });
-    Ok((
-        env,
-        Expression::NativeType(NativeType::new(Server { tx }, "server".to_string())),
-    ))
-}
-
-pub fn shutdown(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
-    let (env, arg) = crate::evaluate(env, args[0].clone())?;
-    let server = extract::native_type(arg)?;
-    let server = server.value.lock();
-    let server = server
-        .downcast_ref::<Server>()
-        .ok_or_else(|| error("Expected server"))?;
-    server.tx.send(()).unwrap();
-    Ok((env, Expression::Nil))
-}
-
 pub fn environment() -> Environment {
     ordmap! {
         "*name*".to_string() => Expression::String("server".to_string()),
-        "start".to_string() => NativeFunction(start),
-        "stop".to_string() => NativeFunction(shutdown)
+        "start".to_string() => NativeFunction(
+            |env, args| {
+                Box::pin(async move {
+                    let (env, arg) = crate::evaluate(env, args[0].clone()).await?;
+                    let m = extract::map(arg)?;
+                    let port_expr = m.get(&Expression::Keyword(":port".to_string()));
+                    let port = match port_expr {
+                        Some(Expression::Integer(i)) => i
+                            .to_u16()
+                            .ok_or_else(|| error("Port number out of range"))?,
+                        None => 3000,
+                        _ => return Err(error("Expected integer for :port")),
+                    };
+                    let mut app = Router::new();
+                    if let Some(routes) = m.get(&Expression::Keyword(":routes".to_string())) {
+                        let m = extract::map(routes.clone())?;
+                        for (k, v) in m.iter() {
+                            let path = extract::string(k.clone())?;
+                            match v.clone() {
+                                Expression::String(text) => app = app.route(&path, get(|| async { text })),
+                                Expression::Array(_) => {
+                                    let mut string = String::new();
+                                    html::build_string(v.clone(), &mut string)?;
+                                    app = app.route(&path, get(|| async { Html(string) }))
+                                }
+                                Expression::Function(patterns) => {
+                                    let env = env.clone();
+                                    let cloned_path = path.clone();
+                                    let handler = async move |req: Request<Body>| {
+                                        let (_, expr) = evaluate(
+                                            env,
+                                            Expression::Call(Call {
+                                                function: Box::new(Expression::Function(patterns.clone())),
+                                                arguments: vector![request_map(&cloned_path, req).await.unwrap()],
+                                            }),
+                                        ).await
+                                        .unwrap();
+                                        let mut string = String::new();
+                                        html::build_string(expr, &mut string).unwrap();
+                                        Html(string)
+                                    };
+                                    app = app.route(&path, get(handler.clone()));
+                                    app = app.route(&path, post(handler));
+                                }
+                                _ => return Err(error("Expected string for route")),
+                            }
+                        }
+                    }
+                    let (tx, mut rx) = broadcast::channel(1);
+                    tokio::spawn(async move {
+                        let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port);
+                        axum::Server::bind(&socket)
+                            .serve(app.into_make_service())
+                            .with_graceful_shutdown(async {
+                                rx.recv().await.ok();
+                            })
+                            .await
+                            .unwrap();
+                    });
+                    Ok((
+                        env,
+                        Expression::NativeType(NativeType::new(Server { tx }, "server".to_string())),
+                    ))
+                })
+            }
+        ),
+        "stop".to_string() => NativeFunction(
+            |env, args| {
+                Box::pin(async move {
+                    let (env, arg) = crate::evaluate(env, args[0].clone()).await?;
+                    let server = extract::native_type(arg)?;
+                    let server = server.value.lock();
+                    let server = server
+                        .downcast_ref::<Server>()
+                        .ok_or_else(|| error("Expected server"))?;
+                    server.tx.send(()).unwrap();
+                    Ok((env, Expression::Nil))
+                })
+            }
+        )
     }
 }

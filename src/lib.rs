@@ -1,4 +1,4 @@
-//#![no_std]
+#![no_std]
 #![forbid(unsafe_code)]
 #![feature(ip_in_core)]
 #![feature(error_in_core)]
@@ -13,6 +13,7 @@ mod evaluator;
 pub mod expression;
 pub mod extract;
 pub mod html;
+pub mod http;
 pub mod map;
 mod native_type;
 mod numerics;

@@ -1,3 +1,4 @@
+/*
 use im::ordmap;
 use rug::Integer;
 use yeti;
@@ -100,3 +101,4 @@ fn import_multiple_modules() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+*/

@@ -5,6 +5,7 @@ use crate::evaluate_expressions;
 use crate::expression::Environment;
 use crate::extract;
 use crate::Expression::{self, NativeFunction};
+use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::{String, ToString};
 use im::{ordmap, OrdMap, Vector};
@@ -138,8 +139,8 @@ pub fn build_string(expr: Expression, string: &mut String) -> Result<()> {
     }
 }
 
-pub fn string(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
-    let (env, args) = evaluate_expressions(env, args)?;
+async fn string(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
+    let (env, args) = evaluate_expressions(env, args).await?;
     let mut string = String::new();
     build_string(args[0].clone(), &mut string)?;
     Ok((env, Expression::String(string)))
@@ -148,6 +149,10 @@ pub fn string(env: Environment, args: Vector<Expression>) -> Result<(Environment
 pub fn environment() -> Environment {
     ordmap! {
         "*name*".to_string() => Expression::String("html".to_string()),
-        "string".to_string() => NativeFunction(string)
+        "string".to_string() => NativeFunction(
+            |env, args| {
+                Box::pin(string(env, args))
+            }
+        )
     }
 }

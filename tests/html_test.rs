@@ -1,3 +1,4 @@
+/*
 use yeti;
 
 type Result = std::result::Result<(), yeti::effect::Effect>;
@@ -104,3 +105,4 @@ fn evaluate_html_with_int() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+*/

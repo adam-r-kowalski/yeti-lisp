@@ -4,9 +4,11 @@ use crate::effect::{error, Effect};
 use crate::expression::{Call, Environment, Pattern, Result};
 use crate::extract;
 use crate::Expression;
+use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec;
+use async_recursion::async_recursion;
 use im::Vector;
 
 fn evaluate_symbol(environment: Environment, symbol: String) -> Result {
@@ -144,16 +146,16 @@ fn find_pattern_match(
     Err(error(&error_message))
 }
 
-fn evaluate_call(environment: Environment, call: Call) -> Result {
+async fn evaluate_call(environment: Environment, call: Call) -> Result {
     let Call {
         function,
         arguments,
     } = call;
-    let (environment, function) = evaluate(environment.clone(), *function)?;
+    let (environment, function) = evaluate(environment.clone(), *function).await?;
     match function {
         Expression::Function(function) => {
             let original_environment = environment.clone();
-            let (_, arguments) = evaluate_expressions(environment, arguments)?;
+            let (_, arguments) = evaluate_expressions(environment, arguments).await?;
             let cloned_function = function.clone();
             let (mut env, body) = find_pattern_match(function.env, function.patterns, arguments)?;
             env.insert(
@@ -163,16 +165,21 @@ fn evaluate_call(environment: Environment, call: Call) -> Result {
             if let Some(Expression::Symbol(name)) = env.get("*self*") {
                 env.insert(name.to_string(), Expression::Function(cloned_function));
             }
-            let (_, value) = body
-                .iter()
-                .try_fold((env, Expression::Nil), |(env, _), expression| {
-                    evaluate(env, expression.clone())
-                })?;
+            let mut value = Expression::Nil;
+            let mut env = env.clone();
+            for expression in body.iter() {
+                let (e, v) = evaluate(env, expression.clone()).await?;
+                env = e;
+                value = v;
+            }
             Ok((original_environment, value))
         }
-        Expression::NativeFunction(f) => f(environment, arguments),
+        Expression::NativeFunction(f) => {
+            let (env, value) = f(environment, arguments).await?;
+            Ok((env, value))
+        }
         Expression::Keyword(k) => {
-            let (environment, arguments) = evaluate_expressions(environment, arguments)?;
+            let (environment, arguments) = evaluate_expressions(environment, arguments).await?;
             match &arguments[0] {
                 Expression::Map(m) => {
                     if let Some(v) = m.get(&Expression::Keyword(k)) {
@@ -187,7 +194,7 @@ fn evaluate_call(environment: Environment, call: Call) -> Result {
             }
         }
         Expression::Map(m) => {
-            let (environment, arguments) = evaluate_expressions(environment, arguments)?;
+            let (environment, arguments) = evaluate_expressions(environment, arguments).await?;
             if let Some(v) = m.get(&arguments[0]) {
                 Ok((environment, v.clone()))
             } else if arguments.len() == 2 {
@@ -200,51 +207,51 @@ fn evaluate_call(environment: Environment, call: Call) -> Result {
     }
 }
 
-pub fn evaluate(environment: Environment, expression: Expression) -> Result {
+#[async_recursion]
+pub async fn evaluate(environment: Environment, expression: Expression) -> Result {
     match expression {
         Expression::Symbol(s) => evaluate_symbol(environment, s),
         Expression::NamespacedSymbol(s) => evaluate_namespaced_symbol(environment, &s),
-        Expression::Call(call) => evaluate_call(environment, call),
+        Expression::Call(call) => evaluate_call(environment, call).await,
         Expression::Array(a) => {
-            let (environment, a) = evaluate_expressions(environment, a)?;
+            let (environment, a) = evaluate_expressions(environment, a).await?;
             Ok((environment, Expression::Array(a)))
         }
         Expression::Map(m) => {
-            let (environment, m) = m.into_iter().try_fold(
-                (environment, im::OrdMap::new()),
-                |(environment, mut m), (k, v)| {
-                    let (environment, k) = evaluate(environment, k)?;
-                    let (environment, v) = evaluate(environment, v)?;
-                    m.insert(k, v);
-                    Ok((environment, m))
-                },
-            )?;
-            Ok((environment, Expression::Map(m)))
+            let mut environment = environment.clone();
+            let mut new_map = im::OrdMap::new();
+            for (k, v) in m {
+                let (e, k) = evaluate(environment, k).await?;
+                let (e, v) = evaluate(e, v).await?;
+                new_map.insert(k, v);
+                environment = e;
+            }
+            Ok((environment, Expression::Map(new_map)))
         }
         Expression::Quote(e) => Ok((environment, *e)),
         e => Ok((environment, e)),
     }
 }
 
-pub fn evaluate_expressions(
+pub async fn evaluate_expressions(
     environment: Environment,
     expressions: Vector<Expression>,
 ) -> core::result::Result<(Environment, Vector<Expression>), Effect> {
-    expressions.into_iter().try_fold(
-        (environment, Vector::new()),
-        |(environment, mut expressions), expression| {
-            let (environment, argument) = evaluate(environment, expression)?;
-            expressions.push_back(argument);
-            Ok((environment, expressions))
-        },
-    )
+    let mut result = Vector::new();
+    let mut environment = environment;
+    for expression in expressions {
+        let (e, expression) = evaluate(environment, expression).await?;
+        result.push_back(expression);
+        environment = e;
+    }
+    Ok((environment, result))
 }
 
-pub fn evaluate_source(
+pub async fn evaluate_source(
     env: Environment,
     source: &str,
 ) -> core::result::Result<(Environment, Expression), Effect> {
     let tokens = crate::Tokens::from_str(source);
     let expression = crate::parse(tokens);
-    evaluate(env, expression)
+    evaluate(env, expression).await
 }

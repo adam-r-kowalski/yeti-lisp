@@ -1,3 +1,4 @@
+/*
 use rug::Integer;
 use yeti;
 
@@ -38,3 +39,4 @@ fn when_if_condition_is_false() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+*/

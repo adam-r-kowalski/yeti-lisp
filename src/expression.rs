@@ -8,7 +8,9 @@ use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::fmt::{self, Display, Formatter};
+use core::future::Future;
 use core::hash::Hash;
+use core::pin::Pin;
 use im::{OrdMap, Vector};
 use rug::{Integer, Rational};
 
@@ -36,6 +38,8 @@ pub struct Call {
     pub arguments: Expressions,
 }
 
+type NativeFunction = fn(Environment, Expressions) -> Pin<Box<dyn Future<Output = Result> + Send>>;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Expression {
     Symbol(String),
@@ -52,7 +56,7 @@ pub enum Expression {
     Call(Call),
     Function(Function),
     Quote(Box<Expression>),
-    NativeFunction(fn(Environment, Expressions) -> Result),
+    NativeFunction(NativeFunction),
     NativeType(NativeType),
     Module(Environment),
 }

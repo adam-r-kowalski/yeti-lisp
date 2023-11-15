@@ -92,11 +92,13 @@ fn repl_environment() -> yeti::Environment {
         yeti::Expression::Module(ordmap! {
             "read-file-sync".to_string() => yeti::Expression::NativeFunction(
                 |env, args| {
-                    let (env, args) = yeti::evaluate_expressions(env, args)?;
-                    let path = yeti::extract::string(args[0].clone())?;
-                    let contents = std::fs::read_to_string(path)
-                        .map_err(|_| yeti::effect::error("Could not read file"))?;
-                    Ok((env, yeti::Expression::String(contents)))
+                    Box::pin(async move {
+                        let (env, args) = yeti::evaluate_expressions(env, args).await?;
+                        let path = yeti::extract::string(args[0].clone())?;
+                        let contents = std::fs::read_to_string(path)
+                            .map_err(|_| yeti::effect::error("Could not read file"))?;
+                        Ok((env, yeti::Expression::String(contents)))
+                    })
                 }
             )
         }),
@@ -110,7 +112,7 @@ async fn main() -> io::Result<()> {
     let mut iterator = StdinIterator::new();
     loop {
         let expression = read(&mut iterator)?;
-        match yeti::evaluate(environment.clone(), expression) {
+        match yeti::evaluate(environment.clone(), expression).await {
             Ok((next_environment, expression)) => {
                 print(expression)?;
                 environment = next_environment;
