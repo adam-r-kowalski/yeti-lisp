@@ -9,11 +9,9 @@ im = "15.1.0"
 tokio = { version = "1.33.0", features = ["full"] }
 axum = "0.6.20"
 reqwest = { version = "0.11.22", features = ["json"] }
-spin = "0.9.8"
 rusqlite = { version = "0.29.0", features = ["bundled"] }
 crossterm = "0.27"
 hyper = { version = "0.14.24", features = ["stream"] }
-uuid = { version = "1.5.0", features = ["v4"] }
 serde = "1.0.190"
 serde_qs = "0.12"
 serde_json = "1.0"

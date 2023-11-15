@@ -232,18 +232,18 @@ async fn query(env: Environment, args: Vector<Expression>) -> Result<(Environmen
     let db = extract::native_type(args[0].clone())?;
     let array = extract::array(sql_string(args[1].clone())?)?;
     let string = extract::string(array[0].clone())?;
-    let parameters = array
-        .iter()
-        .skip(1)
-        .map(|p| p as &dyn ToSql)
-        .collect::<Vec<_>>();
-    let connection = db.value.lock();
+    let connection = db.value.lock().await;
     let connection = connection
         .downcast_ref::<Connection>()
         .ok_or_else(|| error("Expected SQLite database connection"))?;
     let result = connection.prepare(&string);
     match result {
         Ok(mut stmt) => {
+            let parameters = array
+                .iter()
+                .skip(1)
+                .map(|p| p as &dyn ToSql)
+                .collect::<Vec<_>>();
             let column_names: Vec<String> =
                 stmt.column_names().iter().map(|c| c.to_string()).collect();
             let rows: Vector<Expression> = stmt
@@ -303,15 +303,15 @@ pub fn environment() -> Environment {
                     let db = extract::native_type(args[0].clone())?;
                     let array = extract::array(sql_string(args[1].clone())?)?;
                     let string = extract::string(array[0].clone())?;
+                    let connection = db.value.lock().await;
+                    let connection = connection
+                        .downcast_ref::<Connection>()
+                        .ok_or_else(|| error("Expected SQLite database connection"))?;
                     let parameters = array
                         .iter()
                         .skip(1)
                         .map(|p| p as &dyn ToSql)
                         .collect::<Vec<_>>();
-                    let connection = db.value.lock();
-                    let connection = connection
-                        .downcast_ref::<Connection>()
-                        .ok_or_else(|| error("Expected SQLite database connection"))?;
                     match connection.execute(&string, &parameters[..]) {
                         Ok(_) => Ok((env, Expression::Nil)),
                         Err(e) => Err(error(&format!("Failed to execute query: {}", e))),

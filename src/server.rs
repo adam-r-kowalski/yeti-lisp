@@ -242,7 +242,7 @@ pub fn environment() -> Environment {
                 Box::pin(async move {
                     let (env, arg) = crate::evaluate(env, args[0].clone()).await?;
                     let server = extract::native_type(arg)?;
-                    let server = server.value.lock();
+                    let server = server.value.lock().await;
                     let server = server
                         .downcast_ref::<Server>()
                         .ok_or_else(|| error("Expected server"))?;

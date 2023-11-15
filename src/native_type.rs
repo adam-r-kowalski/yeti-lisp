@@ -3,7 +3,7 @@ extern crate alloc;
 use alloc::string::String;
 use alloc::sync::Arc;
 use core::any::{Any, TypeId};
-use spin::Mutex;
+use tokio::sync::Mutex;
 
 pub struct NativeType {
     pub value: Arc<Mutex<dyn Any + Send>>,
