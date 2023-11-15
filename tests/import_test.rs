@@ -10,7 +10,7 @@ async fn import_module_and_use_def_from_it() -> Result {
     env.insert(
         "io".to_string(),
         yeti::Expression::Module(ordmap! {
-            "read-file-sync".to_string() => yeti::Expression::NativeFunction(
+            "read-file".to_string() => yeti::Expression::NativeFunction(
                 |env, _| Box::pin(async { Ok((env, yeti::Expression::String("(def bar 5)".to_string()))) })
             )
         }),
@@ -28,7 +28,7 @@ async fn import_module_with_multiple_definitions() -> Result {
     env.insert(
         "io".to_string(),
         yeti::Expression::Module(ordmap! {
-            "read-file-sync".to_string() => yeti::Expression::NativeFunction(
+            "read-file".to_string() => yeti::Expression::NativeFunction(
                 |env, _| Box::pin(async {Ok((env, yeti::Expression::String(r#"
                     (def bar 5)
 
@@ -53,7 +53,7 @@ async fn import_module_with_function() -> Result {
     env.insert(
         "io".to_string(),
         yeti::Expression::Module(ordmap! {
-            "read-file-sync".to_string() => yeti::Expression::NativeFunction(
+            "read-file".to_string() => yeti::Expression::NativeFunction(
                 |env, _| Box::pin(async {Ok((env, yeti::Expression::String(r#"
                     (defn square [x] (* x x))
                 "#.to_string())))})
@@ -73,7 +73,7 @@ async fn import_multiple_modules() -> Result {
     env.insert(
         "io".to_string(),
         yeti::Expression::Module(ordmap! {
-            "read-file-sync".to_string() => yeti::Expression::NativeFunction(
+            "read-file".to_string() => yeti::Expression::NativeFunction(
                 |env, args| Box::pin(async {
                     let (env, args) = yeti::evaluate_expressions(env, args).await?;
                     let path = yeti::extract::string(args[0].clone())?;

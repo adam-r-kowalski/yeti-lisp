@@ -90,12 +90,12 @@ fn repl_environment() -> yeti::Environment {
     environment.insert(
         "io".to_string(),
         yeti::Expression::Module(ordmap! {
-            "read-file-sync".to_string() => yeti::Expression::NativeFunction(
+            "read-file".to_string() => yeti::Expression::NativeFunction(
                 |env, args| {
                     Box::pin(async move {
                         let (env, args) = yeti::evaluate_expressions(env, args).await?;
                         let path = yeti::extract::string(args[0].clone())?;
-                        let contents = std::fs::read_to_string(path)
+                        let contents = tokio::fs::read_to_string(path).await
                             .map_err(|_| yeti::effect::error("Could not read file"))?;
                         Ok((env, yeti::Expression::String(contents)))
                     })

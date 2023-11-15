@@ -299,7 +299,7 @@ pub fn environment() -> Environment {
                 let (mut env, source) = crate::evaluate(env, Expression::Call(Call{
                     function: Box::new(Expression::NamespacedSymbol(vec![
                         "io".to_string(),
-                        "read-file-sync".to_string()
+                        "read-file".to_string()
                     ])),
                     arguments: vector![Expression::String(path)],
                 })).await?;
