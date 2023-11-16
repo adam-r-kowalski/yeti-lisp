@@ -1,4 +1,6 @@
+use httpdate::fmt_http_date;
 use std::collections::HashMap;
+use std::time::SystemTime;
 
 use yeti;
 
@@ -30,8 +32,24 @@ async fn http_get() -> Result {
     )
     .await?;
     assert!(matches!(actual, yeti::Expression::NativeType(_)));
-    let (_, actual) = yeti::evaluate_source(env, r#"(http/get "http://localhost:3001")"#).await?;
-    assert_eq!(actual, yeti::Expression::String("Hello Yeti".to_string()));
+    let (env, actual) = yeti::evaluate_source(env, r#"(http/get "http://localhost:3001")"#).await?;
+    let now = SystemTime::now();
+    let formatted_date = fmt_http_date(now);
+    let expected_response_str = format!(
+        r#"
+        {{
+            :headers {{:content-length "10"
+                       :content-type "text/plain; charset=utf-8"
+                       :date "{}"}}
+            :status 200
+            :url "http://localhost:3001/"
+            :text "Hello Yeti"
+        }}
+        "#,
+        formatted_date
+    );
+    let (_, expected) = yeti::evaluate_source(env, &expected_response_str).await?;
+    assert_eq!(actual, expected);
     Ok(())
 }
 
