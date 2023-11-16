@@ -89,7 +89,20 @@ impl Display for Expression {
             Expression::Symbol(s) => write!(f, "{}", s),
             Expression::NamespacedSymbol(s) => write!(f, "{}", s.join("/")),
             Expression::Keyword(k) => write!(f, "{}", k),
-            Expression::String(s) => write!(f, "\"{}\"", s),
+            Expression::String(s) => {
+                write!(f, "\"")?;
+                for c in s.chars() {
+                    match c {
+                        '\n' => write!(f, "\\n")?,
+                        '\t' => write!(f, "\\t")?,
+                        '\r' => write!(f, "\\r")?,
+                        '\\' => write!(f, "\\\\")?,
+                        '"' => write!(f, "\\\"")?,
+                        _ => write!(f, "{}", c)?,
+                    }
+                }
+                write!(f, "\"")
+            }
             Expression::Integer(i) => write!(f, "{}", i),
             Expression::Float(fl) => write!(f, "{}", fl),
             Expression::Ratio(r) => write!(f, "{}/{}", r.numer(), r.denom()),
