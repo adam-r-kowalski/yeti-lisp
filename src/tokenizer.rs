@@ -73,7 +73,47 @@ impl<I: Iterator<Item = char>> Tokens<I> {
 
     fn string(&mut self) -> Token {
         self.iterator.next();
-        let string: String = self.iterator.peeking_take_while(|&c| c != '"').collect();
+        let mut string = String::new();
+        while let Some(&c) = self.iterator.peek() {
+            match c {
+                '\\' => {
+                    self.iterator.next();
+                    match self.iterator.peek() {
+                        Some('n') => {
+                            self.iterator.next();
+                            string.push('\n');
+                        }
+                        Some('t') => {
+                            self.iterator.next();
+                            string.push('\t');
+                        }
+                        Some('r') => {
+                            self.iterator.next();
+                            string.push('\r');
+                        }
+                        Some('\\') => {
+                            self.iterator.next();
+                            string.push('\\');
+                        }
+                        Some('"') => {
+                            self.iterator.next();
+                            string.push('"');
+                        }
+                        Some(_) => {
+                            string.push('\\');
+                        }
+                        None => {
+                            string.push('\\');
+                        }
+                    }
+                }
+                '"' => break,
+                _ => {
+                    string.push(c);
+                    self.iterator.next();
+                }
+            }
+        }
         self.iterator.next();
         Token::String(string)
     }

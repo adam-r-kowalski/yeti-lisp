@@ -37,14 +37,16 @@ fn tokenize_keyword() {
 
 #[test]
 fn tokenize_string_literal() {
-    let actual = yeti::Tokens::from_str(r#""hello" "world" "123" "that's" "that’s"#)
-        .collect::<Vec<yeti::Token>>();
+    let actual =
+        yeti::Tokens::from_str(r#""hello" "world" "123" "that's" "that’s" "Quoted \"String\"""#)
+            .collect::<Vec<yeti::Token>>();
     let expected = vec![
         yeti::Token::String("hello".to_string()),
         yeti::Token::String("world".to_string()),
         yeti::Token::String("123".to_string()),
         yeti::Token::String("that's".to_string()),
         yeti::Token::String("that’s".to_string()),
+        yeti::Token::String("Quoted \"String\"".to_string()),
     ];
     assert_eq!(actual, expected);
 }
