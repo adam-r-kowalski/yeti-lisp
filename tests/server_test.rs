@@ -157,51 +157,68 @@ async fn evaluate_server_show_request_as_str() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_query_parameters() -> Result {
-    let tokens = yeti::Tokens::from_str(
+    let env = yeti::core::environment();
+    let (env, actual) = yeti::evaluate_source(
+        env,
         r#"
-        (server/start {:port 10090
+        (server/start {:port 3005
                        :routes {"/" (fn [req] [:p (str req)])}})
         "#,
-    );
-    let expression = yeti::parse(tokens);
-    let environment = yeti::core::environment();
-    let (_, actual) = yeti::evaluate(environment.clone(), expression).await?;
+    )
+    .await?;
     assert!(matches!(actual, yeti::Expression::NativeType(_)));
-    let body = reqwest::get("http://localhost:10090?foo=bar&baz=qux")
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap();
-    assert_eq!(
-        body,
-        r#"<p>{:headers {:accept "*/*", :host "localhost:10090"}, :method "GET", :path "/", :query {:baz "qux", :foo "bar"}}</p>"#
+    let (env, actual) = yeti::evaluate_source(
+        env,
+        r#"(http/get "http://localhost:3005/?foo=bar&baz=qux")"#,
+    )
+    .await?;
+    let now = SystemTime::now();
+    let formatted_date = fmt_http_date(now);
+    let expected_response_str = format!(
+        r#"
+        {{:headers {{:content-length "116"
+                     :content-type "text/html; charset=utf-8"
+                     :date "{}"}}
+          :status 200
+          :url "http://localhost:3005/?foo=bar&baz=qux"
+          :text "<p>{{:headers {{:accept \"*/*\", :host \"localhost:3005\"}}, :method \"GET\", :path \"/\", :query {{:baz \"qux\", :foo \"bar\"}}}}</p>"}}
+        "#,
+        formatted_date
     );
+    let (_, expected) = yeti::evaluate_source(env, &expected_response_str).await?;
+    assert_eq!(actual, expected);
     Ok(())
 }
 
 #[tokio::test]
 async fn evaluate_server_url_parameters() -> Result {
-    let tokens = yeti::Tokens::from_str(
+    let env = yeti::core::environment();
+    let (env, actual) = yeti::evaluate_source(
+        env,
         r#"
-        (server/start {:port 10070
+        (server/start {:port 3006
                        :routes {"/hello/:name" (fn [req] [:p (str req)])}})
         "#,
-    );
-    let expression = yeti::parse(tokens);
-    let environment = yeti::core::environment();
-    let (_, actual) = yeti::evaluate(environment.clone(), expression).await?;
+    )
+    .await?;
     assert!(matches!(actual, yeti::Expression::NativeType(_)));
-    let body = reqwest::get("http://localhost:10070/hello/joe")
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap();
-    assert_eq!(
-        body,
-        r#"<p>{:headers {:accept "*/*", :host "localhost:10070"}, :method "GET", :params {:name "joe"}, :path "/hello/joe"}</p>"#
+    let (env, actual) =
+        yeti::evaluate_source(env, r#"(http/get "http://localhost:3006/hello/joe")"#).await?;
+    let now = SystemTime::now();
+    let formatted_date = fmt_http_date(now);
+    let expected_response_str = format!(
+        r#"
+        {{:headers {{:content-length "115"
+                     :content-type "text/html; charset=utf-8"
+                     :date "{}"}}
+          :status 200
+          :url "http://localhost:3006/hello/joe"
+          :text "<p>{{:headers {{:accept \"*/*\", :host \"localhost:3006\"}}, :method \"GET\", :params {{:name \"joe\"}}, :path \"/hello/joe\"}}</p>"}}
+        "#,
+        formatted_date
     );
+    let (_, expected) = yeti::evaluate_source(env, &expected_response_str).await?;
+    assert_eq!(actual, expected);
     Ok(())
 }
 
