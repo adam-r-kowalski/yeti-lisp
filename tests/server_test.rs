@@ -1,5 +1,4 @@
 use httpdate::fmt_http_date;
-use std::collections::HashMap;
 use std::time::SystemTime;
 
 use yeti;
@@ -261,33 +260,38 @@ async fn evaluate_server_form_data() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_post_json_data() -> Result {
-    let tokens = yeti::Tokens::from_str(
+    let env = yeti::core::environment();
+    let (env, actual) = yeti::evaluate_source(
+        env,
         r#"
-        (server/start {:port 10030
+        (server/start {:port 3008
                        :routes {"/" (fn [req] [:p (str req)])}})
         "#,
-    );
-    let expression = yeti::parse(tokens);
-    let environment = yeti::core::environment();
-    let (_, actual) = yeti::evaluate(environment.clone(), expression).await?;
+    )
+    .await?;
     assert!(matches!(actual, yeti::Expression::NativeType(_)));
-    let client = reqwest::Client::new();
-    let mut map = HashMap::new();
-    map.insert("foo", "bar");
-    map.insert("baz", "qux");
-    let body = client
-        .post("http://localhost:10030")
-        .json(&map)
-        .send()
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap();
-    assert_eq!(
-        body,
-        r#"<p>{:headers {:accept "*/*", :content-length "25", :content-type "application/json", :host "localhost:10030"}, :json {:baz "qux", :foo "bar"}, :method "POST", :path "/"}</p>"#
+    let (env, actual) = yeti::evaluate_source(
+        env,
+        r#"
+        (http/post "http://localhost:3008" {:json {:foo "bar" :baz "qux"}})
+        "#,
+    )
+    .await?;
+    let now = SystemTime::now();
+    let formatted_date = fmt_http_date(now);
+    let expected_response_str = format!(
+        r#"
+        {{:headers {{:content-length "172"
+                     :content-type "text/html; charset=utf-8"
+                     :date "{}"}}
+          :status 200
+          :url "http://localhost:3008/"
+          :text "<p>{{:headers {{:accept \"*/*\", :content-length \"25\", :content-type \"application/json\", :host \"localhost:3008\"}}, :json {{:baz \"qux\", :foo \"bar\"}}, :method \"POST\", :path \"/\"}}</p>"}}
+        "#,
+        formatted_date
     );
+    let (_, expected) = yeti::evaluate_source(env, &expected_response_str).await?;
+    assert_eq!(actual, expected);
     Ok(())
 }
 
