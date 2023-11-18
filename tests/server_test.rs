@@ -224,30 +224,38 @@ async fn evaluate_server_url_parameters() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_form_data() -> Result {
-    let tokens = yeti::Tokens::from_str(
+    let env = yeti::core::environment();
+    let (env, actual) = yeti::evaluate_source(
+        env,
         r#"
-        (server/start {:port 10040
+        (server/start {:port 3007
                        :routes {"/" (fn [req] [:p (str req)])}})
         "#,
-    );
-    let expression = yeti::parse(tokens);
-    let environment = yeti::core::environment();
-    let (_, actual) = yeti::evaluate(environment.clone(), expression).await?;
+    )
+    .await?;
     assert!(matches!(actual, yeti::Expression::NativeType(_)));
-    let client = reqwest::Client::new();
-    let body = client
-        .post("http://localhost:10040")
-        .form(&[("foo", "bar"), ("baz", "qux")])
-        .send()
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap();
-    assert_eq!(
-        body,
-        r#"<p>{:form {:baz "qux", :foo "bar"}, :headers {:accept "*/*", :content-length "15", :content-type "application/x-www-form-urlencoded", :host "localhost:10040"}, :method "POST", :path "/"}</p>"#
+    let (env, actual) = yeti::evaluate_source(
+        env,
+        r#"
+        (http/post "http://localhost:3007" {:form {:foo "bar" :baz "qux"}})
+        "#,
+    )
+    .await?;
+    let now = SystemTime::now();
+    let formatted_date = fmt_http_date(now);
+    let expected_response_str = format!(
+        r#"
+        {{:headers {{:content-length "189"
+                     :content-type "text/html; charset=utf-8"
+                     :date "{}"}}
+          :status 200
+          :url "http://localhost:3007/"
+          :text "<p>{{:form {{:baz \"qux\", :foo \"bar\"}}, :headers {{:accept \"*/*\", :content-length \"15\", :content-type \"application/x-www-form-urlencoded\", :host \"localhost:3007\"}}, :method \"POST\", :path \"/\"}}</p>"}}
+        "#,
+        formatted_date
     );
+    let (_, expected) = yeti::evaluate_source(env, &expected_response_str).await?;
+    assert_eq!(actual, expected);
     Ok(())
 }
 

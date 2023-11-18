@@ -5,7 +5,7 @@ use crate::numerics::Float;
 use crate::NativeType;
 use alloc::boxed::Box;
 use alloc::format;
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use core::fmt::{self, Display, Formatter};
 use core::future::Future;
@@ -13,6 +13,7 @@ use core::hash::Hash;
 use core::pin::Pin;
 use im::{OrdMap, Vector};
 use rug::{Integer, Rational};
+use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
 type Expressions = Vector<Expression>;
 
@@ -143,6 +144,37 @@ impl Display for Expression {
                 "#module({})",
                 e.get("*name*").unwrap_or(&Expression::Nil)
             ),
+        }
+    }
+}
+impl Serialize for Expression {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Expression::Keyword(s) => s[1..].serialize(serializer),
+            Expression::String(s) => s.serialize(serializer),
+            Expression::Integer(i) => i.to_string().serialize(serializer),
+            Expression::Float(f) => f.to_string().serialize(serializer),
+            Expression::Ratio(r) => r.to_string().serialize(serializer),
+            Expression::Bool(b) => b.serialize(serializer),
+            Expression::Nil => serializer.serialize_unit(),
+            Expression::Array(expressions) => {
+                let mut seq = serializer.serialize_seq(Some(expressions.len()))?;
+                for e in expressions {
+                    seq.serialize_element(e)?;
+                }
+                seq.end()
+            }
+            Expression::Map(map) => {
+                let mut map_ser = serializer.serialize_map(Some(map.len()))?;
+                for (k, v) in map {
+                    map_ser.serialize_entry(k, v)?;
+                }
+                map_ser.end()
+            }
+            _ => Err(serde::ser::Error::custom("unsupported variant")),
         }
     }
 }
