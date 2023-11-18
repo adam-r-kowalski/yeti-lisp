@@ -100,6 +100,18 @@ fn repl_environment() -> yeti::Environment {
                         Ok((env, yeti::Expression::String(contents)))
                     })
                 }
+            ),
+            "write-file".to_string() => yeti::Expression::NativeFunction(
+                |env, args| {
+                    Box::pin(async move {
+                        let (env, args) = yeti::evaluate_expressions(env, args).await?;
+                        let path = yeti::extract::string(args[0].clone())?;
+                        let contents = yeti::extract::string(args[1].clone())?;
+                        tokio::fs::write(path, contents).await
+                            .map_err(|_| yeti::effect::error("Could not write file"))?;
+                        Ok((env, yeti::Expression::Nil))
+                    })
+                }
             )
         }),
     );

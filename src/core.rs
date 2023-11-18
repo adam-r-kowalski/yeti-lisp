@@ -4,7 +4,7 @@ use crate::effect::{error, Effect};
 use crate::expression::{Call, Environment, Function, Pattern};
 use crate::Expression::{Integer, Module, NativeFunction, Ratio};
 use crate::{
-    array, evaluate_expressions, extract, html, http, map, pattern_match, ratio, server, sql,
+    array, evaluate_expressions, extract, html, http, json, map, pattern_match, ratio, server, sql,
     Expression,
 };
 use alloc::boxed::Box;
@@ -327,6 +327,7 @@ pub fn environment() -> Environment {
         "html".to_string() => Module(html::environment()),
         "server".to_string() => Module(server::environment()),
         "sql".to_string() => Module(sql::environment()),
-        "http".to_string() => Module(http::environment())
+        "http".to_string() => Module(http::environment()),
+        "json".to_string() => Module(json::environment())
     }
 }

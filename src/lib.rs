@@ -14,6 +14,7 @@ pub mod expression;
 pub mod extract;
 pub mod html;
 pub mod http;
+pub mod json;
 pub mod map;
 mod native_type;
 mod numerics;
