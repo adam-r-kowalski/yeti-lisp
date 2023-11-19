@@ -163,9 +163,8 @@ pub fn environment() -> Environment {
                                     app = app.route(&path, get(|| async { Html(string) }));
                                 }
                                 Expression::Map(_) => {
-                                    let json = serde_json::to_string_pretty(v)
-                                        .map_err(|_| error("Could not convert to json"))?;
-                                    app = app.route(&path, get(|| async { Json(json) }));
+                                    let data = v.clone();
+                                    app = app.route(&path, get(|| async { Json(data) }));
                                 }
                                 Expression::Function(patterns) => {
                                     let env = env.clone();

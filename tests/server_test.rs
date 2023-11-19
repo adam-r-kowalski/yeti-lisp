@@ -309,12 +309,12 @@ async fn server_route_returns_json() -> Result {
     let formatted_date = fmt_http_date(now);
     let expected_response_str = format!(
         r#"
-        {{:headers {{:content-length "26"
+        {{:headers {{:content-length "13"
                      :content-type "application/json"
                      :date "{}"}}
           :status 200
           :url "http://localhost:3009/"
-          :json {{:foo :bar}}}}
+          :json {{:foo "bar"}}}}
         "#,
         formatted_date
     );
