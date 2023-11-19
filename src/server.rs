@@ -1,17 +1,17 @@
 extern crate alloc;
 
 use crate::effect::{error, Effect};
+use crate::evaluate;
 use crate::expression::{Call, Environment};
 use crate::Expression::NativeFunction;
 use crate::NativeType;
-use crate::{evaluate, Float};
 use crate::{extract, html, Expression};
 use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
 use alloc::format;
 use alloc::string::{String, ToString};
 use axum::http::Request;
-use axum::response::Html;
+use axum::response::{Html, Json};
 use axum::routing::{get, post};
 use axum::Router;
 use core::net::IpAddr;
@@ -19,9 +19,7 @@ use core::net::Ipv4Addr;
 use core::net::SocketAddr;
 use hyper::header::CONTENT_TYPE;
 use hyper::Body;
-use im::{ordmap, vector, OrdMap, Vector};
-use rug::Integer;
-use serde_json::Value as JsonValue;
+use im::{ordmap, vector, OrdMap};
 use serde_qs;
 use tokio::sync::broadcast;
 
@@ -49,38 +47,6 @@ async fn parse_form_data(req: Request<Body>) -> Result<OrdMap<Expression, Expres
         m
     });
     Ok(form_data)
-}
-
-fn json_value_to_expression(value: JsonValue) -> Expression {
-    match value {
-        JsonValue::Bool(b) => Expression::Bool(b),
-        JsonValue::String(s) => Expression::String(s),
-        JsonValue::Number(num) => {
-            if let Some(i) = num.as_i64() {
-                Expression::Integer(Integer::from(i))
-            } else if let Some(f) = num.as_f64() {
-                Expression::Float(Float::from_f64(f))
-            } else {
-                Expression::Nil
-            }
-        }
-        JsonValue::Array(arr) => Expression::Array(
-            arr.into_iter()
-                .map(json_value_to_expression)
-                .collect::<Vector<Expression>>(),
-        ),
-        JsonValue::Object(obj) => Expression::Map(
-            obj.into_iter()
-                .map(|(k, v)| {
-                    (
-                        Expression::Keyword(format!(":{}", k)),
-                        json_value_to_expression(v),
-                    )
-                })
-                .collect::<OrdMap<Expression, Expression>>(),
-        ),
-        JsonValue::Null => Expression::Nil,
-    }
 }
 
 async fn request_map(route_path: &str, req: Request<Body>) -> Result<Expression> {
@@ -140,9 +106,9 @@ async fn request_map(route_path: &str, req: Request<Body>) -> Result<Expression>
             let body_bytes = hyper::body::to_bytes(req.into_body())
                 .await
                 .map_err(|_| error("Failed to read body"))?;
-            let json_data: JsonValue = serde_json::from_slice(&body_bytes)
+            let json_data = serde_json::from_slice::<Expression>(&body_bytes)
                 .map_err(|_| error("Failed to parse JSON body"))?;
-            if let Expression::Map(json_map) = json_value_to_expression(json_data) {
+            if let Expression::Map(json_map) = json_data {
                 if !json_map.is_empty() {
                     map.insert(
                         Expression::Keyword(":json".to_string()),
@@ -194,7 +160,12 @@ pub fn environment() -> Environment {
                                 Expression::Array(_) => {
                                     let mut string = String::new();
                                     html::build_string(v.clone(), &mut string)?;
-                                    app = app.route(&path, get(|| async { Html(string) }))
+                                    app = app.route(&path, get(|| async { Html(string) }));
+                                }
+                                Expression::Map(_) => {
+                                    let json = serde_json::to_string_pretty(v)
+                                        .map_err(|_| error("Could not convert to json"))?;
+                                    app = app.route(&path, get(|| async { Json(json) }));
                                 }
                                 Expression::Function(patterns) => {
                                     let env = env.clone();

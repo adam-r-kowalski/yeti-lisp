@@ -13,7 +13,9 @@ use core::hash::Hash;
 use core::pin::Pin;
 use im::{OrdMap, Vector};
 use rug::{Integer, Rational};
+use serde::de::{self, MapAccess, SeqAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
+use serde::{Deserialize, Deserializer};
 
 type Expressions = Vector<Expression>;
 
@@ -176,5 +178,85 @@ impl Serialize for Expression {
             }
             _ => Err(serde::ser::Error::custom("unsupported variant")),
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for Expression {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_any(ExpressionVisitor)
+    }
+}
+
+struct ExpressionVisitor;
+
+impl<'de> Visitor<'de> for ExpressionVisitor {
+    type Value = Expression;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a valid JSON value")
+    }
+
+    fn visit_str<E>(self, v: &str) -> core::result::Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Expression::String(v.to_string()))
+    }
+
+    fn visit_i64<E>(self, v: i64) -> core::result::Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Expression::Integer(Integer::from(v)))
+    }
+
+    fn visit_f64<E>(self, v: f64) -> core::result::Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Expression::Float(Float::from_f64(v)))
+    }
+
+    fn visit_bool<E>(self, v: bool) -> core::result::Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Expression::Bool(v))
+    }
+
+    fn visit_seq<V>(self, mut seq: V) -> core::result::Result<Self::Value, V::Error>
+    where
+        V: SeqAccess<'de>,
+    {
+        let mut expressions = Vector::new();
+        while let Some(elem) = seq.next_element()? {
+            expressions.push_back(elem);
+        }
+        Ok(Expression::Array(expressions))
+    }
+
+    fn visit_map<V>(self, mut map: V) -> core::result::Result<Self::Value, V::Error>
+    where
+        V: MapAccess<'de>,
+    {
+        let mut ord_map = OrdMap::new();
+        while let Some((key, value)) = map.next_entry()? {
+            let key = match key {
+                Expression::String(s) => Expression::Keyword(format!(":{}", s)),
+                _ => key,
+            };
+            ord_map.insert(key, value);
+        }
+        Ok(Expression::Map(ord_map))
+    }
+
+    fn visit_unit<E>(self) -> core::result::Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Expression::Nil)
     }
 }

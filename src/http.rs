@@ -25,17 +25,33 @@ async fn encode_response(response: Response) -> Result<Expression, Effect> {
         }
     }
     let url = Expression::String(response.url().to_string());
-    let text = response
-        .text()
-        .await
-        .map_err(|_| error("Could not get text from response"))
-        .map(|text| Expression::String(text))?;
-    Ok(Expression::Map(ordmap! {
+    let mut result = ordmap! {
         Expression::Keyword(":status".to_string()) => status,
         Expression::Keyword(":headers".to_string()) => Expression::Map(headers_map),
-        Expression::Keyword(":url".to_string()) => url,
-        Expression::Keyword(":text".to_string()) => text
-    }))
+        Expression::Keyword(":url".to_string()) => url
+    };
+    let content_type = headers
+        .get("content-type")
+        .map(|value| value.to_str().unwrap_or(""))
+        .unwrap_or("");
+    match content_type {
+        "application/json" => {
+            let json = response
+                .json::<Expression>()
+                .await
+                .map_err(|_| error("Could not get text from response"))?;
+            result.insert(Expression::Keyword(":json".to_string()), json);
+        }
+        _ => {
+            let text = response
+                .text()
+                .await
+                .map_err(|_| error("Could not get text from response"))
+                .map(|text| Expression::String(text))?;
+            result.insert(Expression::Keyword(":text".to_string()), text);
+        }
+    }
+    Ok(Expression::Map(result))
 }
 
 pub fn environment() -> Environment {

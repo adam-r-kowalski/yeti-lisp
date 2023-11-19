@@ -296,6 +296,34 @@ async fn evaluate_server_post_json_data() -> Result {
 }
 
 #[tokio::test]
+async fn server_route_returns_json() -> Result {
+    let env = yeti::core::environment();
+    let (env, actual) = yeti::evaluate_source(
+        env,
+        r#"(server/start {:port 3009 :routes {"/" {:foo :bar}}})"#,
+    )
+    .await?;
+    assert!(matches!(actual, yeti::Expression::NativeType(_)));
+    let (env, actual) = yeti::evaluate_source(env, r#"(http/get "http://localhost:3009")"#).await?;
+    let now = SystemTime::now();
+    let formatted_date = fmt_http_date(now);
+    let expected_response_str = format!(
+        r#"
+        {{:headers {{:content-length "26"
+                     :content-type "application/json"
+                     :date "{}"}}
+          :status 200
+          :url "http://localhost:3009/"
+          :json {{:foo :bar}}}}
+        "#,
+        formatted_date
+    );
+    let (_, expected) = yeti::evaluate_source(env, &expected_response_str).await?;
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[tokio::test]
 async fn evaluate_stop() -> Result {
     let tokens = yeti::Tokens::from_str("(def s (server/start {:port 9090}))");
     let expression = yeti::parse(tokens);
