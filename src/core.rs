@@ -5,7 +5,7 @@ use crate::expression::{Call, Environment, Function, Pattern};
 use crate::Expression::{Integer, Module, NativeFunction, Ratio};
 use crate::{
     array, evaluate_expressions, extract, html, http, json, map, pattern_match, ratio, server, sql,
-    yaml, Expression,
+    toml, yaml, Expression,
 };
 use alloc::boxed::Box;
 use alloc::format;
@@ -329,6 +329,7 @@ pub fn environment() -> Environment {
         "sql".to_string() => Module(sql::environment()),
         "http".to_string() => Module(http::environment()),
         "json".to_string() => Module(json::environment()),
-        "yaml".to_string() => Module(yaml::environment())
+        "yaml".to_string() => Module(yaml::environment()),
+        "toml".to_string() => Module(toml::environment())
     }
 }

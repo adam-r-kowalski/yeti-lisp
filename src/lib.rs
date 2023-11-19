@@ -23,6 +23,7 @@ mod peeking_take_while;
 pub mod server;
 pub mod sql;
 mod tokenizer;
+pub mod toml;
 pub mod yaml;
 
 pub use evaluator::{evaluate, evaluate_expressions, evaluate_source, pattern_match};
