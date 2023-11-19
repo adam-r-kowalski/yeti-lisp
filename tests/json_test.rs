@@ -36,3 +36,16 @@ async fn json_from_string_for_map() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[tokio::test]
+async fn json_from_string_for_map_with_int() -> Result {
+    let env = yeti::core::environment();
+    let (env, actual) = yeti::evaluate_source(
+        env,
+        r#"(json/from-string "{\n  \"first\": \"John\",\n  \"age\": 20\n}")"#,
+    )
+    .await?;
+    let (_, expected) = yeti::evaluate_source(env, r#"{:first "John" :age 20}"#).await?;
+    assert_eq!(actual, expected);
+    Ok(())
+}

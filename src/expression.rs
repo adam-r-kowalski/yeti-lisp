@@ -213,6 +213,13 @@ impl<'de> Visitor<'de> for ExpressionVisitor {
         Ok(Expression::Integer(Integer::from(v)))
     }
 
+    fn visit_u64<E>(self, v: u64) -> core::result::Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Expression::Integer(Integer::from(v)))
+    }
+
     fn visit_f64<E>(self, v: f64) -> core::result::Result<Self::Value, E>
     where
         E: de::Error,
