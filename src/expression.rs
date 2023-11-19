@@ -157,9 +157,9 @@ impl Serialize for Expression {
         match self {
             Expression::Keyword(s) => s[1..].serialize(serializer),
             Expression::String(s) => s.serialize(serializer),
-            Expression::Integer(i) => i.to_string().serialize(serializer),
-            Expression::Float(f) => f.to_string().serialize(serializer),
-            Expression::Ratio(r) => r.to_string().serialize(serializer),
+            Expression::Integer(i) => i.to_i64().serialize(serializer),
+            Expression::Float(f) => f.to_f64().serialize(serializer),
+            Expression::Ratio(r) => r.to_f64().serialize(serializer),
             Expression::Bool(b) => b.serialize(serializer),
             Expression::Nil => serializer.serialize_unit(),
             Expression::Array(expressions) => {

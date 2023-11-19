@@ -14,6 +14,17 @@ async fn json_to_string_for_map() -> Result {
 }
 
 #[tokio::test]
+async fn json_to_string_for_map_with_int() -> Result {
+    let env = yeti::core::environment();
+    let (_, actual) =
+        yeti::evaluate_source(env, r#"(json/to-string {:first "John" :age 20})"#).await?;
+    let expected =
+        yeti::Expression::String("{\n  \"age\": 20,\n  \"first\": \"John\"\n}".to_string());
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[tokio::test]
 async fn json_from_string_for_map() -> Result {
     let env = yeti::core::environment();
     let (env, actual) = yeti::evaluate_source(
