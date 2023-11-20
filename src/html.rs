@@ -158,14 +158,27 @@ fn dom_to_expression(handle: &Handle) -> Expression {
             name,
             public_id,
             system_id,
-        } => Expression::Array(vector![
-            Expression::Keyword(":doctype".to_string()),
-            Expression::Map(ordmap! {
-                Expression::Keyword(":name".to_string()) => Expression::String(name.to_string()),
-                Expression::Keyword(":public_id".to_string()) => Expression::String(public_id.to_string()),
-                Expression::Keyword(":system_id".to_string()) => Expression::String(system_id.to_string())
-            })
-        ]),
+        } => {
+            let mut attrs = ordmap! {
+                Expression::Keyword(":name".to_string()) => Expression::String(name.to_string())
+            };
+            if !public_id.is_empty() {
+                attrs.insert(
+                    Expression::Keyword(":public_id".to_string()),
+                    Expression::String(public_id.to_string()),
+                );
+            }
+            if !system_id.is_empty() {
+                attrs.insert(
+                    Expression::Keyword(":system_id".to_string()),
+                    Expression::String(system_id.to_string()),
+                );
+            }
+            Expression::Array(vector![
+                Expression::Keyword(":doctype".to_string()),
+                Expression::Map(attrs)
+            ])
+        }
         NodeData::Document => {
             let children = handle.children.borrow();
             let expressions: Vector<Expression> = children.iter().map(dom_to_expression).collect();
