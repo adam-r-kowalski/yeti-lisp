@@ -4,6 +4,7 @@ use crate::effect::{error, Effect};
 use crate::evaluate_expressions;
 use crate::expression::Environment;
 use crate::extract;
+use crate::html::html_string_to_expression;
 use crate::Expression::{self, NativeFunction};
 use alloc::boxed::Box;
 use alloc::format;
@@ -41,6 +42,14 @@ async fn encode_response(response: Response) -> Result<Expression, Effect> {
                 .await
                 .map_err(|_| error("Could not get text from response"))?;
             result.insert(Expression::Keyword(":json".to_string()), json);
+        }
+        "text/html; charset=utf-8" => {
+            let text = response
+                .text()
+                .await
+                .map_err(|_| error("Could not get text from response"))?;
+            let expression = html_string_to_expression(&text);
+            result.insert(Expression::Keyword(":html".to_string()), expression);
         }
         _ => {
             let text = response

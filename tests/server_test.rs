@@ -83,7 +83,7 @@ async fn evaluate_server_with_html_route() -> Result {
                      :date "{}"}}
           :status 200
           :url "http://localhost:3002/"
-          :text "<ul><li>first</li><li>second</li></ul>"}}
+          :html [:html [:head] [:body [:ul [:li "first"] [:li "second"]]]]}}
         "#,
         formatted_date
     );
@@ -114,7 +114,7 @@ async fn evaluate_server_with_function_route() -> Result {
                      :date "{}"}}
           :status 200
           :url "http://localhost:3003/"
-          :text "<ul><li>first</li><li>second</li></ul>"}}
+          :html [:html [:head] [:body [:ul [:li "first"] [:li "second"]]]]}}
         "#,
         formatted_date
     );
@@ -145,7 +145,7 @@ async fn evaluate_server_show_request_as_str() -> Result {
                      :date "{}"}}
           :status 200
           :url "http://localhost:3004/"
-          :text "<p>{{:headers {{:accept \"*/*\", :host \"localhost:3004\"}}, :method \"GET\", :path \"/\"}}</p>"}}
+          :html [:html [:head] [:body [:p "{{:headers {{:accept \"*/*\", :host \"localhost:3004\"}}, :method \"GET\", :path \"/\"}}"]]]}}
         "#,
         formatted_date
     );
@@ -180,7 +180,7 @@ async fn evaluate_server_query_parameters() -> Result {
                      :date "{}"}}
           :status 200
           :url "http://localhost:3005/?foo=bar&baz=qux"
-          :text "<p>{{:headers {{:accept \"*/*\", :host \"localhost:3005\"}}, :method \"GET\", :path \"/\", :query {{:baz \"qux\", :foo \"bar\"}}}}</p>"}}
+          :html [:html [:head] [:body [:p "{{:headers {{:accept \"*/*\", :host \"localhost:3005\"}}, :method \"GET\", :path \"/\", :query {{:baz \"qux\", :foo \"bar\"}}}}"]]]}}
         "#,
         formatted_date
     );
@@ -212,7 +212,7 @@ async fn evaluate_server_url_parameters() -> Result {
                      :date "{}"}}
           :status 200
           :url "http://localhost:3006/hello/joe"
-          :text "<p>{{:headers {{:accept \"*/*\", :host \"localhost:3006\"}}, :method \"GET\", :params {{:name \"joe\"}}, :path \"/hello/joe\"}}</p>"}}
+          :html [:html [:head] [:body [:p "{{:headers {{:accept \"*/*\", :host \"localhost:3006\"}}, :method \"GET\", :params {{:name \"joe\"}}, :path \"/hello/joe\"}}"]]]}}
         "#,
         formatted_date
     );
@@ -249,7 +249,7 @@ async fn evaluate_server_form_data() -> Result {
                      :date "{}"}}
           :status 200
           :url "http://localhost:3007/"
-          :text "<p>{{:form {{:baz \"qux\", :foo \"bar\"}}, :headers {{:accept \"*/*\", :content-length \"15\", :content-type \"application/x-www-form-urlencoded\", :host \"localhost:3007\"}}, :method \"POST\", :path \"/\"}}</p>"}}
+          :html [:html [:head] [:body [:p "{{:form {{:baz \"qux\", :foo \"bar\"}}, :headers {{:accept \"*/*\", :content-length \"15\", :content-type \"application/x-www-form-urlencoded\", :host \"localhost:3007\"}}, :method \"POST\", :path \"/\"}}"]]]}}
         "#,
         formatted_date
     );
@@ -286,7 +286,7 @@ async fn evaluate_server_post_json_data() -> Result {
                      :date "{}"}}
           :status 200
           :url "http://localhost:3008/"
-          :text "<p>{{:headers {{:accept \"*/*\", :content-length \"25\", :content-type \"application/json\", :host \"localhost:3008\"}}, :json {{:baz \"qux\", :foo \"bar\"}}, :method \"POST\", :path \"/\"}}</p>"}}
+          :html [:html [:head] [:body [:p "{{:headers {{:accept \"*/*\", :content-length \"25\", :content-type \"application/json\", :host \"localhost:3008\"}}, :json {{:baz \"qux\", :foo \"bar\"}}, :method \"POST\", :path \"/\"}}"]]]}}
         "#,
         formatted_date
     );

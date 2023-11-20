@@ -188,15 +188,19 @@ fn dom_to_expression(handle: &Handle) -> Expression {
     }
 }
 
+pub fn html_string_to_expression(html: &str) -> Expression {
+    let parser = parse_document(RcDom::default(), Default::default());
+    let dom = parser.one(html);
+    dom_to_expression(&dom.document)
+}
+
 async fn from_string(
     env: Environment,
     args: Vector<Expression>,
 ) -> Result<(Environment, Expression)> {
     let (env, args) = evaluate_expressions(env, args).await?;
     let html = extract::string(args[0].clone())?;
-    let parser = parse_document(RcDom::default(), Default::default());
-    let dom = parser.one(html);
-    let expression = dom_to_expression(&dom.document);
+    let expression = html_string_to_expression(&html);
     Ok((env, expression))
 }
 
