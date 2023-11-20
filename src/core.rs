@@ -275,6 +275,38 @@ pub fn environment() -> Environment {
               })
             }
         ),
+        "->".to_string() => NativeFunction(
+            |env, args| {
+              Box::pin(async move {
+                let (initial, args) = args.split_at(1);
+                let (env, mut result) = crate::evaluate(env, initial[0].clone()).await?;
+                let mut env = env;
+                for expression in args.iter() {
+                  match expression {
+                    Expression::Call(Call{function, arguments}) => {
+                      let mut new_arguments = vector![result];
+                      new_arguments.append(arguments.clone());
+                      let (new_env, value) = crate::evaluate(env, Expression::Call(Call{
+                        function: function.clone(),
+                        arguments: new_arguments,
+                      })).await?;
+                      env = new_env;
+                      result = value;
+                    }
+                    _ => {
+                      let (new_env, value) = crate::evaluate(env, Expression::Call(Call{
+                        function: Box::new(expression.clone()),
+                        arguments: vector![result],
+                      })).await?;
+                      env = new_env;
+                      result = value;
+                    }
+                  }
+                }
+                Ok((env, result))
+              })
+            }
+        ),
         "when".to_string() => NativeFunction(
             |env, args| {
               Box::pin(async move {
@@ -317,6 +349,16 @@ pub fn environment() -> Environment {
                 Ok((env, Expression::Nil))
               })
             }
+        ),
+        "inc".to_string() => NativeFunction(
+          |env, args| {
+              Box::pin(async move {
+                crate::evaluate(env, Expression::Call(Call{
+                    function: Box::new(Expression::Symbol("+".to_string())),
+                    arguments: vector![args[0].clone(), Expression::Integer(rug::Integer::from(1))],
+                })).await
+              })
+          }
         ),
         "assoc".to_string() => NativeFunction(|env, args| Box::pin(map::assoc(env, args))),
         "dissoc".to_string() => NativeFunction(|env, args| Box::pin(map::dissoc(env, args))),

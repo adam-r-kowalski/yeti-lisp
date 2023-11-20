@@ -205,7 +205,13 @@ impl<I: Iterator<Item = char>> Iterator for Tokens<I> {
                     self.iterator.next();
                     match self.iterator.peek() {
                         Some(&c) if c.is_digit(10) => Some(self.number(Negative::Yes)),
-                        _ => Some(Token::Symbol("-".to_string())),
+                        _ => {
+                            if let Token::Symbol(symbol) = self.symbol() {
+                                Some(Token::Symbol(format!("-{}", symbol)))
+                            } else {
+                                panic!("Expected symbol got {:?}", self.iterator.peek());
+                            }
+                        }
                     }
                 }
                 _ if is_whitespace(c) => {

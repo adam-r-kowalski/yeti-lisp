@@ -4,7 +4,7 @@ use yeti;
 #[test]
 fn tokenize_symbol() {
     let actual = yeti::Tokens::from_str(
-        "snake_case PascalCase kebab-case camelCase predicate? namespaced/symbol",
+        "snake_case PascalCase kebab-case camelCase predicate? -> namespaced/symbol",
     )
     .collect::<Vec<yeti::Token>>();
     let expected = vec![
@@ -13,6 +13,7 @@ fn tokenize_symbol() {
         yeti::Token::Symbol("kebab-case".to_string()),
         yeti::Token::Symbol("camelCase".to_string()),
         yeti::Token::Symbol("predicate?".to_string()),
+        yeti::Token::Symbol("->".to_string()),
         yeti::Token::NamespacedSymbol(vec!["namespaced".to_string(), "symbol".to_string()]),
     ];
     assert_eq!(actual, expected);
