@@ -43,7 +43,7 @@ async fn encode_response(response: Response) -> Result<Expression, Effect> {
                 .map_err(|_| error("Could not get text from response"))?;
             result.insert(Expression::Keyword(":json".to_string()), json);
         }
-        "text/html; charset=utf-8" => {
+        t if t.starts_with("text/html") => {
             let text = response
                 .text()
                 .await
