@@ -8,7 +8,10 @@ use crate::Expression::{self, NativeFunction};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::{String, ToString};
-use im::{ordmap, OrdMap, Vector};
+use html5ever::parse_document;
+use html5ever::tendril::TendrilSink;
+use im::{ordmap, vector, OrdMap, Vector};
+use markup5ever_rcdom::{Handle, NodeData, RcDom};
 
 type Result<T> = core::result::Result<T, Effect>;
 
@@ -139,20 +142,72 @@ pub fn build_string(expr: Expression, string: &mut String) -> Result<()> {
     }
 }
 
-async fn string(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
+async fn to_string(
+    env: Environment,
+    args: Vector<Expression>,
+) -> Result<(Environment, Expression)> {
     let (env, args) = evaluate_expressions(env, args).await?;
     let mut string = String::new();
     build_string(args[0].clone(), &mut string)?;
     Ok((env, Expression::String(string)))
 }
 
+fn dom_to_expression(handle: &Handle) -> Expression {
+    match &handle.data {
+        NodeData::Document => {
+            let children = handle.children.borrow();
+            let expressions: Vector<Expression> = children.iter().map(dom_to_expression).collect();
+            if expressions.len() == 1 {
+                expressions[0].clone()
+            } else {
+                Expression::Array(expressions)
+            }
+        }
+        NodeData::Element { name, attrs, .. } => {
+            let tag = Expression::Keyword(format!(":{}", name.local));
+            let mut result = vector![tag];
+            let attributes = attrs.borrow();
+            if !attributes.is_empty() {
+                let mut map = ordmap! {};
+                for attr in attributes.iter() {
+                    let key = Expression::Keyword(format!(":{}", attr.name.local));
+                    let value = Expression::String(attr.value.to_string());
+                    map.insert(key, value);
+                }
+                result.push_back(Expression::Map(map));
+            }
+            let children = handle.children.borrow();
+            for child in children.iter() {
+                let child = dom_to_expression(child);
+                result.push_back(child);
+            }
+            Expression::Array(result)
+        }
+        NodeData::Text { contents } => Expression::String(contents.borrow().to_string()),
+        e => panic!("unexpected {:?}", e),
+    }
+}
+
+async fn from_string(
+    env: Environment,
+    args: Vector<Expression>,
+) -> Result<(Environment, Expression)> {
+    let (env, args) = evaluate_expressions(env, args).await?;
+    let html = extract::string(args[0].clone())?;
+    let parser = parse_document(RcDom::default(), Default::default());
+    let dom = parser.one(html);
+    let expression = dom_to_expression(&dom.document);
+    Ok((env, expression))
+}
+
 pub fn environment() -> Environment {
     ordmap! {
         "*name*".to_string() => Expression::String("html".to_string()),
-        "string".to_string() => NativeFunction(
-            |env, args| {
-                Box::pin(string(env, args))
-            }
+        "to-string".to_string() => NativeFunction(
+            |env, args| Box::pin(to_string(env, args))
+        ),
+        "from-string".to_string() => NativeFunction(
+            |env, args| Box::pin(from_string(env, args))
         )
     }
 }
