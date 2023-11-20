@@ -154,6 +154,18 @@ async fn to_string(
 
 fn dom_to_expression(handle: &Handle) -> Expression {
     match &handle.data {
+        NodeData::Doctype {
+            name,
+            public_id,
+            system_id,
+        } => Expression::Array(vector![
+            Expression::Keyword(":doctype".to_string()),
+            Expression::Map(ordmap! {
+                Expression::Keyword(":name".to_string()) => Expression::String(name.to_string()),
+                Expression::Keyword(":public_id".to_string()) => Expression::String(public_id.to_string()),
+                Expression::Keyword(":system_id".to_string()) => Expression::String(system_id.to_string())
+            })
+        ]),
         NodeData::Document => {
             let children = handle.children.borrow();
             let expressions: Vector<Expression> = children.iter().map(dom_to_expression).collect();
