@@ -11,9 +11,11 @@ use alloc::collections::BTreeMap;
 use alloc::format;
 use alloc::string::{String, ToString};
 use axum::http::Request;
+use axum::response::IntoResponse;
 use axum::response::{Html, Json};
-use axum::routing::{get, post};
+use axum::routing::{get, post, delete, put};
 use axum::Router;
+use core::future::Future;
 use core::net::IpAddr;
 use core::net::Ipv4Addr;
 use core::net::SocketAddr;
@@ -134,6 +136,21 @@ async fn request_map(route_path: &str, req: Request<Body>) -> Result<Expression>
     Ok(Expression::Map(map))
 }
 
+fn create_handler(expression: Expression) -> impl Future<Output = impl IntoResponse> {
+    async move {
+        match expression {
+            Expression::String(text) => text.into_response(),
+            Expression::Array(_) => {
+                let mut string = String::new();
+                html::build_string(expression, &mut string).unwrap();
+                Html(string).into_response()
+            }
+            Expression::Map(_) => Json(expression).into_response(),
+            _ => unimplemented!(),
+        }
+    }
+}
+
 pub fn environment() -> Environment {
     ordmap! {
         "*name*".to_string() => Expression::String("server".to_string()),
@@ -156,16 +173,6 @@ pub fn environment() -> Environment {
                         for (k, v) in m.iter() {
                             let path = extract::string(k.clone())?;
                             match v.clone() {
-                                Expression::String(text) => app = app.route(&path, get(|| async { text })),
-                                Expression::Array(_) => {
-                                    let mut string = String::new();
-                                    html::build_string(v.clone(), &mut string)?;
-                                    app = app.route(&path, get(|| async { Html(string) }));
-                                }
-                                Expression::Map(_) => {
-                                    let data = v.clone();
-                                    app = app.route(&path, get(|| async { Json(data) }));
-                                }
                                 Expression::Function(patterns) => {
                                     let env = env.clone();
                                     let cloned_path = path.clone();
@@ -178,14 +185,23 @@ pub fn environment() -> Environment {
                                             }),
                                         ).await
                                         .unwrap();
-                                        let mut string = String::new();
-                                        html::build_string(expr, &mut string).unwrap();
-                                        Html(string)
+                                        create_handler(expr).await
                                     };
                                     app = app.route(&path, get(handler.clone()));
-                                    app = app.route(&path, post(handler));
+                                    app = app.route(&path, post(handler.clone()));
+                                    app = app.route(&path, delete(handler.clone()));
+                                    app = app.route(&path, put(handler));
                                 }
-                                _ => return Err(error("Expected string for route")),
+                                _ => {
+                                    let v = v.clone();
+                                    let handler = async move |_req: Request<Body>| {
+                                        create_handler(v).await
+                                    };
+                                    app = app.route(&path, get(handler.clone()));
+                                    app = app.route(&path, post(handler.clone()));
+                                    app = app.route(&path, delete(handler.clone()));
+                                    app = app.route(&path, put(handler));
+                                }
                             }
                         }
                     }

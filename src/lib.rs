@@ -4,6 +4,7 @@
 #![feature(error_in_core)]
 #![feature(iter_array_chunks)]
 #![feature(async_closure)]
+#![feature(impl_trait_in_fn_trait_return)]
 #![recursion_limit = "256"]
 
 pub mod array;
