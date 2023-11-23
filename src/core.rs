@@ -368,7 +368,7 @@ pub fn environment() -> Environment {
                 })
             }
         ),
-        "swap!".to_string() => NativeFunction(
+        "reset!".to_string() => NativeFunction(
             |env, args| {
                 Box::pin(async move {
                     let (env, args) = crate::evaluate_expressions(env, args).await?;
@@ -380,7 +380,7 @@ pub fn environment() -> Environment {
                 })
             }
         ),
-        "update!".to_string() => NativeFunction(
+        "swap!".to_string() => NativeFunction(
             |env, args| {
                 Box::pin(async move {
                     let (env, args) = crate::evaluate_expressions(env, args).await?;
