@@ -75,6 +75,16 @@ fn extend_builder(mut builder: RequestBuilder, params: Option<Expression>) -> Re
             if let Some(e) = params.get(&Expression::Keyword(":query".to_string())) {
                 builder = builder.query(e);
             }
+            if let Some(e) = params.get(&Expression::Keyword(":headers".to_string())) {
+                if let Expression::Map(headers) = e {
+                    for (key, value) in headers.iter() {
+                        let keyword = extract::keyword(key.clone()).unwrap_or_default();
+                        let keyword = &keyword[1..];
+                        let value = extract::string(value.clone()).unwrap_or_default();
+                        builder = builder.header(keyword, value);
+                    }
+                }
+            }
             builder
         }
         _ => builder,
