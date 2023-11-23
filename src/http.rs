@@ -71,7 +71,16 @@ pub fn environment() -> Environment {
                 Box::pin(async move {
                     let (env, args) = evaluate_expressions(env, args).await?;
                     let url = extract::string(args[0].clone())?;
-                    let response = reqwest::get(url)
+                    let client = reqwest::Client::new();
+                    let mut builder = client.get(url);
+                    if let Some(e) = args.get(1) {
+                        let params = extract::map(e.clone())?;
+                        if let Some(e) = params.get(&Expression::Keyword(":query".to_string())) {
+                            builder = builder.query(e);
+                        }
+                    }
+                    let response = builder
+                        .send()
                         .await
                         .map_err(|_| error("Could not make get request"))?;
                     let response = encode_response(response).await?;

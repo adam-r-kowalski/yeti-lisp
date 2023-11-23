@@ -1,9 +1,9 @@
 extern crate alloc;
 
+use crate::atom::Atom;
 use crate::effect::Effect;
 use crate::numerics::Float;
 use crate::NativeType;
-use crate::atom::Atom;
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::{String, ToString};
