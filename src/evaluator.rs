@@ -207,6 +207,13 @@ async fn evaluate_call(environment: Environment, call: Call) -> Result {
     }
 }
 
+async fn evaluate_deref(environment: Environment, expression: Expression) -> Result {
+    let (environment, expression) = evaluate(environment, expression).await?;
+    let atom = extract::atom(expression)?;
+    let value = atom.0.lock().await;
+    Ok((environment, value.clone()))
+}
+
 #[async_recursion]
 pub async fn evaluate(environment: Environment, expression: Expression) -> Result {
     match expression {
@@ -229,6 +236,7 @@ pub async fn evaluate(environment: Environment, expression: Expression) -> Resul
             Ok((environment, Expression::Map(new_map)))
         }
         Expression::Quote(e) => Ok((environment, *e)),
+        Expression::Deref(e) => evaluate_deref(environment, *e).await,
         e => Ok((environment, e)),
     }
 }

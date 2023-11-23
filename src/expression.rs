@@ -3,6 +3,7 @@ extern crate alloc;
 use crate::effect::Effect;
 use crate::numerics::Float;
 use crate::NativeType;
+use crate::atom::Atom;
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::{String, ToString};
@@ -59,6 +60,8 @@ pub enum Expression {
     Call(Call),
     Function(Function),
     Quote(Box<Expression>),
+    Deref(Box<Expression>),
+    Atom(Atom),
     NativeFunction(NativeFunction),
     NativeType(NativeType),
     Module(Environment),
@@ -140,7 +143,9 @@ impl Display for Expression {
             }
             Expression::NativeFunction(_) => write!(f, "#native_function"),
             Expression::NativeType(t) => write!(f, "{}", t),
+            Expression::Atom(a) => write!(f, "{}", a),
             Expression::Quote(e) => write!(f, "'{}", e),
+            Expression::Deref(e) => write!(f, "@{}", e),
             Expression::Module(e) => write!(
                 f,
                 "#module({})",

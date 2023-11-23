@@ -1,4 +1,5 @@
 extern crate alloc;
+use crate::atom::Atom;
 use crate::effect::{error, Effect};
 use crate::expression::Call;
 use crate::{Environment, Expression, NativeType};
@@ -74,6 +75,13 @@ pub fn native_type(expr: Expression) -> Result<NativeType> {
 pub fn module(expr: Expression) -> Result<Environment> {
     match expr {
         Expression::Module(m) => Ok(m),
+        _ => Err(error("Expected module")),
+    }
+}
+
+pub fn atom(expr: Expression) -> Result<Atom> {
+    match expr {
+        Expression::Atom(a) => Ok(a),
         _ => Err(error("Expected module")),
     }
 }

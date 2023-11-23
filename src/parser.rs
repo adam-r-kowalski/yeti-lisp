@@ -36,6 +36,7 @@ impl<I: Iterator<Item = char>> Parser<I> {
             Some(Token::LeftBracket) => self.array(),
             Some(Token::LeftBrace) => self.map(),
             Some(Token::Quote) => self.quote(),
+            Some(Token::Deref) => self.deref(),
             Some(t) => panic!("Unexpected token {:?}", t),
             None => panic!("Expected token got None"),
         }
@@ -97,6 +98,10 @@ impl<I: Iterator<Item = char>> Parser<I> {
 
     fn quote(&mut self) -> Expression {
         Expression::Quote(Box::new(self.expression()))
+    }
+
+    fn deref(&mut self) -> Expression {
+        Expression::Deref(Box::new(self.expression()))
     }
 }
 

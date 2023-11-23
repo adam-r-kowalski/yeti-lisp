@@ -25,6 +25,7 @@ pub enum Token {
     LeftBrace,
     RightBrace,
     Quote,
+    Deref,
 }
 
 #[derive(PartialEq)]
@@ -191,6 +192,7 @@ impl<I: Iterator<Item = char>> Iterator for Tokens<I> {
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(&c) = self.iterator.peek() {
             match c {
+                '@' => Some(self.consume_and_return(Token::Deref)),
                 '(' => Some(self.consume_and_return(Token::LeftParen)),
                 ')' => Some(self.consume_and_return(Token::RightParen)),
                 '{' => Some(self.consume_and_return(Token::LeftBrace)),

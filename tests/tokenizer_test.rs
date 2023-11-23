@@ -133,3 +133,19 @@ fn tokenize_ratio() {
     ];
     assert_eq!(actual, expected);
 }
+
+#[test]
+fn tokenize_deref() {
+    let actual = yeti::Tokens::from_str("@ @x @(atom x)").collect::<Vec<yeti::Token>>();
+    let expected = vec![
+        yeti::Token::Deref,
+        yeti::Token::Deref,
+        yeti::Token::Symbol("x".to_string()),
+        yeti::Token::Deref,
+        yeti::Token::LeftParen,
+        yeti::Token::Symbol("atom".to_string()),
+        yeti::Token::Symbol("x".to_string()),
+        yeti::Token::RightParen,
+    ];
+    assert_eq!(actual, expected);
+}

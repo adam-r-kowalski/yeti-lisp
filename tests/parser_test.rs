@@ -202,3 +202,11 @@ fn parse_quote() {
     })));
     assert_eq!(actual, expected);
 }
+
+#[test]
+fn parse_deref() {
+    let tokens = yeti::Tokens::from_str("@x");
+    let actual = yeti::parse(tokens);
+    let expected = yeti::Expression::Deref(Box::new(yeti::Expression::Symbol("x".to_string())));
+    assert_eq!(actual, expected);
+}

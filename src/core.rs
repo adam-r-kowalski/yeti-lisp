@@ -360,6 +360,42 @@ pub fn environment() -> Environment {
               })
           }
         ),
+        "atom".to_string() => NativeFunction(
+            |env, args| {
+                Box::pin(async move {
+                    let (env, value) = crate::evaluate(env, args[0].clone()).await?;
+                    Ok((env, Expression::Atom(crate::atom::Atom::new(value))))
+                })
+            }
+        ),
+        "swap!".to_string() => NativeFunction(
+            |env, args| {
+                Box::pin(async move {
+                    let (env, args) = crate::evaluate_expressions(env, args).await?;
+                    let atom = extract::atom(args[0].clone())?;
+                    let value_to_swap = args[1].clone();
+                    let mut value = atom.0.lock().await;
+                    *value = value_to_swap;
+                    Ok((env, Expression::Nil))
+                })
+            }
+        ),
+        "update!".to_string() => NativeFunction(
+            |env, args| {
+                Box::pin(async move {
+                    let (env, args) = crate::evaluate_expressions(env, args).await?;
+                    let atom = extract::atom(args[0].clone())?;
+                    let f = args[1].clone();
+                    let mut value = atom.0.lock().await;
+                    let (env, new_value) = crate::evaluate(env, Expression::Call(Call{
+                        function: Box::new(f),
+                        arguments: vector![value.clone()],
+                    })).await?;
+                    *value = new_value;
+                    Ok((env, Expression::Nil))
+                })
+            }
+        ),
         "assoc".to_string() => NativeFunction(|env, args| Box::pin(map::assoc(env, args))),
         "dissoc".to_string() => NativeFunction(|env, args| Box::pin(map::dissoc(env, args))),
         "merge".to_string() => NativeFunction(|env, args| Box::pin(map::merge(env, args))),

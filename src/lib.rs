@@ -7,6 +7,7 @@
 #![recursion_limit = "256"]
 
 pub mod array;
+pub mod atom;
 pub mod core;
 pub mod effect;
 mod evaluator;
