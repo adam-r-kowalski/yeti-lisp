@@ -10,7 +10,7 @@ use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::ToString;
 use im::ordmap;
-use reqwest::Response;
+use reqwest::{RequestBuilder, Response};
 use rug::Integer;
 
 async fn encode_response(response: Response) -> Result<Expression, Effect> {
@@ -63,6 +63,24 @@ async fn encode_response(response: Response) -> Result<Expression, Effect> {
     Ok(Expression::Map(result))
 }
 
+fn extend_builder(mut builder: RequestBuilder, params: Option<Expression>) -> RequestBuilder {
+    match params {
+        Some(Expression::Map(params)) => {
+            if let Some(e) = params.get(&Expression::Keyword(":form".to_string())) {
+                builder = builder.form(e);
+            }
+            if let Some(e) = params.get(&Expression::Keyword(":json".to_string())) {
+                builder = builder.json(e);
+            }
+            if let Some(e) = params.get(&Expression::Keyword(":query".to_string())) {
+                builder = builder.query(e);
+            }
+            builder
+        }
+        _ => builder,
+    }
+}
+
 pub fn environment() -> Environment {
     ordmap! {
         "*name*".to_string() => Expression::String("http".to_string()),
@@ -72,13 +90,7 @@ pub fn environment() -> Environment {
                     let (env, args) = evaluate_expressions(env, args).await?;
                     let url = extract::string(args[0].clone())?;
                     let client = reqwest::Client::new();
-                    let mut builder = client.get(url);
-                    if let Some(e) = args.get(1) {
-                        let params = extract::map(e.clone())?;
-                        if let Some(e) = params.get(&Expression::Keyword(":query".to_string())) {
-                            builder = builder.query(e);
-                        }
-                    }
+                    let builder = extend_builder(client.get(url), args.get(1).cloned());
                     let response = builder
                         .send()
                         .await
@@ -93,15 +105,8 @@ pub fn environment() -> Environment {
                 Box::pin(async move {
                     let (env, args) = evaluate_expressions(env, args).await?;
                     let url = extract::string(args[0].clone())?;
-                    let params = extract::map(args[1].clone())?;
                     let client = reqwest::Client::new();
-                    let mut builder = client.post(url);
-                    if let Some(e) = params.get(&Expression::Keyword(":form".to_string())) {
-                        builder = builder.form(e);
-                    }
-                    if let Some(e) = params.get(&Expression::Keyword(":json".to_string())) {
-                        builder = builder.json(e);
-                    }
+                    let builder = extend_builder(client.post(url), args.get(1).cloned());
                     let response = builder
                         .send()
                         .await
