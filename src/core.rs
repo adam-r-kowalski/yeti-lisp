@@ -243,7 +243,11 @@ pub fn environment() -> Environment {
               Box::pin(async move {
             let (env, args) = evaluate_expressions(env, args).await?;
             let result = args.iter().fold(String::new(), |mut result, arg| {
-                result.push_str(&format!("{}", arg));
+                if let Expression::String(s) = arg {
+                    result.push_str(&s);
+                } else {
+                    result.push_str(&format!("{}", arg));
+                }
                 result
             });
             Ok((env, Expression::String(result)))

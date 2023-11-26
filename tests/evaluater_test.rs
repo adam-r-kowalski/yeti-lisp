@@ -323,3 +323,12 @@ async fn evaluate_assert_false_raises_error() -> Result {
     assert!(result.is_err());
     Ok(())
 }
+
+#[tokio::test]
+async fn evaluate_str_concat() -> Result {
+    let env = yeti::core::environment();
+    let (env, actual) = yeti::evaluate_source(env, r#"(str "hello" " " "world")"#).await?;
+    let (_, expected) = yeti::evaluate_source(env, r#""hello world""#).await?;
+    assert_eq!(actual, expected);
+    Ok(())
+}
