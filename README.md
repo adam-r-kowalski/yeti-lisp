@@ -172,12 +172,12 @@ e ; this is an error as e is not defined
 
 
 (def app
- (server/start {:port 8080
-                :routes {"/" home}}))
+ (http/server {:port 8080
+               :routes {"/" home}}))
 ; this starts a server on port 8080 that serves the home page
 
 
-(server/stop app) ; this stops the server
+(http/server-stop app) ; this stops the server
 
 
 ; now lets create a simple web app that uses the database we created earlier
@@ -215,8 +215,8 @@ e ; this is an error as e is not defined
  
 
 (def app
- (server/start {:port 8080
-                :routes {"/" home}}))
+ (http/server {:port 8080
+               :routes {"/" home}}))
 
 ; if the request is made with no query parameters we render all employees
 ; if the request is made with a job query parameter we render only those employees
@@ -224,26 +224,28 @@ e ; this is an error as e is not defined
 
 ;; Http requests can be made using the following library
 
-(def response (http/get "https://example.com"))
+(def response (http/request {:url "https://example.com"}))
 
 ;; you can add query parameters like so
 
-(def response (http/get "https://example.com"
-               {:query {:foo "bar"
-                        :baz "qux"}}))
+(def response (http/request {:url "https://example.com"}
+                             :query {:foo "bar"
+                                     :baz "qux"}}))
 
 
 ;; you can make post requests like so (here with form data)
 
-(def response (http/post "https://example.com"
-               {:form {:foo "bar"
-                       :baz "qux"}}))
+(def response (http/request {:url "https://example.com"}
+                             :method :post
+                             :form {:foo "bar"
+                                    :baz "qux"}}))
 
 ;; you can make post requests like so (here with json data)
 
-(def response (http/post "https://example.com"
-               {:json {:foo "bar"
-                       :baz "qux"}}))
+(def response (http/request {:url "https://example.com"}
+                             :method :post
+                             :json {:foo "bar"
+                                    :baz "qux"}}))
 
 
 ;; Atoms allow you to change which value is stored over time. You can transition
