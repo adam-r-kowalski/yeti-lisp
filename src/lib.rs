@@ -22,7 +22,6 @@ mod native_type;
 mod numerics;
 mod parser;
 mod peeking_take_while;
-pub mod server;
 pub mod sql;
 mod tokenizer;
 pub mod toml;
