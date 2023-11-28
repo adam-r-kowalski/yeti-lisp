@@ -112,6 +112,17 @@ fn repl_environment() -> yeti::Environment {
                         Ok((env, yeti::Expression::Nil))
                     })
                 }
+            ),
+            "sleep".to_string() => yeti::Expression::NativeFunction(
+                |env, args| {
+                    Box::pin(async move {
+                        let (env, args) = yeti::evaluate_expressions(env, args).await?;
+                        let ms = yeti::extract::integer(args[0].clone())?;
+                        let ms = ms.to_u64().ok_or(yeti::effect::error("Could not convert integer to u64"))?;
+                        tokio::time::sleep(tokio::time::Duration::from_millis(ms)).await;
+                        Ok((env, yeti::Expression::Nil))
+                    })
+                }
             )
         }),
     );
