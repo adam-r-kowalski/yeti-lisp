@@ -135,14 +135,14 @@ pub fn environment() -> Environment {
         ),
         "def".to_string() => NativeFunction(
           |env, args| {
-              Box::pin(async move {
-            let (name, value) = (args[0].clone(), args[1].clone());
-            let (env, value) = crate::evaluate(env, value).await?;
-            let name = extract::symbol(name)?;
-            let mut new_env = env.clone();
-            new_env.insert(name, value);
-            Ok((new_env, Expression::Nil))
-              })
+            Box::pin(async move {
+              let (name, value) = (args[0].clone(), args[1].clone());
+              let (env, value) = crate::evaluate(env, value).await?;
+              let name = extract::symbol(name)?;
+              let mut new_env = env.clone();
+              new_env.insert(name, value);
+              Ok((new_env, Expression::Nil))
+            })
           }
         ),
         "fn".to_string() => NativeFunction(
@@ -257,7 +257,6 @@ pub fn environment() -> Environment {
         "bound?".to_string() => NativeFunction(
             |env, args| {
               Box::pin(async move {
-                let (env, args) = evaluate_expressions(env, args).await?;
                 let name = extract::symbol(args[0].clone())?;
                 let result = env.contains_key(&name);
                 Ok((env, Expression::Bool(result)))
@@ -267,15 +266,8 @@ pub fn environment() -> Environment {
         "do".to_string() => NativeFunction(
             |env, args| {
               Box::pin(async move {
-                let original_env = env.clone();
-                let mut result = Expression::Nil;
-                let mut env = env;
-                for expression in args.iter() {
-                    let (e, v) = crate::evaluate(env, expression.clone()).await?;
-                    env = e;
-                    result = v;
-                }
-                Ok((original_env, result))
+                let (env, args) = evaluate_expressions(env, args).await?;
+                Ok((env, args.last().unwrap_or(&Expression::Nil).clone()))
               })
             }
         ),

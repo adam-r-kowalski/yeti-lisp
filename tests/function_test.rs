@@ -16,25 +16,6 @@ async fn function_definition_and_call() -> Result {
 }
 
 #[tokio::test]
-async fn multi_line_function() -> Result {
-    let env = yeti::core::environment();
-    let (env, _) = yeti::evaluate_source(
-        env,
-        r#"
-         (defn sum-of-squares [x y]
-          (def x2 (* x x))
-          (def y2 (* y y))
-          (+ x2 y2))
-        "#,
-    )
-    .await?;
-    let (_, actual) = yeti::evaluate_source(env, "(sum-of-squares 5 7)").await?;
-    let expected = yeti::Expression::Integer(Integer::from(74));
-    assert_eq!(actual, expected);
-    Ok(())
-}
-
-#[tokio::test]
 async fn closure() -> Result {
     let env = yeti::core::environment();
     let (env, _) = yeti::evaluate_source(

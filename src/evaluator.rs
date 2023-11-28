@@ -8,6 +8,7 @@ use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec;
+use alloc::vec::Vec;
 use async_recursion::async_recursion;
 use im::Vector;
 
@@ -165,14 +166,8 @@ async fn evaluate_call(environment: Environment, call: Call) -> Result {
             if let Some(Expression::Symbol(name)) = env.get("*self*") {
                 env.insert(name.to_string(), Expression::Function(cloned_function));
             }
-            let mut value = Expression::Nil;
-            let mut env = env.clone();
-            for expression in body.iter() {
-                let (e, v) = evaluate(env, expression.clone()).await?;
-                env = e;
-                value = v;
-            }
-            Ok((original_environment, value))
+            let (_, results) = evaluate_expressions(env, body).await?;
+            Ok((original_environment, results.last().unwrap_or(&Expression::Nil).clone()))
         }
         Expression::NativeFunction(f) => {
             let (env, value) = f(environment, arguments).await?;
@@ -242,17 +237,29 @@ pub async fn evaluate(environment: Environment, expression: Expression) -> Resul
 }
 
 pub async fn evaluate_expressions(
-    environment: Environment,
-    expressions: Vector<Expression>,
+    env: Environment,
+    exprs: Vector<Expression>,
 ) -> core::result::Result<(Environment, Vector<Expression>), Effect> {
-    let mut result = Vector::new();
-    let mut environment = environment;
-    for expression in expressions {
-        let (e, expression) = evaluate(environment, expression).await?;
-        result.push_back(expression);
-        environment = e;
+    let futures: Vec<_> = exprs
+        .iter()
+        .map(|expr| {
+            let env = env.clone();
+            let expr = expr.clone();
+            async move {
+                let (_, value) = evaluate(env, expr).await?;
+                Ok(value)
+            }
+        })
+        .collect();
+    let results = futures::future::join_all(futures).await;
+    let mut values = Vector::new();
+    for result in results {
+        match result {
+            Ok(v) => values.push_back(v),
+            Err(e) => return Err(e),
+        }
     }
-    Ok((environment, result))
+    Ok((env, values))
 }
 
 pub async fn evaluate_source(
