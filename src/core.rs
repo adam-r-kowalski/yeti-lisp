@@ -210,13 +210,8 @@ pub fn environment() -> Environment {
                     let (e, value) = crate::evaluate(let_env, value.clone()).await?;
                     let_env = pattern_match(e, pattern.clone(), value)?;
                 }
-                let mut value = Expression::Nil;
-                for expression in body.iter() {
-                    let (e, v) = crate::evaluate(let_env, expression.clone()).await?;
-                    let_env = e;
-                    value = v;
-                }
-                Ok((original_env, value))
+                let (_, values) = crate::evaluate_expressions(let_env, body).await?;
+                Ok((original_env, values.last().unwrap_or(&Expression::Nil).clone()))
               })
           }
         ),
