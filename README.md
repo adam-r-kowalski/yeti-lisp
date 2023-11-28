@@ -220,4 +220,51 @@ e ; this is an error as e is not defined
 
 ; if the request is made with no query parameters we render all employees
 ; if the request is made with a job query parameter we render only those employees
+
+
+;; Http requests can be made using the following library
+
+(def response (http/get "https://example.com"))
+
+;; you can add query parameters like so
+
+(def response (http/get "https://example.com"
+               {:query {:foo "bar"
+                        :baz "qux"}}))
+
+
+;; you can make post requests like so (here with form data)
+
+(def response (http/post "https://example.com"
+               {:form {:foo "bar"
+                       :baz "qux"}}))
+
+;; you can make post requests like so (here with json data)
+
+(def response (http/post "https://example.com"
+               {:json {:foo "bar"
+                       :baz "qux"}}))
+
+
+;; Atoms allow you to change which value is stored over time. You can transition
+;; between one immutable value to another
+
+(def value (atom nil))
+
+(assert (= @value nil))
+
+(def current @value))
+
+(reset! value 5)
+
+(assert (= @value 5))
+
+(assert (= current nil))
+
+(swap! value inc)
+
+(assert (= @value 6))
+
+(assert (= current nil))
+
 ```
