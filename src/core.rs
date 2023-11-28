@@ -11,6 +11,7 @@ use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec;
+use alloc::vec::Vec;
 use im::{ordmap, vector, Vector};
 use rug;
 
@@ -218,18 +219,33 @@ pub fn environment() -> Environment {
         "for".to_string() => NativeFunction(
           |env, args| {
               Box::pin(async move {
-                let (bindings, body) = (args[0].clone(), args[1].clone());
-                let bindings = extract::array(bindings)?;
+                let (bindings, body) = args.split_at(1);
+                let bindings = extract::array(bindings[0].clone())?;
                 let pattern = bindings[0].clone();
                 let (env, values) = crate::evaluate(env, bindings[1].clone()).await?;
                 let values = extract::array(values)?;
-                let mut result = Vector::new();
-                for value in values.iter() {
-                    let env = pattern_match(env.clone(), pattern.clone(), value.clone())?;
-                    let (_, value) = crate::evaluate(env, body.clone()).await?;
-                    result.push_back(value);
+                let futures: Vec<_> = values
+                    .iter()
+                    .map(|value| {
+                        let body = body.clone();
+                        let pattern = pattern.clone();
+                        let env = env.clone();
+                        async move {
+                            let env = pattern_match(env, pattern, value.clone())?;
+                            let (_, value) = crate::evaluate_expressions(env.clone(), body).await?;
+                            Ok(value.last().unwrap_or(&Expression::Nil).clone())
+                        }
+                    })
+                    .collect();
+                let results = futures::future::join_all(futures).await;
+                let mut values = vector![];
+                for result in results {
+                    match result {
+                        Ok(v) => values.push_back(v),
+                        Err(e) => return Err(e),
+                    }
                 }
-                crate::evaluate(env, Expression::Array(result)).await
+                Ok((env, Expression::Array(values)))
               })
           }
         ),
@@ -384,6 +400,22 @@ pub fn environment() -> Environment {
                     })).await?;
                     *value = new_value;
                     Ok((env, Expression::Nil))
+                })
+            }
+        ),
+        "range".to_string() => NativeFunction(
+            |env, args| {
+                Box::pin(async move {
+                    let (env, args) = crate::evaluate_expressions(env, args).await?;
+                    let mut start = rug::Integer::from(0);
+                    let stop = extract::integer(args[0].clone())?;
+                    let step = 1;
+                    let mut range = vector![];
+                    while start < stop {
+                        range.push_back(Expression::Integer(start.clone()));
+                        start += step;
+                    }
+                    Ok((env, Expression::Array(range)))
                 })
             }
         ),
