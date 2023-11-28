@@ -561,6 +561,52 @@ async fn server_route_function_which_returns_json() -> Result {
 }
 
 #[tokio::test]
+async fn server_route_redirect() -> Result {
+    let env = yeti::core::environment();
+    let (env, _) = yeti::evaluate_source(
+        env,
+        r#"
+        (def home {:redirect "/other"})
+        "#,
+    )
+    .await?;
+    let (env, _) = yeti::evaluate_source(
+        env,
+        r#"
+        (def other [:h1 "Hello World"])
+        "#,
+    )
+    .await?;
+    let (env, _) = yeti::evaluate_source(
+        env,
+        r#"
+        (def s
+          (server/start {:port 3014
+                         :routes {"/" home
+                                  "/other" other}}))
+        "#,
+    )
+    .await?;
+    let (env, actual) = yeti::evaluate_source(env, r#"(http/get "http://localhost:3014")"#).await?;
+    let now = SystemTime::now();
+    let formatted_date = fmt_http_date(now);
+    let expected_response_str = format!(
+        r#"
+        {{:headers {{:content-length "20"
+                     :content-type "text/html; charset=utf-8"
+                     :date "{}"}}
+          :status 200
+          :url "http://localhost:3014/other"
+          :html [:html [:head] [:body [:h1 "Hello World"]]]}}
+        "#,
+        formatted_date
+    );
+    let (_, expected) = yeti::evaluate_source(env, &expected_response_str).await?;
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[tokio::test]
 async fn evaluate_stop() -> Result {
     let tokens = yeti::Tokens::from_str("(def s (server/start {:port 9090}))");
     let expression = yeti::parse(tokens);

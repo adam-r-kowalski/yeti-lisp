@@ -11,9 +11,9 @@ use alloc::collections::BTreeMap;
 use alloc::format;
 use alloc::string::{String, ToString};
 use axum::http::Request;
-use axum::response::IntoResponse;
 use axum::response::{Html, Json};
-use axum::routing::{get, post, delete, put};
+use axum::response::{IntoResponse, Redirect};
+use axum::routing::{delete, get, post, put};
 use axum::Router;
 use core::future::Future;
 use core::net::IpAddr;
@@ -145,7 +145,14 @@ fn create_handler(expression: Expression) -> impl Future<Output = impl IntoRespo
                 html::build_string(expression, &mut string).unwrap();
                 Html(string).into_response()
             }
-            Expression::Map(_) => Json(expression).into_response(),
+            Expression::Map(ref m) => {
+                if let Some(redirect) = m.get(&Expression::Keyword(":redirect".to_string())) {
+                    let url = extract::string(redirect.clone()).unwrap();
+                    Redirect::permanent(&url).into_response()
+                } else {
+                    Json(expression).into_response()
+                }
+            }
             _ => unimplemented!(),
         }
     }
