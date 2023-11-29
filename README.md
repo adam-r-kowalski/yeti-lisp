@@ -93,6 +93,8 @@ nil ; this is nil, it represents nothing
 
 (:head (:tail (:tail c))) ; this evaluates to 5
 
+(-> c :tail :tail :head) ; this evaluates to 5
+
 ; here we define a function that sums the elements of a linked list
 ; using pattern matching
 (defn list-sum
@@ -171,13 +173,12 @@ e ; this is an error as e is not defined
    [:p "Welcome to my website!"]]])
 
 
-(def app
- (http/server {:port 8080
-               :routes {"/" home}}))
+(http/server {:port 8080
+              :routes {"/" home}}))
 ; this starts a server on port 8080 that serves the home page
 
 
-(http/server-stop app) ; this stops the server
+(http/server-stop {:port 8080}) ; this stops the server
 
 
 ; now lets create a simple web app that uses the database we created earlier
@@ -214,9 +215,8 @@ e ; this is an error as e is not defined
       [:li [:strong name] ", " job ", " age " years old"]))]]])
  
 
-(def app
- (http/server {:port 8080
-               :routes {"/" home}}))
+(http/server {:port 8080
+              :routes {"/" home}}))
 
 ; if the request is made with no query parameters we render all employees
 ; if the request is made with a job query parameter we render only those employees
