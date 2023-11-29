@@ -202,6 +202,16 @@ impl<I: Iterator<Item = char>> Iterator for Tokens<I> {
                 '\'' => Some(self.consume_and_return(Token::Quote)),
                 '"' => Some(self.string()),
                 ':' => Some(self.keyword()),
+                ';' => {
+                    self.iterator.next();
+                    while let Some(&c) = self.iterator.peek() {
+                        if c == '\n' {
+                            break;
+                        }
+                        self.iterator.next();
+                    }
+                    self.next()
+                }
                 '/' => Some(self.consume_and_return(Token::Symbol("/".to_string()))),
                 '-' => {
                     self.iterator.next();

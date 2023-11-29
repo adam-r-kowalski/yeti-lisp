@@ -149,3 +149,55 @@ fn tokenize_deref() {
     ];
     assert_eq!(actual, expected);
 }
+
+#[test]
+fn tokenize_comment_after_expression() {
+    let actual =
+        yeti::Tokens::from_str("(+ 1 2) ; comment after expression").collect::<Vec<yeti::Token>>();
+    let expected = vec![
+        yeti::Token::LeftParen,
+        yeti::Token::Symbol("+".to_string()),
+        yeti::Token::Integer(Integer::from(1)),
+        yeti::Token::Integer(Integer::from(2)),
+        yeti::Token::RightParen,
+    ];
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn tokenize_comment_before_expression() {
+    let actual = yeti::Tokens::from_str(
+        r#"
+          ; comment before expression
+          (+ 1 2)
+        "#,
+    )
+    .collect::<Vec<yeti::Token>>();
+    let expected = vec![
+        yeti::Token::LeftParen,
+        yeti::Token::Symbol("+".to_string()),
+        yeti::Token::Integer(Integer::from(1)),
+        yeti::Token::Integer(Integer::from(2)),
+        yeti::Token::RightParen,
+    ];
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn tokenize_comment_in_between_expression() {
+    let actual = yeti::Tokens::from_str(
+        r#"
+          (+ 1 ; comment before expression
+             2)
+        "#,
+    )
+    .collect::<Vec<yeti::Token>>();
+    let expected = vec![
+        yeti::Token::LeftParen,
+        yeti::Token::Symbol("+".to_string()),
+        yeti::Token::Integer(Integer::from(1)),
+        yeti::Token::Integer(Integer::from(2)),
+        yeti::Token::RightParen,
+    ];
+    assert_eq!(actual, expected);
+}
