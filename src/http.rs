@@ -1,5 +1,6 @@
 extern crate alloc;
 
+use crate::atom::Atom;
 use crate::effect::{error, Effect};
 use crate::evaluate;
 use crate::evaluate_expressions;
@@ -22,13 +23,14 @@ use core::net::Ipv4Addr;
 use core::net::SocketAddr;
 use hyper::header::CONTENT_TYPE;
 use hyper::Body;
-use im::{ordmap, vector, OrdMap};
+use im::{ordmap, vector, OrdMap, Vector};
 use reqwest::{RequestBuilder, Response};
 use rug::Integer;
 use tokio::sync::broadcast;
 
 struct Server {
     tx: broadcast::Sender<()>,
+    port: u16,
 }
 
 type Result<T> = core::result::Result<T, Effect>;
@@ -210,138 +212,174 @@ async fn encode_response(response: Response) -> Result<Expression> {
     Ok(Expression::Map(result))
 }
 
-fn extend_builder(mut builder: RequestBuilder, params: OrdMap<Expression, Expression>) -> RequestBuilder {
-        if let Some(e) = params.get(&Expression::Keyword(":form".to_string())) {
-            builder = builder.form(e);
+fn extend_builder(
+    mut builder: RequestBuilder,
+    params: OrdMap<Expression, Expression>,
+) -> RequestBuilder {
+    if let Some(e) = params.get(&Expression::Keyword(":form".to_string())) {
+        builder = builder.form(e);
+    }
+    if let Some(e) = params.get(&Expression::Keyword(":json".to_string())) {
+        builder = builder.json(e);
+    }
+    if let Some(e) = params.get(&Expression::Keyword(":query".to_string())) {
+        builder = builder.query(e);
+    }
+    if let Some(e) = params.get(&Expression::Keyword(":headers".to_string())) {
+        if let Expression::Map(headers) = e {
+            for (key, value) in headers.iter() {
+                let keyword = extract::keyword(key.clone()).unwrap_or_default();
+                let keyword = &keyword[1..];
+                let value = extract::string(value.clone()).unwrap_or_default();
+                builder = builder.header(keyword, value);
+            }
         }
-        if let Some(e) = params.get(&Expression::Keyword(":json".to_string())) {
-            builder = builder.json(e);
-        }
-        if let Some(e) = params.get(&Expression::Keyword(":query".to_string())) {
-            builder = builder.query(e);
-        }
-        if let Some(e) = params.get(&Expression::Keyword(":headers".to_string())) {
-            if let Expression::Map(headers) = e {
-                for (key, value) in headers.iter() {
-                    let keyword = extract::keyword(key.clone()).unwrap_or_default();
-                    let keyword = &keyword[1..];
-                    let value = extract::string(value.clone()).unwrap_or_default();
-                    builder = builder.header(keyword, value);
+    }
+    builder
+}
+
+async fn request(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
+    let (env, args) = evaluate_expressions(env, args).await?;
+    let map = extract::map(args[0].clone())?;
+    let url = extract::string(extract::key(map.clone(), ":url")?)?;
+    let default_method = Expression::Keyword(":get".to_string());
+    let method = map
+        .get(&Expression::Keyword(":method".to_string()))
+        .unwrap_or(&default_method);
+    let method = extract::keyword(method.clone())?;
+    let client = reqwest::Client::new();
+    let builder = match &method[..] {
+        ":post" => client.post(url),
+        _ => client.get(url),
+    };
+    let builder = extend_builder(builder, map);
+    let response = builder
+        .send()
+        .await
+        .map_err(|_| error("Could not make get request"))?;
+    let response = encode_response(response).await?;
+    Ok((env, response))
+}
+
+async fn server(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
+    let (env, arg) = crate::evaluate(env, args[0].clone()).await?;
+    let m = extract::map(arg)?;
+    let port_expr = m.get(&Expression::Keyword(":port".to_string()));
+    let port = match port_expr {
+        Some(Expression::Integer(i)) => i
+            .to_u16()
+            .ok_or_else(|| error("Port number out of range"))?,
+        None => 3000,
+        _ => return Err(error("Expected integer for :port")),
+    };
+    let mut app = Router::new();
+    if let Some(routes) = m.get(&Expression::Keyword(":routes".to_string())) {
+        let m = extract::map(routes.clone())?;
+        for (k, v) in m.iter() {
+            let path = extract::string(k.clone())?;
+            match v.clone() {
+                Expression::Function(patterns) => {
+                    let env = env.clone();
+                    let cloned_path = path.clone();
+                    let handler = async move |req: Request<Body>| {
+                        let (_, expr) = evaluate(
+                            env,
+                            Expression::Call(Call {
+                                function: Box::new(Expression::Function(patterns.clone())),
+                                arguments: vector![request_map(&cloned_path, req).await.unwrap()],
+                            }),
+                        )
+                        .await
+                        .unwrap();
+                        create_handler(expr).await
+                    };
+                    app = app.route(&path, get(handler.clone()));
+                    app = app.route(&path, post(handler.clone()));
+                    app = app.route(&path, delete(handler.clone()));
+                    app = app.route(&path, put(handler));
+                }
+                _ => {
+                    let v = v.clone();
+                    let handler = async move |_req: Request<Body>| create_handler(v).await;
+                    app = app.route(&path, get(handler.clone()));
+                    app = app.route(&path, post(handler.clone()));
+                    app = app.route(&path, delete(handler.clone()));
+                    app = app.route(&path, put(handler));
                 }
             }
         }
-        builder
+    }
+    let (tx, mut rx) = broadcast::channel(1);
+    tokio::spawn(async move {
+        let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port);
+        axum::Server::bind(&socket)
+            .serve(app.into_make_service())
+            .with_graceful_shutdown(async {
+                rx.recv().await.ok();
+            })
+            .await
+            .unwrap();
+    });
+    let server = NativeType::new(Server { tx, port }, "server".to_string());
+    let server = Expression::NativeType(server);
+    let http = extract::module(env.get("http").unwrap().clone())?;
+    let servers = extract::atom(http.get("*servers*").unwrap().clone())?;
+    let mut guard = servers.0.lock().await;
+    let mut servers = extract::map(guard.clone())?;
+    servers.insert(Expression::Integer(Integer::from(port)), server.clone());
+    *guard = Expression::Map(servers);
+    Ok((env, server))
+}
+
+async fn server_stop(
+    env: Environment,
+    args: Vector<Expression>,
+) -> Result<(Environment, Expression)> {
+    let (env, arg) = crate::evaluate(env, args[0].clone()).await?;
+    match arg {
+        Expression::NativeType(server) => {
+            let port = {
+                let server = server.value.lock().await;
+                let server = server
+                    .downcast_ref::<Server>()
+                    .ok_or_else(|| error("Expected server"))?;
+                server.tx.send(()).unwrap();
+                server.port
+            };
+            let http = extract::module(env.get("http").unwrap().clone())?;
+            let servers = extract::atom(http.get("*servers*").unwrap().clone())?;
+            let mut guard = servers.0.lock().await;
+            let mut servers = extract::map(guard.clone())?;
+            servers.remove(&Expression::Integer(Integer::from(port)));
+            *guard = Expression::Map(servers);
+            Ok((env, Expression::Nil))
+        }
+        Expression::Map(map) => {
+            let port = extract::key(map.clone(), ":port")?;
+            let http = extract::module(env.get("http").unwrap().clone())?;
+            let servers = extract::atom(http.get("*servers*").unwrap().clone())?;
+            let mut guard = servers.0.lock().await;
+            let mut servers = extract::map(guard.clone())?;
+            if let Some(Expression::NativeType(server)) = servers.remove(&port) {
+                let server = server.value.lock().await;
+                let server = server
+                    .downcast_ref::<Server>()
+                    .ok_or_else(|| error("Expected server"))?;
+                server.tx.send(()).unwrap();
+            }
+            *guard = Expression::Map(servers);
+            Ok((env, Expression::Nil))
+        }
+        _ => return Err(error("Expected server")),
+    }
 }
 
 pub fn environment() -> Environment {
     ordmap! {
         "*name*".to_string() => Expression::String("http".to_string()),
-        "request".to_string() => NativeFunction(
-            |env, args| {
-                Box::pin(async move {
-                    let (env, args) = evaluate_expressions(env, args).await?;
-                    let map = extract::map(args[0].clone())?;
-                    let url = extract::string(extract::key(map.clone(), ":url")?)?;
-                    let default_method = Expression::Keyword(":get".to_string());
-                    let method = map.get(&Expression::Keyword(":method".to_string())).unwrap_or(&default_method);
-                    let method = extract::keyword(method.clone())?;
-                    let client = reqwest::Client::new();
-                    let builder = match &method[..] {
-                        ":post" => client.post(url),
-                        _ => client.get(url)
-                    };
-                    let builder = extend_builder(builder, map);
-                    let response = builder
-                        .send()
-                        .await
-                        .map_err(|_| error("Could not make get request"))?;
-                    let response = encode_response(response).await?;
-                    Ok((env, response))
-                })
-            }
-        ),
-        "server".to_string() => NativeFunction(
-            |env, args| {
-                Box::pin(async move {
-                    let (env, arg) = crate::evaluate(env, args[0].clone()).await?;
-                    let m = extract::map(arg)?;
-                    let port_expr = m.get(&Expression::Keyword(":port".to_string()));
-                    let port = match port_expr {
-                        Some(Expression::Integer(i)) => i
-                            .to_u16()
-                            .ok_or_else(|| error("Port number out of range"))?,
-                        None => 3000,
-                        _ => return Err(error("Expected integer for :port")),
-                    };
-                    let mut app = Router::new();
-                    if let Some(routes) = m.get(&Expression::Keyword(":routes".to_string())) {
-                        let m = extract::map(routes.clone())?;
-                        for (k, v) in m.iter() {
-                            let path = extract::string(k.clone())?;
-                            match v.clone() {
-                                Expression::Function(patterns) => {
-                                    let env = env.clone();
-                                    let cloned_path = path.clone();
-                                    let handler = async move |req: Request<Body>| {
-                                        let (_, expr) = evaluate(
-                                            env,
-                                            Expression::Call(Call {
-                                                function: Box::new(Expression::Function(patterns.clone())),
-                                                arguments: vector![request_map(&cloned_path, req).await.unwrap()],
-                                            }),
-                                        ).await
-                                        .unwrap();
-                                        create_handler(expr).await
-                                    };
-                                    app = app.route(&path, get(handler.clone()));
-                                    app = app.route(&path, post(handler.clone()));
-                                    app = app.route(&path, delete(handler.clone()));
-                                    app = app.route(&path, put(handler));
-                                }
-                                _ => {
-                                    let v = v.clone();
-                                    let handler = async move |_req: Request<Body>| {
-                                        create_handler(v).await
-                                    };
-                                    app = app.route(&path, get(handler.clone()));
-                                    app = app.route(&path, post(handler.clone()));
-                                    app = app.route(&path, delete(handler.clone()));
-                                    app = app.route(&path, put(handler));
-                                }
-                            }
-                        }
-                    }
-                    let (tx, mut rx) = broadcast::channel(1);
-                    tokio::spawn(async move {
-                        let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port);
-                        axum::Server::bind(&socket)
-                            .serve(app.into_make_service())
-                            .with_graceful_shutdown(async {
-                                rx.recv().await.ok();
-                            })
-                            .await
-                            .unwrap();
-                    });
-                    Ok((
-                        env,
-                        Expression::NativeType(NativeType::new(Server { tx }, "server".to_string())),
-                    ))
-                })
-            }
-        ),
-        "server-stop".to_string() => NativeFunction(
-            |env, args| {
-                Box::pin(async move {
-                    let (env, arg) = crate::evaluate(env, args[0].clone()).await?;
-                    let server = extract::native_type(arg)?;
-                    let server = server.value.lock().await;
-                    let server = server
-                        .downcast_ref::<Server>()
-                        .ok_or_else(|| error("Expected server"))?;
-                    server.tx.send(()).unwrap();
-                    Ok((env, Expression::Nil))
-                })
-            }
-        )
+        "*servers*".to_string() => Expression::Atom(Atom::new(Expression::Map(ordmap! {}))),
+        "request".to_string() => NativeFunction(|env, args| Box::pin(request(env, args))),
+        "server".to_string() => NativeFunction(|env, args| Box::pin(server(env, args))),
+        "server-stop".to_string() => NativeFunction(|env, args| Box::pin(server_stop(env, args)))
     }
 }
