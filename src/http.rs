@@ -264,14 +264,15 @@ async fn request(env: Environment, args: Vector<Expression>) -> Result<(Environm
 async fn server(env: Environment, args: Vector<Expression>) -> Result<(Environment, Expression)> {
     let (env, arg) = crate::evaluate(env, args[0].clone()).await?;
     let m = extract::map(arg)?;
-    let port_expr = m.get(&Expression::Keyword(":port".to_string()));
-    let port = match port_expr {
-        Some(Expression::Integer(i)) => i
-            .to_u16()
-            .ok_or_else(|| error("Port number out of range"))?,
-        None => 3000,
-        _ => return Err(error("Expected integer for :port")),
-    };
+    let default_port = Expression::Integer(Integer::from(3000));
+    let port = m
+        .get(&Expression::Keyword(":port".to_string()))
+        .unwrap_or(&default_port);
+    stop_server_by_port(env.clone(), port.clone()).await?;
+    let port = extract::integer(port.clone())?;
+    let port = port
+        .to_u16()
+        .ok_or_else(|| error("Port number out of range"))?;
     let mut app = Router::new();
     if let Some(routes) = m.get(&Expression::Keyword(":routes".to_string())) {
         let m = extract::map(routes.clone())?;
@@ -331,6 +332,25 @@ async fn server(env: Environment, args: Vector<Expression>) -> Result<(Environme
     Ok((env, server))
 }
 
+async fn stop_server_by_port(
+    env: Environment,
+    port: Expression,
+) -> Result<(Environment, Expression)> {
+    let http = extract::module(env.get("http").unwrap().clone())?;
+    let servers = extract::atom(http.get("*servers*").unwrap().clone())?;
+    let mut guard = servers.0.lock().await;
+    let mut servers = extract::map(guard.clone())?;
+    if let Some(Expression::NativeType(server)) = servers.remove(&port) {
+        let server = server.value.lock().await;
+        let server = server
+            .downcast_ref::<Server>()
+            .ok_or_else(|| error("Expected server"))?;
+        server.tx.send(()).unwrap();
+    }
+    *guard = Expression::Map(servers);
+    Ok((env, Expression::Nil))
+}
+
 async fn server_stop(
     env: Environment,
     args: Vector<Expression>,
@@ -356,19 +376,7 @@ async fn server_stop(
         }
         Expression::Map(map) => {
             let port = extract::key(map.clone(), ":port")?;
-            let http = extract::module(env.get("http").unwrap().clone())?;
-            let servers = extract::atom(http.get("*servers*").unwrap().clone())?;
-            let mut guard = servers.0.lock().await;
-            let mut servers = extract::map(guard.clone())?;
-            if let Some(Expression::NativeType(server)) = servers.remove(&port) {
-                let server = server.value.lock().await;
-                let server = server
-                    .downcast_ref::<Server>()
-                    .ok_or_else(|| error("Expected server"))?;
-                server.tx.send(()).unwrap();
-            }
-            *guard = Expression::Map(servers);
-            Ok((env, Expression::Nil))
+            stop_server_by_port(env, port).await
         }
         _ => return Err(error("Expected server")),
     }

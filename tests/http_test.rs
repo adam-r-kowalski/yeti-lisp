@@ -645,3 +645,55 @@ async fn evaluate_stop_using_port() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[tokio::test]
+async fn evaluate_redefine_server() -> Result {
+    let env = yeti::core::environment();
+    let (env, _) = yeti::evaluate_source(
+        env,
+        r#"(http/server {:port 3017 :routes {"/" "Hello Yeti"}})"#,
+    ).await?;
+    let (env, actual) = yeti::evaluate_source(
+        env,
+        r#"(http/request {:url "http://localhost:3017"})"#,
+    ).await?;
+    let now = SystemTime::now();
+    let formatted_date = fmt_http_date(now);
+    let expected_response_str = format!(r#"
+        {{:headers {{:content-length "10"
+                     :content-type "text/plain; charset=utf-8"
+                     :date "{}"}}
+          :status 200
+          :url "http://localhost:3017/"
+          :text "Hello Yeti"}}
+        "#, formatted_date);
+    let (env, expected) = yeti::evaluate_source(
+        env,
+        &expected_response_str,
+    ).await?;
+    assert_eq!(actual, expected);
+    let (env, _) = yeti::evaluate_source(
+        env,
+        r#"(http/server {:port 3017 :routes {"/" "Goodbye Yeti"}})"#,
+    ).await?;
+    let (env, actual) = yeti::evaluate_source(
+        env,
+        r#"(http/request {:url "http://localhost:3017"})"#,
+    ).await?;
+    let now = SystemTime::now();
+    let formatted_date = fmt_http_date(now);
+    let expected_response_str = format!(r#"
+        {{:headers {{:content-length "12"
+                     :content-type "text/plain; charset=utf-8"
+                     :date "{}"}}
+          :status 200
+          :url "http://localhost:3017/"
+          :text "Goodbye Yeti"}}
+        "#, formatted_date);
+    let (_, expected) = yeti::evaluate_source(
+        env,
+        &expected_response_str,
+    ).await?;
+    assert_eq!(actual, expected);
+    Ok(())
+}
