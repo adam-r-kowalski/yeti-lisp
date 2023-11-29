@@ -218,35 +218,91 @@ e ; this is an error as e is not defined
 (http/server {:port 8080
               :routes {"/" home}}))
 
-; if the request is made with no query parameters we render all employees
-; if the request is made with a job query parameter we render only those employees
+;; If we make the following request we get all the employees
+
+(def response (http/request {:url "http://localhost:8080"}))
+
+;; If we make the following request we get only the developers
+
+(def response (http/request {:url "http://localhost:8080"}
+                             :query {:job "Developer"}}))
 
 
-;; Http requests can be made using the following library
+;; We can define a service which allows you to log in
 
-(def response (http/request {:url "https://example.com"}))
+(def home
+ [:form
+  [:input {:name "email"}]
+  [:input {:name "password" :type "password"}]])
 
-;; you can add query parameters like so
+(defn login [{:form {:email email :password password}}]
+ [:h1 "Welcome" email])
 
-(def response (http/request {:url "https://example.com"}
-                             :query {:foo "bar"
-                                     :baz "qux"}}))
+(http/server {:port 8080
+              :routes {"/" home}
+                       "/login" login}})
 
+;; We can explicitly submit the form like this
 
-;; you can make post requests like so (here with form data)
-
-(def response (http/request {:url "https://example.com"}
+(def response (http/request {:url "http://localhost:8080/login"}
                              :method :post
-                             :form {:foo "bar"
-                                    :baz "qux"}}))
+                             :form {:email "joe@email.com"
+                                    :password "pass"}}))
 
-;; you can make post requests like so (here with json data)
+;; we can define a simple calculator service
 
-(def response (http/request {:url "https://example.com"}
+(defn add [{:json {:lhs lhs :rhs rhs}}]
+ {:result (+ lhs rhs)})
+ 
+
+(defn sub [{:json {:lhs lhs :rhs rhs}}]
+ {:result (- lhs rhs)})
+
+
+(http/server {:port 8080
+              :routes {"/add" add
+                       "/sub" sub}}))
+
+
+;; you can get the response like so
+
+(def response (http/request {:url "https://localhost:8080/add"}
                              :method :post
-                             :json {:foo "bar"
-                                    :baz "qux"}}))
+                             :json {:lhs 5
+                                    :rhs 10}}))
 
+(def result (-> response :json :result))
+
+(assert (= result 15))
+
+
+;; we can define a route which redirects
+
+(def home {:redirect "/other"})
+ 
+
+(def other
+ [:h1 "Welcome to the other page"])
+
+
+(http/server {:port 8080
+              :routes {"/home" home
+                       "/other" other}}))
+
+
+;; we can define a more complex redirct with query parameters
+
+(def home {:redirect {:url "/full-name"
+                      :query {:first "joe" :last "smith"}}})
+ 
+
+(defn other [{:query {:first first :last last}}]
+ [:h1 "Welcome " first ", " last])
+
+
+(http/server {:port 8080
+              :routes {"/home" home
+                       "/other" other}}))
 
 ;; Atoms allow you to change which value is stored over time. You can transition
 ;; between one immutable value to another
@@ -270,3 +326,4 @@ e ; this is an error as e is not defined
 (assert (= current nil))
 
 ```
+
