@@ -149,14 +149,20 @@ fn create_handler(expression: Expression) -> impl Future<Output = impl IntoRespo
                 html::build_string(expression, &mut string).unwrap();
                 Html(string).into_response()
             }
-            Expression::Map(ref m) => {
-                if let Some(redirect) = m.get(&Expression::Keyword(":redirect".to_string())) {
-                    let url = extract::string(redirect.clone()).unwrap();
+            Expression::Map(ref m) => match m.get(&Expression::Keyword(":redirect".to_string())) {
+                Some(Expression::String(url)) => Redirect::permanent(&url).into_response(),
+                Some(Expression::Map(map)) => {
+                    let url = extract::key(map.clone(), ":url").unwrap();
+                    let mut url = extract::string(url).unwrap();
+                    if let Some(query) = map.get(&Expression::Keyword(":query".to_string())) {
+                        let query = serde_qs::to_string(query).unwrap();
+                        url.push('?');
+                        url.push_str(&query);
+                    }
                     Redirect::permanent(&url).into_response()
-                } else {
-                    Json(expression).into_response()
                 }
-            }
+                _ => Json(expression).into_response(),
+            },
             _ => unimplemented!(),
         }
     }

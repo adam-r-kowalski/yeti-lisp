@@ -140,11 +140,8 @@ async fn evaluate_server_show_request_as_str() -> Result {
         "#,
     )
     .await?;
-    let (env, _) = yeti::evaluate_source(
-        env,
-        r#"(http/server {:port 3004 :routes {"/" handler}})"#,
-    )
-    .await?;
+    let (env, _) =
+        yeti::evaluate_source(env, r#"(http/server {:port 3004 :routes {"/" handler}})"#).await?;
     let (env, actual) =
         yeti::evaluate_source(env, r#"(http/request {:url "http://localhost:3004"})"#).await?;
     let now = SystemTime::now();
@@ -189,11 +186,8 @@ async fn evaluate_server_query_parameters_in_url() -> Result {
         "#,
     )
     .await?;
-    let (env, _) = yeti::evaluate_source(
-        env,
-        r#"(http/server {:port 3005 :routes {"/" handler}})"#,
-    )
-    .await?;
+    let (env, _) =
+        yeti::evaluate_source(env, r#"(http/server {:port 3005 :routes {"/" handler}})"#).await?;
     let (env, actual) = yeti::evaluate_source(
         env,
         r#"(http/request {:url "http://localhost:3005?foo=bar&baz=qux"})"#,
@@ -242,11 +236,8 @@ async fn evaluate_server_query_parameters_in_map() -> Result {
         "#,
     )
     .await?;
-    let (env, _) = yeti::evaluate_source(
-        env,
-        r#"(http/server {:port 3006 :routes {"/" handler}})"#,
-    )
-    .await?;
+    let (env, _) =
+        yeti::evaluate_source(env, r#"(http/server {:port 3006 :routes {"/" handler}})"#).await?;
     let (env, actual) = yeti::evaluate_source(
         env,
         r#"(http/request {:url "http://localhost:3006" :query {:foo "bar" :baz "qux"}})"#,
@@ -348,11 +339,8 @@ async fn evaluate_server_form_data() -> Result {
         "#,
     )
     .await?;
-    let (env, _) = yeti::evaluate_source(
-        env,
-        r#"(http/server {:port 3009 :routes {"/" handler}})"#,
-    )
-    .await?;
+    let (env, _) =
+        yeti::evaluate_source(env, r#"(http/server {:port 3009 :routes {"/" handler}})"#).await?;
     let (env, actual) = yeti::evaluate_source(
         env,
         r#"(http/request {:url "http://localhost:3009" :method :post :form {:foo "bar" :baz "qux"}})"#,
@@ -405,11 +393,8 @@ async fn evaluate_server_post_json_data() -> Result {
         "#,
     )
     .await?;
-    let (env, _) = yeti::evaluate_source(
-        env,
-        r#"(http/server {:port 3010 :routes {"/" handler}})"#,
-    )
-    .await?;
+    let (env, _) =
+        yeti::evaluate_source(env, r#"(http/server {:port 3010 :routes {"/" handler}})"#).await?;
     let (env, actual) = yeti::evaluate_source(
         env,
         r#"(http/request {:url "http://localhost:3010" :method :post :json {:foo "bar" :baz "qux"}})"#,
@@ -462,11 +447,8 @@ async fn evaluate_server_request_with_headers() -> Result {
         "#,
     )
     .await?;
-    let (env, _) = yeti::evaluate_source(
-        env,
-        r#"(http/server {:port 3011 :routes {"/" handler}})"#,
-    )
-    .await?;
+    let (env, _) =
+        yeti::evaluate_source(env, r#"(http/server {:port 3011 :routes {"/" handler}})"#).await?;
     let (env, actual) = yeti::evaluate_source(
         env,
         r#"(http/request {:url "http://localhost:3011" :headers {:foo "bar" :baz "qux"}})"#,
@@ -544,11 +526,8 @@ async fn server_route_function_which_returns_json() -> Result {
         "#,
     )
     .await?;
-    let (env, _) = yeti::evaluate_source(
-        env,
-        r#"(http/server {:port 3013 :routes {"/" add}})"#,
-    )
-    .await?;
+    let (env, _) =
+        yeti::evaluate_source(env, r#"(http/server {:port 3013 :routes {"/" add}})"#).await?;
     let (env, actual) = yeti::evaluate_source(
         env,
         r#"(http/request {:url "http://localhost:3013" :json {:lhs 1 :rhs 2}})"#,
@@ -619,8 +598,55 @@ async fn server_route_redirect() -> Result {
 }
 
 #[tokio::test]
+async fn server_route_redirect_with_query_parameters() -> Result {
+    let env = yeti::core::environment();
+    let (env, _) = yeti::evaluate_source(
+        env,
+        r#"
+        (def home {:redirect {:url "/other"
+                              :query {:name "Joe"}}})
+        "#,
+    )
+    .await?;
+    let (env, _) = yeti::evaluate_source(
+        env,
+        r#"
+        (defn other [{:query {:name name}}] [:h1 name])
+        "#,
+    )
+    .await?;
+    let (env, _) = yeti::evaluate_source(
+        env,
+        r#"
+        (http/server {:port 3015
+                      :routes {"/" home
+                               "/other" other}})
+        "#,
+    )
+    .await?;
+    let (env, actual) =
+        yeti::evaluate_source(env, r#"(http/request {:url "http://localhost:3015"})"#).await?;
+    let now = SystemTime::now();
+    let formatted_date = fmt_http_date(now);
+    let expected_response_str = format!(
+        r#"
+        {{:headers {{:content-length "12"
+                     :content-type "text/html; charset=utf-8"
+                     :date "{}"}}
+          :status 200
+          :url "http://localhost:3015/other?name=Joe"
+          :html [:html [:head] [:body [:h1 "Joe"]]]}}
+        "#,
+        formatted_date
+    );
+    let (_, expected) = yeti::evaluate_source(env, &expected_response_str).await?;
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[tokio::test]
 async fn evaluate_stop_using_handle() -> Result {
-    let tokens = yeti::Tokens::from_str("(def s (http/server {:port 3015}))");
+    let tokens = yeti::Tokens::from_str("(def s (http/server {:port 3016}))");
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
     let (environment, _) = yeti::evaluate(environment, expression).await?;
@@ -634,11 +660,11 @@ async fn evaluate_stop_using_handle() -> Result {
 
 #[tokio::test]
 async fn evaluate_stop_using_port() -> Result {
-    let tokens = yeti::Tokens::from_str("(http/server {:port 3016})");
+    let tokens = yeti::Tokens::from_str("(http/server {:port 3017})");
     let expression = yeti::parse(tokens);
     let environment = yeti::core::environment();
     let (environment, _) = yeti::evaluate(environment, expression).await?;
-    let tokens = yeti::Tokens::from_str("(http/server-stop {:port 3016})");
+    let tokens = yeti::Tokens::from_str("(http/server-stop {:port 3017})");
     let expression = yeti::parse(tokens);
     let (_, actual) = yeti::evaluate(environment, expression).await?;
     let expected = yeti::Expression::Nil;
@@ -651,49 +677,47 @@ async fn evaluate_redefine_server() -> Result {
     let env = yeti::core::environment();
     let (env, _) = yeti::evaluate_source(
         env,
-        r#"(http/server {:port 3017 :routes {"/" "Hello Yeti"}})"#,
-    ).await?;
-    let (env, actual) = yeti::evaluate_source(
-        env,
-        r#"(http/request {:url "http://localhost:3017"})"#,
-    ).await?;
+        r#"(http/server {:port 3018 :routes {"/" "Hello Yeti"}})"#,
+    )
+    .await?;
+    let (env, actual) =
+        yeti::evaluate_source(env, r#"(http/request {:url "http://localhost:3018"})"#).await?;
     let now = SystemTime::now();
     let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(r#"
+    let expected_response_str = format!(
+        r#"
         {{:headers {{:content-length "10"
                      :content-type "text/plain; charset=utf-8"
                      :date "{}"}}
           :status 200
-          :url "http://localhost:3017/"
+          :url "http://localhost:3018/"
           :text "Hello Yeti"}}
-        "#, formatted_date);
-    let (env, expected) = yeti::evaluate_source(
-        env,
-        &expected_response_str,
-    ).await?;
+        "#,
+        formatted_date
+    );
+    let (env, expected) = yeti::evaluate_source(env, &expected_response_str).await?;
     assert_eq!(actual, expected);
     let (env, _) = yeti::evaluate_source(
         env,
-        r#"(http/server {:port 3017 :routes {"/" "Goodbye Yeti"}})"#,
-    ).await?;
-    let (env, actual) = yeti::evaluate_source(
-        env,
-        r#"(http/request {:url "http://localhost:3017"})"#,
-    ).await?;
+        r#"(http/server {:port 3018 :routes {"/" "Goodbye Yeti"}})"#,
+    )
+    .await?;
+    let (env, actual) =
+        yeti::evaluate_source(env, r#"(http/request {:url "http://localhost:3018"})"#).await?;
     let now = SystemTime::now();
     let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(r#"
+    let expected_response_str = format!(
+        r#"
         {{:headers {{:content-length "12"
                      :content-type "text/plain; charset=utf-8"
                      :date "{}"}}
           :status 200
-          :url "http://localhost:3017/"
+          :url "http://localhost:3018/"
           :text "Goodbye Yeti"}}
-        "#, formatted_date);
-    let (_, expected) = yeti::evaluate_source(
-        env,
-        &expected_response_str,
-    ).await?;
+        "#,
+        formatted_date
+    );
+    let (_, expected) = yeti::evaluate_source(env, &expected_response_str).await?;
     assert_eq!(actual, expected);
     Ok(())
 }
