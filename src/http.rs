@@ -191,7 +191,7 @@ async fn encode_response(response: Response) -> Result<Expression> {
         .map(|value| value.to_str().unwrap_or(""))
         .unwrap_or("");
     match content_type {
-        "application/json" => {
+        t if t.starts_with("application/json") => {
             let json = response
                 .json::<Expression>()
                 .await
