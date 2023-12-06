@@ -376,9 +376,16 @@ pub fn environment() -> Environment {
             }
         ),
         "chan".to_string() => NativeFunction(
-            |env, _args| {
+            |env, args| {
                 Box::pin(async move {
-                    Ok((env, Expression::Channel(crate::channel::Channel::new())))
+                    let (env, args) = crate::evaluate_expressions(env, args).await?;
+                    if args.len() == 0 {
+                        Ok((env, Expression::Channel(crate::channel::Channel::new(1))))
+                    } else {
+                        let buffer_size = extract::integer(args[0].clone())?;
+                        let buffer_size = buffer_size.to_usize().ok_or(error("Expected positive integer"))?;
+                        Ok((env, Expression::Channel(crate::channel::Channel::new(buffer_size))))
+                    }
                 })
             }
         ),

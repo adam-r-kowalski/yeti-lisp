@@ -1,9 +1,9 @@
 extern crate alloc;
 
+use crate::Expression;
 use alloc::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::Mutex;
-use crate::Expression;
 
 pub struct Channel {
     pub sender: mpsc::Sender<Expression>,
@@ -11,8 +11,8 @@ pub struct Channel {
 }
 
 impl Channel {
-    pub fn new() -> Channel {
-        let (sender, receiver) = mpsc::channel(1);
+    pub fn new(buffer_size: usize) -> Channel {
+        let (sender, receiver) = mpsc::channel(buffer_size);
         let receiver = Arc::new(Mutex::new(receiver));
         Channel { sender, receiver }
     }
