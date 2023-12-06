@@ -1,5 +1,6 @@
 extern crate alloc;
 use crate::atom::Atom;
+use crate::channel::Channel;
 use crate::effect::{error, Effect};
 use crate::expression::Call;
 use crate::{Environment, Expression, NativeType};
@@ -82,6 +83,13 @@ pub fn module(expr: Expression) -> Result<Environment> {
 pub fn atom(expr: Expression) -> Result<Atom> {
     match expr {
         Expression::Atom(a) => Ok(a),
-        _ => Err(error("Expected module")),
+        _ => Err(error("Expected atom")),
+    }
+}
+
+pub fn channel(expr: Expression) -> Result<Channel> {
+    match expr {
+        Expression::Channel(c) => Ok(c),
+        _ => Err(error("Expected channel")),
     }
 }

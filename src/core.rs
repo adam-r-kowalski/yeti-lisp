@@ -375,6 +375,34 @@ pub fn environment() -> Environment {
                 })
             }
         ),
+        "chan".to_string() => NativeFunction(
+            |env, _args| {
+                Box::pin(async move {
+                    Ok((env, Expression::Channel(crate::channel::Channel::new())))
+                })
+            }
+        ),
+        "put!".to_string() => NativeFunction(
+            |env, args| {
+                Box::pin(async move {
+                    let (env, args) = crate::evaluate_expressions(env, args).await?;
+                    let chan = extract::channel(args[0].clone())?;
+                    let value = args[1].clone();
+                    chan.sender.send(value).await.map_err(|_| error("Channel closed"))?;
+                    Ok((env, Expression::Nil))
+                })
+            }
+        ),
+        "get!".to_string() => NativeFunction(
+            |env, args| {
+                Box::pin(async move {
+                    let (env, args) = crate::evaluate_expressions(env, args).await?;
+                    let chan = extract::channel(args[0].clone())?;
+                    let value = chan.receiver.lock().await.recv().await.ok_or(error("Channel closed"))?;
+                    Ok((env, value))
+                })
+            }
+        ),
         "reset!".to_string() => NativeFunction(
             |env, args| {
                 Box::pin(async move {
