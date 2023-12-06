@@ -393,7 +393,7 @@ pub fn environment() -> Environment {
                 })
             }
         ),
-        "get!".to_string() => NativeFunction(
+        "take!".to_string() => NativeFunction(
             |env, args| {
                 Box::pin(async move {
                     let (env, args) = crate::evaluate_expressions(env, args).await?;
