@@ -21,3 +21,13 @@ async fn put_and_take_off_channel() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[tokio::test]
+async fn take_then_put_channel() -> Result {
+    let env = yeti::core::environment();
+    let (env, _) = yeti::evaluate_source(env, "(def c (chan))").await?;
+    let (env, _) = yeti::evaluate_source(env, "(spawn (take! c))").await?;
+    let (_, actual) = yeti::evaluate_source(env, r#"(put! c "hello channel")"#).await?;
+    assert!(matches!(actual, yeti::Expression::Nil));
+    Ok(())
+}

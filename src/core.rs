@@ -447,6 +447,18 @@ pub fn environment() -> Environment {
                 })
             }
         ),
+        "spawn".to_string() => NativeFunction(
+            |env, args| {
+                Box::pin(async move {
+                    let env_cloned = env.clone();
+                    tokio::spawn(async move {
+                        let _ = crate::evaluate_expressions(env, args).await?;
+                        Ok::<(), Effect>(())
+                    });
+                    Ok((env_cloned, Expression::Nil))
+                })
+            }
+        ),
         "assoc".to_string() => NativeFunction(|env, args| Box::pin(map::assoc(env, args))),
         "dissoc".to_string() => NativeFunction(|env, args| Box::pin(map::dissoc(env, args))),
         "merge".to_string() => NativeFunction(|env, args| Box::pin(map::merge(env, args))),
