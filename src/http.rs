@@ -190,6 +190,7 @@ async fn encode_response(response: Response) -> Result<Expression> {
         .get("content-type")
         .map(|value| value.to_str().unwrap_or(""))
         .unwrap_or("");
+    println!("content_type: {}", content_type);
     match content_type {
         t if t.starts_with("application/json") => {
             let json = response

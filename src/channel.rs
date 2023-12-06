@@ -2,19 +2,26 @@ extern crate alloc;
 
 use crate::Expression;
 use alloc::sync::Arc;
+use core::sync::atomic::AtomicBool;
 use tokio::sync::mpsc;
 use tokio::sync::Mutex;
 
 pub struct Channel {
     pub sender: mpsc::Sender<Expression>,
     pub receiver: Arc<Mutex<mpsc::Receiver<Expression>>>,
+    pub closed: Arc<AtomicBool>,
 }
 
 impl Channel {
     pub fn new(buffer_size: usize) -> Channel {
         let (sender, receiver) = mpsc::channel(buffer_size);
         let receiver = Arc::new(Mutex::new(receiver));
-        Channel { sender, receiver }
+        let closed = Arc::new(AtomicBool::new(false));
+        Channel {
+            sender,
+            receiver,
+            closed,
+        }
     }
 }
 
@@ -61,6 +68,7 @@ impl Clone for Channel {
         Channel {
             sender: self.sender.clone(),
             receiver: self.receiver.clone(),
+            closed: self.closed.clone(),
         }
     }
 }

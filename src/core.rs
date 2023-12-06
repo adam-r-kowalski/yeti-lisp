@@ -389,12 +389,19 @@ pub fn environment() -> Environment {
                 })
             }
         ),
-        "put!".to_string() => NativeFunction(
+       "put!".to_string() => NativeFunction(
             |env, args| {
                 Box::pin(async move {
                     let (env, args) = crate::evaluate_expressions(env, args).await?;
                     let chan = extract::channel(args[0].clone())?;
                     let value = args[1].clone();
+                    if value == Expression::Nil {
+                        chan.closed.store(true, core::sync::atomic::Ordering::Relaxed);
+                        return Ok((env, Expression::Nil));
+                    }
+                    if chan.closed.load(core::sync::atomic::Ordering::Relaxed) {
+                        return Ok((env, Expression::Nil));
+                    }
                     chan.sender.send(value).await.map_err(|_| error("Channel closed"))?;
                     Ok((env, Expression::Nil))
                 })
@@ -405,6 +412,9 @@ pub fn environment() -> Environment {
                 Box::pin(async move {
                     let (env, args) = crate::evaluate_expressions(env, args).await?;
                     let chan = extract::channel(args[0].clone())?;
+                    if chan.closed.load(core::sync::atomic::Ordering::Relaxed) {
+                        return Ok((env, Expression::Nil));
+                    }
                     let value = chan.receiver.lock().await.recv().await.ok_or(error("Channel closed"))?;
                     Ok((env, value))
                 })
