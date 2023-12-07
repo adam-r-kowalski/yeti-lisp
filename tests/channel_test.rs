@@ -52,7 +52,7 @@ async fn channel_with_specified_buffer_size() -> Result {
 }
 
 #[tokio::test]
-async fn closing_a_channel() -> Result {
+async fn closing_a_channel_using_nil() -> Result {
     let env = yeti::core::environment();
     let (env, _) = yeti::evaluate_source(env, "(def c (chan 3))").await?;
     let (env, _) = yeti::evaluate_source(env, "(put! c nil)").await?;
@@ -60,5 +60,18 @@ async fn closing_a_channel() -> Result {
     assert_eq!(actual, yeti::Expression::Nil);
     let (_, actual) = yeti::evaluate_source(env, "(take! c)").await?;
     assert_eq!(actual, yeti::Expression::Nil);
+    Ok(())
+}
+
+#[tokio::test]
+async fn closing_a_channel_using_close() -> Result {
+    let env = yeti::core::environment();
+    let (env, _) = yeti::evaluate_source(env, "(def c (chan 3))").await?;
+    let (env, actual) = yeti::evaluate_source(env, "(closed? c)").await?;
+    assert_eq!(actual, yeti::Expression::Bool(false));
+    let (env, actual) = yeti::evaluate_source(env, "(close! c)").await?;
+    assert_eq!(actual, yeti::Expression::Nil);
+    let (_, actual) = yeti::evaluate_source(env, "(closed? c)").await?;
+    assert_eq!(actual, yeti::Expression::Bool(true));
     Ok(())
 }

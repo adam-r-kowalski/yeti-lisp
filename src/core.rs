@@ -414,6 +414,26 @@ pub fn environment() -> Environment {
                 })
             }
         ),
+        "close!".to_string() => NativeFunction(
+            |env, args| {
+                Box::pin(async move {
+                    let (env, args) = crate::evaluate_expressions(env, args).await?;
+                    let chan = extract::channel(args[0].clone())?;
+                    chan.sender.close();
+                    Ok((env, Expression::Nil))
+                })
+            }
+        ),
+        "closed?".to_string() => NativeFunction(
+            |env, args| {
+                Box::pin(async move {
+                    let (env, args) = crate::evaluate_expressions(env, args).await?;
+                    let chan = extract::channel(args[0].clone())?;
+                    let result = chan.sender.is_closed();
+                    Ok((env, Expression::Bool(result)))
+                })
+            }
+        ),
         "reset!".to_string() => NativeFunction(
             |env, args| {
                 Box::pin(async move {
