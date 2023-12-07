@@ -1,6 +1,8 @@
 extern crate alloc;
 
 use crate::Expression;
+use crate::effect::Effect;
+use crate::effect::error;
 use alloc::sync::Arc;
 use core::sync::atomic::AtomicBool;
 use tokio::sync::mpsc;
@@ -39,13 +41,13 @@ impl core::hash::Hash for Channel {
 
 impl core::fmt::Debug for Channel {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "#atom({:?})", Arc::as_ptr(&self.receiver))
+        write!(f, "#channel({:?})", Arc::as_ptr(&self.receiver))
     }
 }
 
 impl core::fmt::Display for Channel {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "#atom({:?})", Arc::as_ptr(&self.receiver))
+        write!(f, "#channel({:?})", Arc::as_ptr(&self.receiver))
     }
 }
 
@@ -71,4 +73,27 @@ impl Clone for Channel {
             closed: self.closed.clone(),
         }
     }
+}
+
+pub async fn put(chan: Channel, value: Expression) -> Result<(), Effect> {
+    if value == Expression::Nil {
+        chan.closed.store(true, core::sync::atomic::Ordering::Relaxed);
+        return Ok(());
+    }
+    if chan.closed.load(core::sync::atomic::Ordering::Relaxed) {
+        return Ok(());
+    }
+    chan.sender.send(value).await.map_err(|_| error("Channel closed"))?;
+    Ok(())
+}
+
+pub async fn take(chan: Channel) -> Result<Expression, Effect> {
+    if chan.closed.load(core::sync::atomic::Ordering::Relaxed) {
+        if let Ok(value) = chan.receiver.lock().await.try_recv() {
+            return Ok(value);
+        }
+        return Ok(Expression::Nil);
+    }
+    let value = chan.receiver.lock().await.recv().await.ok_or(error("Channel closed"))?;
+    Ok(value)
 }

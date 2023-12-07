@@ -14,6 +14,7 @@ use alloc::collections::BTreeMap;
 use alloc::format;
 use alloc::string::{String, ToString};
 use axum::http::Request;
+use axum::http::Response as HttpResponse;
 use axum::response::{Html, IntoResponse, Json, Redirect};
 use axum::routing::{delete, get, post, put};
 use axum::Router;
@@ -21,6 +22,7 @@ use core::future::Future;
 use core::net::IpAddr;
 use core::net::Ipv4Addr;
 use core::net::SocketAddr;
+use futures::stream;
 use hyper::header::CONTENT_TYPE;
 use hyper::Body;
 use im::{ordmap, vector, OrdMap, Vector};
@@ -163,6 +165,20 @@ fn create_handler(expression: Expression) -> impl Future<Output = impl IntoRespo
                 }
                 _ => Json(expression).into_response(),
             },
+            Expression::Channel(chan) => {
+                let stream = stream::unfold(chan, move |chan| async move {
+                    let value = crate::channel::take(chan.clone())
+                        .await
+                        .unwrap_or(Expression::Nil);
+                    if let Expression::String(s) = value {
+                        Some((Ok::<_, hyper::Error>(s), chan))
+                    } else {
+                        None
+                    }
+                });
+                let body = Body::wrap_stream(stream);
+                HttpResponse::new(body).into_response()
+            }
             _ => unimplemented!(),
         }
     }
@@ -188,18 +204,40 @@ async fn encode_response(response: Response) -> Result<Expression> {
     };
     let content_type = headers
         .get("content-type")
+        .map(|value| value.to_str().ok())
+        .flatten();
+    let transfer_encoding = headers
+        .get("transfer-encoding")
         .map(|value| value.to_str().unwrap_or(""))
         .unwrap_or("");
-    println!("content_type: {}", content_type);
+    if transfer_encoding == "chunked" {
+        let channel = crate::channel::Channel::new(10);
+        let sender = channel.sender.clone();
+        let closed = channel.closed.clone();
+        tokio::spawn(async move {
+            let mut response = response;
+            while let Some(chunk) = response.chunk().await.unwrap_or(None) {
+                let chunk = String::from_utf8_lossy(&chunk).to_string();
+                sender.send(Expression::String(chunk)).await.unwrap();
+            }
+            closed.store(true, core::sync::atomic::Ordering::Relaxed);
+            Ok::<(), Effect>(())
+        });
+        result.insert(
+            Expression::Keyword(":channel".to_string()),
+            Expression::Channel(channel),
+        );
+        return Ok(Expression::Map(result));
+    }
     match content_type {
-        t if t.starts_with("application/json") => {
+        Some(t) if t.starts_with("application/json") => {
             let json = response
                 .json::<Expression>()
                 .await
                 .map_err(|_| error("Could not get text from response"))?;
             result.insert(Expression::Keyword(":json".to_string()), json);
         }
-        t if t.starts_with("text/html") => {
+        Some(t) if t.starts_with("text/html") => {
             let text = response
                 .text()
                 .await
@@ -207,7 +245,7 @@ async fn encode_response(response: Response) -> Result<Expression> {
             let expression = html_string_to_expression(&text);
             result.insert(Expression::Keyword(":html".to_string()), expression);
         }
-        _ => {
+        Some(t) if t.starts_with("text/plain") => {
             let text = response
                 .text()
                 .await
@@ -215,6 +253,8 @@ async fn encode_response(response: Response) -> Result<Expression> {
                 .map(|text| Expression::String(text))?;
             result.insert(Expression::Keyword(":text".to_string()), text);
         }
+        Some(t) => Err(error(&format!("Unsupported content type: {}", t)))?,
+        None => {}
     }
     Ok(Expression::Map(result))
 }

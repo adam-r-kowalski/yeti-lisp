@@ -721,3 +721,53 @@ async fn evaluate_redefine_server() -> Result {
     assert_eq!(actual, expected);
     Ok(())
 }
+
+#[tokio::test]
+async fn streaming_response_from_endpoint() -> Result {
+    let env = yeti::core::environment();
+    let (env, _) = yeti::evaluate_source(
+        env,
+        r#"
+    (defn handler []
+      (let [c (chan)]
+        (spawn
+          (let [_ (put! c "Hello")
+                _ (put! c "Goodbye")
+                _ (put! c nil)]
+            nil))
+        c))
+    "#,
+    )
+    .await?;
+    let (env, _) =
+        yeti::evaluate_source(env, r#"(http/server {:port 3019 :routes {"/" handler}})"#).await?;
+    let (env, _) = yeti::evaluate_source(
+        env,
+        r#"(def response (http/request {:url "http://localhost:3019"}))"#,
+    )
+    .await?;
+    let now = SystemTime::now();
+    let formatted_date = fmt_http_date(now);
+    let expected_headers_str = format!(
+        r#"
+        {{:transfer-encoding "chunked"
+          :date "{}"}}
+        "#,
+        formatted_date
+    );
+    let (env, expected_headers) = yeti::evaluate_source(env, &expected_headers_str).await?;
+    let (env, actual_headers) = yeti::evaluate_source(env, "(:headers response)").await?;
+    assert_eq!(actual_headers, expected_headers);
+    let (env, actual_status) = yeti::evaluate_source(env, "(:status response)").await?;
+    assert_eq!(actual_status, yeti::Expression::Integer(rug::Integer::from(200)));
+    let (env, actual_url) = yeti::evaluate_source(env, "(:url response)").await?;
+    assert_eq!(actual_url, yeti::Expression::String("http://localhost:3019/".to_string()));
+    let (env, _) = yeti::evaluate_source(env, "(def c (:channel response))").await?;
+    let (env, actual) = yeti::evaluate_source(env, "(take! c)").await?;
+    assert_eq!(actual, yeti::Expression::String("Hello".to_string()));
+    let (env, actual) = yeti::evaluate_source(env, "(take! c)").await?;
+    assert_eq!(actual, yeti::Expression::String("Goodbye".to_string()));
+    let (_, actual) = yeti::evaluate_source(env, "(take! c)").await?;
+    assert_eq!(actual, yeti::Expression::Nil);
+    Ok(())
+}
