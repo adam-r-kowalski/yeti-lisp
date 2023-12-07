@@ -751,6 +751,9 @@ async fn streaming_response_from_endpoint() -> Result {
     let expected_headers_str = format!(
         r#"
         {{:transfer-encoding "chunked"
+          :content-type "text/event-stream"
+          :cache-control "no-cache"
+          :connection "keep-alive"
           :date "{}"}}
         "#,
         formatted_date
@@ -759,9 +762,15 @@ async fn streaming_response_from_endpoint() -> Result {
     let (env, actual_headers) = yeti::evaluate_source(env, "(:headers response)").await?;
     assert_eq!(actual_headers, expected_headers);
     let (env, actual_status) = yeti::evaluate_source(env, "(:status response)").await?;
-    assert_eq!(actual_status, yeti::Expression::Integer(rug::Integer::from(200)));
+    assert_eq!(
+        actual_status,
+        yeti::Expression::Integer(rug::Integer::from(200))
+    );
     let (env, actual_url) = yeti::evaluate_source(env, "(:url response)").await?;
-    assert_eq!(actual_url, yeti::Expression::String("http://localhost:3019/".to_string()));
+    assert_eq!(
+        actual_url,
+        yeti::Expression::String("http://localhost:3019/".to_string())
+    );
     let (env, _) = yeti::evaluate_source(env, "(def c (:channel response))").await?;
     let (env, actual) = yeti::evaluate_source(env, "(take! c)").await?;
     assert_eq!(actual, yeti::Expression::String("Hello".to_string()));

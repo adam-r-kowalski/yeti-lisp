@@ -24,7 +24,7 @@ use core::net::Ipv4Addr;
 use core::net::SocketAddr;
 use futures::stream;
 use hyper::header::CONTENT_TYPE;
-use hyper::Body;
+use hyper::{Body, StatusCode};
 use im::{ordmap, vector, OrdMap, Vector};
 use reqwest::{RequestBuilder, Response};
 use rug::Integer;
@@ -171,13 +171,20 @@ fn create_handler(expression: Expression) -> impl Future<Output = impl IntoRespo
                         .await
                         .unwrap_or(Expression::Nil);
                     if let Expression::String(s) = value {
+                        let s = format!("data: {}\n\n", s);
                         Some((Ok::<_, hyper::Error>(s), chan))
                     } else {
                         None
                     }
                 });
-                let body = Body::wrap_stream(stream);
-                HttpResponse::new(body).into_response()
+                HttpResponse::builder()
+                    .status(StatusCode::OK)
+                    .header("Content-Type", "text/event-stream")
+                    .header("Cache-Control", "no-cache")
+                    .header("Connection", "keep-alive")
+                    .body(Body::wrap_stream(stream))
+                    .unwrap()
+                    .into_response()
             }
             _ => unimplemented!(),
         }
@@ -210,15 +217,16 @@ async fn encode_response(response: Response) -> Result<Expression> {
         .get("transfer-encoding")
         .map(|value| value.to_str().unwrap_or(""))
         .unwrap_or("");
-    if transfer_encoding == "chunked" {
+    if transfer_encoding == "chunked" && content_type == Some("text/event-stream") {
         let channel = crate::channel::Channel::new(10);
         let sender = channel.sender.clone();
         let closed = channel.closed.clone();
         tokio::spawn(async move {
             let mut response = response;
             while let Some(chunk) = response.chunk().await.unwrap_or(None) {
-                let chunk = String::from_utf8_lossy(&chunk).to_string();
-                sender.send(Expression::String(chunk)).await.unwrap();
+                let chunk = String::from_utf8_lossy(&chunk);
+                let chunk = &chunk[6..chunk.len() - 2];
+                sender.send(Expression::String(chunk.to_string())).await.unwrap();
             }
             closed.store(true, core::sync::atomic::Ordering::Relaxed);
             Ok::<(), Effect>(())
