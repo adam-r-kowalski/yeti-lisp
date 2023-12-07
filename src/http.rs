@@ -167,9 +167,7 @@ fn create_handler(expression: Expression) -> impl Future<Output = impl IntoRespo
             },
             Expression::Channel(chan) => {
                 let stream = stream::unfold(chan, move |chan| async move {
-                    let value = crate::channel::take(chan.clone())
-                        .await
-                        .unwrap_or(Expression::Nil);
+                    let value = crate::channel::take(chan.clone()).await;
                     if let Expression::String(s) = value {
                         let s = format!("data: {}\n\n", s);
                         Some((Ok::<_, hyper::Error>(s), chan))
@@ -219,21 +217,23 @@ async fn encode_response(response: Response) -> Result<Expression> {
         .unwrap_or("");
     if transfer_encoding == "chunked" && content_type == Some("text/event-stream") {
         let channel = crate::channel::Channel::new(10);
-        let sender = channel.sender.clone();
-        let closed = channel.closed.clone();
+        let channel_cloned = channel.clone();
         tokio::spawn(async move {
             let mut response = response;
             while let Some(chunk) = response.chunk().await.unwrap_or(None) {
                 let chunk = String::from_utf8_lossy(&chunk);
                 let chunk = &chunk[6..chunk.len() - 2];
-                sender.send(Expression::String(chunk.to_string())).await.unwrap();
+                channel.sender
+                    .send(Expression::String(chunk.to_string()))
+                    .await
+                    .unwrap();
             }
-            closed.store(true, core::sync::atomic::Ordering::Relaxed);
+            channel.sender.close();
             Ok::<(), Effect>(())
         });
         result.insert(
             Expression::Keyword(":channel".to_string()),
-            Expression::Channel(channel),
+            Expression::Channel(channel_cloned),
         );
         return Ok(Expression::Map(result));
     }

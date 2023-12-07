@@ -23,3 +23,5 @@ html5ever = "0.26"
 markup5ever_rcdom = "0.2"
 futures = "0.3.29"
 llm = { git = "https://github.com/rustformers/llm" , branch = "main" }
+async-channel = "2.1.1"
+uuid = { version = "1.6.1", features = ["v4", "fast-rng"] }

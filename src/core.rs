@@ -395,7 +395,11 @@ pub fn environment() -> Environment {
                     let (env, args) = crate::evaluate_expressions(env, args).await?;
                     let chan = extract::channel(args[0].clone())?;
                     let value = args[1].clone();
-                    crate::channel::put(chan, value).await?;
+                    if Expression::Nil == value {
+                        chan.sender.close();
+                    } else {
+                        chan.sender.send(value).await.map_err(|_| error("Channel closed"))?;
+                    }
                     Ok((env, Expression::Nil))
                 })
             }
@@ -405,7 +409,7 @@ pub fn environment() -> Environment {
                 Box::pin(async move {
                     let (env, args) = crate::evaluate_expressions(env, args).await?;
                     let chan = extract::channel(args[0].clone())?;
-                    let value = crate::channel::take(chan).await?;
+                    let value = crate::channel::take(chan).await;
                     Ok((env, value))
                 })
             }

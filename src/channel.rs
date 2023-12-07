@@ -1,53 +1,49 @@
 extern crate alloc;
 
 use crate::Expression;
-use crate::effect::Effect;
-use crate::effect::error;
-use alloc::sync::Arc;
-use core::sync::atomic::AtomicBool;
-use tokio::sync::mpsc;
-use tokio::sync::Mutex;
+use async_channel::{bounded, Receiver, Sender};
+use uuid::Uuid;
 
+#[derive(Clone)]
 pub struct Channel {
-    pub sender: mpsc::Sender<Expression>,
-    pub receiver: Arc<Mutex<mpsc::Receiver<Expression>>>,
-    pub closed: Arc<AtomicBool>,
+    pub sender: Sender<Expression>,
+    pub receiver: Receiver<Expression>,
+    pub uuid: Uuid,
 }
 
 impl Channel {
     pub fn new(buffer_size: usize) -> Channel {
-        let (sender, receiver) = mpsc::channel(buffer_size);
-        let receiver = Arc::new(Mutex::new(receiver));
-        let closed = Arc::new(AtomicBool::new(false));
+        let (sender, receiver) = bounded(buffer_size);
+        let uuid = Uuid::new_v4();
         Channel {
             sender,
             receiver,
-            closed,
+            uuid,
         }
     }
 }
 
 impl PartialEq for Channel {
     fn eq(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.receiver, &other.receiver)
+        self.uuid == other.uuid
     }
 }
 
 impl core::hash::Hash for Channel {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        Arc::as_ptr(&self.receiver).hash(state);
+        self.uuid.hash(state);
     }
 }
 
 impl core::fmt::Debug for Channel {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "#channel({:?})", Arc::as_ptr(&self.receiver))
+        write!(f, "#channel({:?})", self.uuid)
     }
 }
 
 impl core::fmt::Display for Channel {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "#channel({:?})", Arc::as_ptr(&self.receiver))
+        write!(f, "#channel({:?})", self.uuid)
     }
 }
 
@@ -55,45 +51,16 @@ impl Eq for Channel {}
 
 impl PartialOrd for Channel {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        Arc::as_ptr(&self.receiver).partial_cmp(&Arc::as_ptr(&other.receiver))
+        self.uuid.partial_cmp(&other.uuid)
     }
 }
 
 impl Ord for Channel {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        Arc::as_ptr(&self.receiver).cmp(&Arc::as_ptr(&other.receiver))
+        self.uuid.cmp(&other.uuid)
     }
 }
 
-impl Clone for Channel {
-    fn clone(&self) -> Self {
-        Channel {
-            sender: self.sender.clone(),
-            receiver: self.receiver.clone(),
-            closed: self.closed.clone(),
-        }
-    }
-}
-
-pub async fn put(chan: Channel, value: Expression) -> Result<(), Effect> {
-    if value == Expression::Nil {
-        chan.closed.store(true, core::sync::atomic::Ordering::Relaxed);
-        return Ok(());
-    }
-    if chan.closed.load(core::sync::atomic::Ordering::Relaxed) {
-        return Ok(());
-    }
-    chan.sender.send(value).await.map_err(|_| error("Channel closed"))?;
-    Ok(())
-}
-
-pub async fn take(chan: Channel) -> Result<Expression, Effect> {
-    if chan.closed.load(core::sync::atomic::Ordering::Relaxed) {
-        if let Ok(value) = chan.receiver.lock().await.try_recv() {
-            return Ok(value);
-        }
-        return Ok(Expression::Nil);
-    }
-    let value = chan.receiver.lock().await.recv().await.ok_or(error("Channel closed"))?;
-    Ok(value)
+pub async fn take(channel: Channel) -> Expression {
+    channel.receiver.recv().await.unwrap_or(Expression::Nil)
 }

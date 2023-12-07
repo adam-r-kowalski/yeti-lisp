@@ -776,6 +776,10 @@ async fn streaming_response_from_endpoint() -> Result {
     assert_eq!(actual, yeti::Expression::String("Hello".to_string()));
     let (env, actual) = yeti::evaluate_source(env, "(take! c)").await?;
     assert_eq!(actual, yeti::Expression::String("Goodbye".to_string()));
+    let (env, actual) = yeti::evaluate_source(env, "(take! c)").await?;
+    assert_eq!(actual, yeti::Expression::Nil);
+    let (env, actual) = yeti::evaluate_source(env, "(take! c)").await?;
+    assert_eq!(actual, yeti::Expression::Nil);
     let (_, actual) = yeti::evaluate_source(env, "(take! c)").await?;
     assert_eq!(actual, yeti::Expression::Nil);
     Ok(())
