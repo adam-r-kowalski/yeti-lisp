@@ -2,12 +2,17 @@ use httpdate::fmt_http_date;
 use std::time::SystemTime;
 
 use compiler;
+use http;
 
 type Result = std::result::Result<(), compiler::effect::Effect>;
 
 #[tokio::test]
 async fn evaluate_server_with_string_route_and_default_options() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
     let (env, actual) =
         compiler::evaluate_source(env, r#"(http/server {:routes {"/" "Hello World"}})"#).await?;
     assert!(matches!(actual, compiler::Expression::NativeType(_)));
@@ -33,7 +38,11 @@ async fn evaluate_server_with_string_route_and_default_options() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_with_string_route() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
     let (env, actual) = compiler::evaluate_source(
         env,
         r#"(http/server {:port 3001 :routes {"/" "Hello World"}})"#,
@@ -65,7 +74,11 @@ async fn evaluate_server_with_string_route() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_with_html_route() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
     let (env, actual) = compiler::evaluate_source(
         env,
         r#"
@@ -97,7 +110,11 @@ async fn evaluate_server_with_html_route() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_with_function_route() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
     let (env, actual) = compiler::evaluate_source(
         env,
         r#"
@@ -129,7 +146,11 @@ async fn evaluate_server_with_function_route() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_show_request_as_str() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
     let (env, _) = compiler::evaluate_source(env, "(def value (atom nil))").await?;
     let (env, _) = compiler::evaluate_source(
         env,
@@ -176,7 +197,11 @@ async fn evaluate_server_show_request_as_str() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_query_parameters_in_url() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
     let (env, _) = compiler::evaluate_source(env, "(def value (atom nil))").await?;
     let (env, _) = compiler::evaluate_source(
         env,
@@ -227,7 +252,11 @@ async fn evaluate_server_query_parameters_in_url() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_query_parameters_in_map() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
     let (env, _) = compiler::evaluate_source(env, "(def value (atom nil))").await?;
     let (env, _) = compiler::evaluate_source(
         env,
@@ -278,7 +307,11 @@ async fn evaluate_server_query_parameters_in_map() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_url_parameters() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
     let (env, _) = compiler::evaluate_source(env, "(def value (atom nil))").await?;
     let (env, _) = compiler::evaluate_source(
         env,
@@ -331,7 +364,11 @@ async fn evaluate_server_url_parameters() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_form_data() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
     let (env, _) = compiler::evaluate_source(env, "(def value (atom nil))").await?;
     let (env, _) = compiler::evaluate_source(
         env,
@@ -386,7 +423,11 @@ async fn evaluate_server_form_data() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_post_json_data() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
     let (env, _) = compiler::evaluate_source(env, "(def value (atom nil))").await?;
     let (env, _) = compiler::evaluate_source(
         env,
@@ -441,7 +482,11 @@ async fn evaluate_server_post_json_data() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_request_with_headers() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
     let (env, _) = compiler::evaluate_source(env, "(def value (atom nil))").await?;
     let (env, _) = compiler::evaluate_source(
         env,
@@ -494,7 +539,11 @@ async fn evaluate_server_request_with_headers() -> Result {
 
 #[tokio::test]
 async fn server_route_returns_json() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
     let (env, actual) = compiler::evaluate_source(
         env,
         r#"(http/server {:port 3012 :routes {"/" {:foo :bar}}})"#,
@@ -523,7 +572,11 @@ async fn server_route_returns_json() -> Result {
 
 #[tokio::test]
 async fn server_route_function_which_returns_json() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
     let (env, _) = compiler::evaluate_source(
         env,
         r#"
@@ -559,7 +612,11 @@ async fn server_route_function_which_returns_json() -> Result {
 
 #[tokio::test]
 async fn server_route_redirect() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
     let (env, _) = compiler::evaluate_source(
         env,
         r#"
@@ -605,7 +662,11 @@ async fn server_route_redirect() -> Result {
 
 #[tokio::test]
 async fn server_route_redirect_with_query_parameters() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
     let (env, _) = compiler::evaluate_source(
         env,
         r#"
@@ -652,13 +713,13 @@ async fn server_route_redirect_with_query_parameters() -> Result {
 
 #[tokio::test]
 async fn evaluate_stop_using_handle() -> Result {
-    let tokens = compiler::Tokens::from_str("(def s (http/server {:port 3016}))");
-    let expression = compiler::parse(tokens);
-    let environment = compiler::core::environment();
-    let (environment, _) = compiler::evaluate(environment, expression).await?;
-    let tokens = compiler::Tokens::from_str("(http/server-stop s)");
-    let expression = compiler::parse(tokens);
-    let (_, actual) = compiler::evaluate(environment, expression).await?;
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
+    let (env, _) = compiler::evaluate_source(env, "(def s (http/server {:port 3016}))").await?;
+    let (_, actual) = compiler::evaluate_source(env, "(http/server-stop s)").await?;
     let expected = compiler::Expression::Nil;
     assert_eq!(actual, expected);
     Ok(())
@@ -666,13 +727,13 @@ async fn evaluate_stop_using_handle() -> Result {
 
 #[tokio::test]
 async fn evaluate_stop_using_port() -> Result {
-    let tokens = compiler::Tokens::from_str("(http/server {:port 3017})");
-    let expression = compiler::parse(tokens);
-    let environment = compiler::core::environment();
-    let (environment, _) = compiler::evaluate(environment, expression).await?;
-    let tokens = compiler::Tokens::from_str("(http/server-stop {:port 3017})");
-    let expression = compiler::parse(tokens);
-    let (_, actual) = compiler::evaluate(environment, expression).await?;
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
+    let (env, _) = compiler::evaluate_source(env, "(http/server {:port 3017})").await?;
+    let (_, actual) = compiler::evaluate_source(env, "(http/server-stop {:port 3017})").await?;
     let expected = compiler::Expression::Nil;
     assert_eq!(actual, expected);
     Ok(())
@@ -680,7 +741,11 @@ async fn evaluate_stop_using_port() -> Result {
 
 #[tokio::test]
 async fn evaluate_redefine_server() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
     let (env, _) = compiler::evaluate_source(
         env,
         r#"(http/server {:port 3018 :routes {"/" "Hello World"}})"#,
@@ -730,7 +795,11 @@ async fn evaluate_redefine_server() -> Result {
 
 #[tokio::test]
 async fn streaming_response_from_endpoint() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
+    );
     let (env, _) = compiler::evaluate_source(
         env,
         r#"

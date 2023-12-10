@@ -1,14 +1,10 @@
+#![no_std]
+#![forbid(unsafe_code)]
+#![feature(ip_in_core)]
+#![feature(async_closure)]
+
 extern crate alloc;
 
-use crate::atom::Atom;
-use crate::effect::{error, Effect};
-use crate::evaluate;
-use crate::evaluate_expressions;
-use crate::expression::{Call, Environment};
-use crate::html::html_string_to_expression;
-use crate::Expression::{self, NativeFunction};
-use crate::NativeType;
-use crate::{extract, html};
 use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
 use alloc::format;
@@ -18,6 +14,15 @@ use axum::http::Response as HttpResponse;
 use axum::response::{Html, IntoResponse, Json, Redirect};
 use axum::routing::{delete, get, post, put};
 use axum::Router;
+use compiler::atom::Atom;
+use compiler::effect::{error, Effect};
+use compiler::evaluate;
+use compiler::evaluate_expressions;
+use compiler::expression::{Call, Environment};
+use compiler::html::html_string_to_expression;
+use compiler::Expression::{self, NativeFunction};
+use compiler::NativeType;
+use compiler::{extract, html};
 use core::future::Future;
 use core::net::IpAddr;
 use core::net::Ipv4Addr;
@@ -167,7 +172,7 @@ fn create_handler(expression: Expression) -> impl Future<Output = impl IntoRespo
             },
             Expression::Channel(chan) => {
                 let stream = stream::unfold(chan, move |chan| async move {
-                    let value = crate::channel::take(chan.clone()).await;
+                    let value = compiler::channel::take(chan.clone()).await;
                     if let Expression::String(s) = value {
                         let s = format!("data: {}\n\n", s);
                         Some((Ok::<_, hyper::Error>(s), chan))
@@ -216,14 +221,15 @@ async fn encode_response(response: Response) -> Result<Expression> {
         .map(|value| value.to_str().unwrap_or(""))
         .unwrap_or("");
     if transfer_encoding == "chunked" && content_type == Some("text/event-stream") {
-        let channel = crate::channel::Channel::new(10);
+        let channel = compiler::channel::Channel::new(10);
         let channel_cloned = channel.clone();
         tokio::spawn(async move {
             let mut response = response;
             while let Some(chunk) = response.chunk().await.unwrap_or(None) {
                 let chunk = String::from_utf8_lossy(&chunk);
                 let chunk = &chunk[6..chunk.len() - 2];
-                channel.sender
+                channel
+                    .sender
                     .send(Expression::String(chunk.to_string()))
                     .await
                     .unwrap();

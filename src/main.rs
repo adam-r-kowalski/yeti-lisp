@@ -4,6 +4,7 @@ use crossterm::style::{
     Color::{self, Reset},
     Colors, Print, SetColors,
 };
+use http;
 use im::ordmap;
 use std::io::{self, Write};
 
@@ -86,6 +87,10 @@ fn repl_environment() -> compiler::Environment {
     environment.insert(
         "*name*".to_string(),
         compiler::Expression::String("repl".to_string()),
+    );
+    environment.insert(
+        "http".to_string(),
+        compiler::Expression::Module(http::environment()),
     );
     environment.insert(
         "io".to_string(),
