@@ -1,3 +1,4 @@
+use compiler;
 use crossterm::execute;
 use crossterm::style::{
     Color::{self, Reset},
@@ -5,7 +6,6 @@ use crossterm::style::{
 };
 use im::ordmap;
 use std::io::{self, Write};
-use yeti;
 
 struct StdinIterator {
     buffer: String,
@@ -69,58 +69,58 @@ const RED: Color = Color::Rgb {
     b: 47,
 };
 
-fn read(iterator: &mut StdinIterator) -> io::Result<yeti::Expression> {
+fn read(iterator: &mut StdinIterator) -> io::Result<compiler::Expression> {
     print_with_color(BLUE, "⛰  ");
-    let tokens = yeti::Tokens::new(iterator);
-    Ok(yeti::parse(tokens))
+    let tokens = compiler::Tokens::new(iterator);
+    Ok(compiler::parse(tokens))
 }
 
-fn print(expression: yeti::Expression) -> io::Result<()> {
+fn print(expression: compiler::Expression) -> io::Result<()> {
     io::stdout().write_all(format!("{}", expression).as_bytes())?;
     println!("\n");
     Ok(())
 }
 
-fn repl_environment() -> yeti::Environment {
-    let mut environment = yeti::core::environment();
+fn repl_environment() -> compiler::Environment {
+    let mut environment = compiler::core::environment();
     environment.insert(
         "*name*".to_string(),
-        yeti::Expression::String("repl".to_string()),
+        compiler::Expression::String("repl".to_string()),
     );
     environment.insert(
         "io".to_string(),
-        yeti::Expression::Module(ordmap! {
-            "read-file".to_string() => yeti::Expression::NativeFunction(
+        compiler::Expression::Module(ordmap! {
+            "read-file".to_string() => compiler::Expression::NativeFunction(
                 |env, args| {
                     Box::pin(async move {
-                        let (env, args) = yeti::evaluate_expressions(env, args).await?;
-                        let path = yeti::extract::string(args[0].clone())?;
+                        let (env, args) = compiler::evaluate_expressions(env, args).await?;
+                        let path = compiler::extract::string(args[0].clone())?;
                         let contents = tokio::fs::read_to_string(path).await
-                            .map_err(|_| yeti::effect::error("Could not read file"))?;
-                        Ok((env, yeti::Expression::String(contents)))
+                            .map_err(|_| compiler::effect::error("Could not read file"))?;
+                        Ok((env, compiler::Expression::String(contents)))
                     })
                 }
             ),
-            "write-file".to_string() => yeti::Expression::NativeFunction(
+            "write-file".to_string() => compiler::Expression::NativeFunction(
                 |env, args| {
                     Box::pin(async move {
-                        let (env, args) = yeti::evaluate_expressions(env, args).await?;
-                        let path = yeti::extract::string(args[0].clone())?;
-                        let contents = yeti::extract::string(args[1].clone())?;
+                        let (env, args) = compiler::evaluate_expressions(env, args).await?;
+                        let path = compiler::extract::string(args[0].clone())?;
+                        let contents = compiler::extract::string(args[1].clone())?;
                         tokio::fs::write(path, contents).await
-                            .map_err(|_| yeti::effect::error("Could not write file"))?;
-                        Ok((env, yeti::Expression::Nil))
+                            .map_err(|_| compiler::effect::error("Could not write file"))?;
+                        Ok((env, compiler::Expression::Nil))
                     })
                 }
             ),
-            "sleep".to_string() => yeti::Expression::NativeFunction(
+            "sleep".to_string() => compiler::Expression::NativeFunction(
                 |env, args| {
                     Box::pin(async move {
-                        let (env, args) = yeti::evaluate_expressions(env, args).await?;
-                        let ms = yeti::extract::integer(args[0].clone())?;
-                        let ms = ms.to_u64().ok_or(yeti::effect::error("Could not convert integer to u64"))?;
+                        let (env, args) = compiler::evaluate_expressions(env, args).await?;
+                        let ms = compiler::extract::integer(args[0].clone())?;
+                        let ms = ms.to_u64().ok_or(compiler::effect::error("Could not convert integer to u64"))?;
                         tokio::time::sleep(tokio::time::Duration::from_millis(ms)).await;
-                        Ok((env, yeti::Expression::Nil))
+                        Ok((env, compiler::Expression::Nil))
                     })
                 }
             )
@@ -135,7 +135,7 @@ async fn main() -> io::Result<()> {
     let mut iterator = StdinIterator::new();
     loop {
         let expression = read(&mut iterator)?;
-        match yeti::evaluate(environment.clone(), expression).await {
+        match compiler::evaluate(environment.clone(), expression).await {
             Ok((next_environment, expression)) => {
                 print(expression)?;
                 environment = next_environment;

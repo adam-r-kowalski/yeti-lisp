@@ -1,0 +1,28 @@
+[package]
+name = "compiler"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rug = "1.22.0"
+im = "15.1.0"
+tokio = { version = "1.33.0", features = ["full"] }
+axum = "0.6.20"
+reqwest = { version = "0.11.22", features = ["json"] }
+rusqlite = { version = "0.29.0", features = ["bundled"] }
+hyper = { version = "0.14.24", features = ["stream"] }
+serde = "1.0.190"
+serde_qs = "0.12"
+serde_json = "1.0"
+serde_yaml = "0.9"
+toml = "0.8.8"
+async-recursion = "1.0.5"
+httpdate = "1.0.3"
+html5ever = "0.26"
+markup5ever_rcdom = "0.2"
+futures = "0.3.29"
+async-channel = "2.1.1"
+uuid = { version = "1.6.1", features = ["v4", "fast-rng"] }
+
+[lib]
+path = "src/lib.rs"
