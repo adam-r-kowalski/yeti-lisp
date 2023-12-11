@@ -217,22 +217,11 @@ version = "0.1.0"
 dependencies = [
  "async-channel",
  "async-recursion",
- "axum",
  "futures",
- "html5ever",
- "httpdate",
- "hyper",
  "im",
- "markup5ever_rcdom",
- "reqwest",
  "rug",
- "rusqlite",
  "serde",
- "serde_json",
- "serde_qs",
- "serde_yaml",
  "tokio",
- "toml 0.8.8",
  "uuid",
 ]
 
