@@ -1,10 +1,15 @@
 use compiler;
+use sql;
 
 type Result = std::result::Result<(), compiler::effect::Effect>;
 
 #[tokio::test]
 async fn sql_connect() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "sql".to_string(),
+        compiler::Expression::Module(sql::environment()),
+    );
     let (_, actual) = compiler::evaluate_source(env, r#"(sql/connect)"#).await?;
     assert!(matches!(actual, compiler::Expression::NativeType(_)));
     Ok(())
@@ -12,7 +17,11 @@ async fn sql_connect() -> Result {
 
 #[tokio::test]
 async fn create_table_string() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "sql".to_string(),
+        compiler::Expression::Module(sql::environment()),
+    );
     let (env, actual) = compiler::evaluate_source(
         env,
         r#"
@@ -35,7 +44,11 @@ async fn create_table_string() -> Result {
 
 #[tokio::test]
 async fn get_all_table_names() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "sql".to_string(),
+        compiler::Expression::Module(sql::environment()),
+    );
     let (env, _) = compiler::evaluate_source(env, r#"(def conn (sql/connect))"#).await?;
     let (env, _) = compiler::evaluate_source(
         env,
@@ -56,7 +69,11 @@ async fn get_all_table_names() -> Result {
 
 #[tokio::test]
 async fn insert_into_vector_syntax_string() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "sql".to_string(),
+        compiler::Expression::Module(sql::environment()),
+    );
     let (env, actual) = compiler::evaluate_source(
         env,
         r#"
@@ -81,7 +98,11 @@ async fn insert_into_vector_syntax_string() -> Result {
 
 #[tokio::test]
 async fn select_string() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "sql".to_string(),
+        compiler::Expression::Module(sql::environment()),
+    );
     let (env, actual) = compiler::evaluate_source(
         env,
         r#"
@@ -101,7 +122,11 @@ async fn select_string() -> Result {
 
 #[tokio::test]
 async fn select_single_column() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "sql".to_string(),
+        compiler::Expression::Module(sql::environment()),
+    );
     let (env, actual) = compiler::evaluate_source(
         env,
         r#"
@@ -120,7 +145,11 @@ async fn select_single_column() -> Result {
 
 #[tokio::test]
 async fn select_not_equal() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "sql".to_string(),
+        compiler::Expression::Module(sql::environment()),
+    );
     let (env, actual) = compiler::evaluate_source(
         env,
         r#"
@@ -139,7 +168,11 @@ async fn select_not_equal() -> Result {
 
 #[tokio::test]
 async fn insert_and_select() -> Result {
-    let env = compiler::core::environment();
+    let mut env = compiler::core::environment();
+    env.insert(
+        "sql".to_string(),
+        compiler::Expression::Module(sql::environment()),
+    );
     let (env, _) = compiler::evaluate_source(env, r#"(def conn (sql/connect))"#).await?;
     let (env, _) = compiler::evaluate_source(
         env,

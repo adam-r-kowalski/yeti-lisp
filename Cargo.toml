@@ -10,10 +10,12 @@ tokio = { version = "1.33.0", features = ["full"] }
 compiler = { path = "./compiler" }
 http = { path = "./http" }
 html = { path = "./html" }
+sql = { path = "./sql" }
 
 [workspace]
 members = [
   "compiler",
   "http",
-  "html"
+  "html",
+  "sql"
 ]

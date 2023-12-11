@@ -4,8 +4,7 @@ use crate::effect::{error, Effect};
 use crate::expression::{Call, Environment, Function, Pattern};
 use crate::Expression::{Integer, Module, NativeFunction, Ratio};
 use crate::{
-    array, evaluate_expressions, extract, json, map, pattern_match, ratio, sql, toml, yaml,
-    Expression,
+    array, evaluate_expressions, extract, json, map, pattern_match, ratio, toml, yaml, Expression,
 };
 use alloc::boxed::Box;
 use alloc::format;
@@ -496,7 +495,6 @@ pub fn environment() -> Environment {
         "get".to_string() => NativeFunction(|env, args| Box::pin(map::get(env, args))),
         "nth".to_string() => NativeFunction(|env, args| Box::pin(array::nth(env, args))),
         "count".to_string() => NativeFunction(|env, args| Box::pin(array::count(env, args))),
-        "sql".to_string() => Module(sql::environment()),
         "json".to_string() => Module(json::environment()),
         "yaml".to_string() => Module(yaml::environment()),
         "toml".to_string() => Module(toml::environment())

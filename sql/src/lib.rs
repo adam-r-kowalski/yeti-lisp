@@ -1,17 +1,20 @@
+#![no_std]
+#![forbid(unsafe_code)]
+
 extern crate alloc;
 
-use crate::effect::{error, Effect};
-use crate::expression::Environment;
-use crate::extract;
-use crate::numerics::Float;
-use crate::Expression::{self, NativeFunction};
-use crate::NativeType;
-use crate::{evaluate_expressions, evaluate_source};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::String;
 use alloc::string::ToString;
 use alloc::vec::Vec;
+use compiler::effect::{error, Effect};
+use compiler::expression::Environment;
+use compiler::extract;
+use compiler::Expression::{self, NativeFunction};
+use compiler::Float;
+use compiler::NativeType;
+use compiler::{evaluate_expressions, evaluate_source};
 use im::{ordmap, vector, OrdMap, Vector};
 use rusqlite::types::{FromSql, FromSqlResult, ToSqlOutput, Value, ValueRef};
 use rusqlite::{Connection, ToSql};
@@ -194,9 +197,11 @@ fn sql_string(expr: Expression) -> Result<Expression> {
     }
 }
 
-impl ToSql for Expression {
+pub struct ExpressionWrapper(pub compiler::Expression);
+
+impl ToSql for ExpressionWrapper {
     fn to_sql(&self) -> rusqlite::Result<ToSqlOutput> {
-        match self {
+        match &self.0 {
             Expression::Integer(i) => Ok(ToSqlOutput::Owned(Value::Integer(i.to_i64().unwrap()))),
             Expression::Float(f) => Ok(ToSqlOutput::Owned(Value::Real(f.to_f64()))),
             Expression::Ratio(r) => Ok(ToSqlOutput::Owned(Value::Real(r.to_f64()))),
@@ -204,25 +209,29 @@ impl ToSql for Expression {
             Expression::Nil => Ok(ToSqlOutput::Owned(Value::Null)),
             Expression::Bool(b) => Ok(ToSqlOutput::Owned(Value::Integer(if *b { 1 } else { 0 }))),
             _ => {
-                let effect = error(&format!("Unsupported data type: {:?}", self));
+                let effect = error(&format!("Unsupported data type: {:?}", self.0));
                 Err(rusqlite::Error::ToSqlConversionFailure(Box::new(effect)))
             }
         }
     }
 }
 
-impl FromSql for Expression {
+impl FromSql for ExpressionWrapper {
     fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
         match value {
-            ValueRef::Null => Ok(Expression::Nil),
-            ValueRef::Integer(int) => Ok(Expression::Integer(rug::Integer::from(int))),
-            ValueRef::Real(float) => Ok(Expression::Float(Float::from_f64(float))),
-            ValueRef::Text(text) => Ok(Expression::String(
+            ValueRef::Null => Ok(ExpressionWrapper(Expression::Nil)),
+            ValueRef::Integer(int) => Ok(ExpressionWrapper(Expression::Integer(
+                rug::Integer::from(int),
+            ))),
+            ValueRef::Real(float) => {
+                Ok(ExpressionWrapper(Expression::Float(Float::from_f64(float))))
+            }
+            ValueRef::Text(text) => Ok(ExpressionWrapper(Expression::String(
                 String::from_utf8_lossy(text).into_owned(),
-            )),
-            ValueRef::Blob(blob) => Ok(Expression::String(
+            ))),
+            ValueRef::Blob(blob) => Ok(ExpressionWrapper(Expression::String(
                 String::from_utf8_lossy(blob).into_owned(),
-            )),
+            ))),
         }
     }
 }
@@ -242,6 +251,10 @@ async fn query(env: Environment, args: Vector<Expression>) -> Result<(Environmen
             let parameters = array
                 .iter()
                 .skip(1)
+                .map(|p| ExpressionWrapper(p.clone()))
+                .collect::<Vec<_>>();
+            let parameters = parameters
+                .iter()
                 .map(|p| p as &dyn ToSql)
                 .collect::<Vec<_>>();
             let column_names: Vec<String> =
@@ -251,8 +264,8 @@ async fn query(env: Environment, args: Vector<Expression>) -> Result<(Environmen
                     let result = column_names.iter().enumerate().try_fold(
                         OrdMap::new(),
                         |mut map, (i, name)| {
-                            let value: Expression = row.get(i)?;
-                            map.insert(Expression::Keyword(format!(":{}", name)), value);
+                            let value: ExpressionWrapper = row.get(i)?;
+                            map.insert(Expression::Keyword(format!(":{}", name)), value.0);
                             Ok(map)
                         },
                     );
@@ -310,6 +323,10 @@ pub fn environment() -> Environment {
                     let parameters = array
                         .iter()
                         .skip(1)
+                        .map(|p| ExpressionWrapper(p.clone()))
+                        .collect::<Vec<_>>();
+                    let parameters = parameters
+                        .iter()
                         .map(|p| p as &dyn ToSql)
                         .collect::<Vec<_>>();
                     match connection.execute(&string, &parameters[..]) {

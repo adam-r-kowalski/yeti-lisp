@@ -1415,6 +1415,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sql"
+version = "0.1.0"
+dependencies = [
+ "compiler",
+ "im",
+ "rug",
+ "rusqlite",
+ "tokio",
+]
+
+[[package]]
 name = "string_cache"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2103,6 +2114,7 @@ dependencies = [
  "html",
  "http 0.1.0",
  "im",
+ "sql",
  "tokio",
 ]
 
