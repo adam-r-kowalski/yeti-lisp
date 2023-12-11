@@ -16,6 +16,7 @@ serde_json = "1.0"
 httpdate = "1.0.3"
 compiler = { path = "../compiler" }
 html = { path = "../html" }
+base = { path = "../base" }
 
 [lib]
 path = "src/lib.rs"

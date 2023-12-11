@@ -8,7 +8,7 @@ type Result = std::result::Result<(), compiler::effect::Effect>;
 
 #[tokio::test]
 async fn evaluate_server_with_string_route_and_default_options() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -38,7 +38,7 @@ async fn evaluate_server_with_string_route_and_default_options() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_with_string_route() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -74,7 +74,7 @@ async fn evaluate_server_with_string_route() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_with_html_route() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -110,7 +110,7 @@ async fn evaluate_server_with_html_route() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_with_function_route() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -146,7 +146,7 @@ async fn evaluate_server_with_function_route() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_show_request_as_str() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -197,7 +197,7 @@ async fn evaluate_server_show_request_as_str() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_query_parameters_in_url() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -252,7 +252,7 @@ async fn evaluate_server_query_parameters_in_url() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_query_parameters_in_map() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -307,7 +307,7 @@ async fn evaluate_server_query_parameters_in_map() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_url_parameters() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -364,7 +364,7 @@ async fn evaluate_server_url_parameters() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_form_data() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -423,7 +423,7 @@ async fn evaluate_server_form_data() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_post_json_data() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -482,7 +482,7 @@ async fn evaluate_server_post_json_data() -> Result {
 
 #[tokio::test]
 async fn evaluate_server_request_with_headers() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -539,7 +539,7 @@ async fn evaluate_server_request_with_headers() -> Result {
 
 #[tokio::test]
 async fn server_route_returns_json() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -572,7 +572,7 @@ async fn server_route_returns_json() -> Result {
 
 #[tokio::test]
 async fn server_route_function_which_returns_json() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -612,7 +612,7 @@ async fn server_route_function_which_returns_json() -> Result {
 
 #[tokio::test]
 async fn server_route_redirect() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -662,7 +662,7 @@ async fn server_route_redirect() -> Result {
 
 #[tokio::test]
 async fn server_route_redirect_with_query_parameters() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -713,7 +713,7 @@ async fn server_route_redirect_with_query_parameters() -> Result {
 
 #[tokio::test]
 async fn evaluate_stop_using_handle() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -727,7 +727,7 @@ async fn evaluate_stop_using_handle() -> Result {
 
 #[tokio::test]
 async fn evaluate_stop_using_port() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -741,7 +741,7 @@ async fn evaluate_stop_using_port() -> Result {
 
 #[tokio::test]
 async fn evaluate_redefine_server() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),
@@ -795,7 +795,7 @@ async fn evaluate_redefine_server() -> Result {
 
 #[tokio::test]
 async fn streaming_response_from_endpoint() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "http".to_string(),
         compiler::Expression::Module(http::environment()),

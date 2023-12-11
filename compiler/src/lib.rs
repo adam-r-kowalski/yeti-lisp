@@ -10,7 +10,6 @@
 pub mod array;
 pub mod atom;
 pub mod channel;
-pub mod core;
 pub mod effect;
 mod evaluator;
 pub mod expression;

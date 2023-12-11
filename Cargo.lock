@@ -147,6 +147,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "base"
+version = "0.1.0"
+dependencies = [
+ "compiler",
+ "futures",
+ "im",
+ "rug",
+ "tokio",
+]
+
+[[package]]
 name = "base64"
 version = "0.21.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -552,6 +563,7 @@ checksum = "d77f7ec81a6d05a3abb01ab6eb7590f6083d08449fe5a1c8b1e620283546ccb7"
 name = "html"
 version = "0.1.0"
 dependencies = [
+ "base",
  "compiler",
  "html5ever",
  "im",
@@ -578,6 +590,7 @@ name = "http"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "base",
  "compiler",
  "futures",
  "html",
@@ -721,6 +734,7 @@ dependencies = [
 name = "json"
 version = "0.1.0"
 dependencies = [
+ "base",
  "compiler",
  "im",
  "serde_json",
@@ -1428,6 +1442,7 @@ dependencies = [
 name = "sql"
 version = "0.1.0"
 dependencies = [
+ "base",
  "compiler",
  "im",
  "rug",
@@ -1627,6 +1642,7 @@ dependencies = [
 name = "toml"
 version = "0.1.0"
 dependencies = [
+ "base",
  "compiler",
  "im",
  "tokio",
@@ -2129,6 +2145,7 @@ dependencies = [
 name = "yaml"
 version = "0.1.0"
 dependencies = [
+ "base",
  "compiler",
  "im",
  "serde_yaml",
@@ -2139,6 +2156,7 @@ dependencies = [
 name = "yeti"
 version = "0.1.0"
 dependencies = [
+ "base",
  "compiler",
  "crossterm",
  "html",

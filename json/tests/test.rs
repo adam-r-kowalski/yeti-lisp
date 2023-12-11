@@ -1,3 +1,4 @@
+use base;
 use compiler;
 use json;
 
@@ -5,7 +6,7 @@ type Result = std::result::Result<(), compiler::effect::Effect>;
 
 #[tokio::test]
 async fn json_to_string_for_map() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "json".to_string(),
         compiler::Expression::Module(json::environment()),
@@ -21,7 +22,7 @@ async fn json_to_string_for_map() -> Result {
 
 #[tokio::test]
 async fn json_to_string_for_map_with_int() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "json".to_string(),
         compiler::Expression::Module(json::environment()),
@@ -36,7 +37,7 @@ async fn json_to_string_for_map_with_int() -> Result {
 
 #[tokio::test]
 async fn json_from_string_for_map() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "json".to_string(),
         compiler::Expression::Module(json::environment()),
@@ -53,7 +54,7 @@ async fn json_from_string_for_map() -> Result {
 
 #[tokio::test]
 async fn json_from_string_for_map_with_int() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "json".to_string(),
         compiler::Expression::Module(json::environment()),

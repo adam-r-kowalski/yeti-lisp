@@ -1,9 +1,13 @@
+#![no_std]
+#![forbid(unsafe_code)]
+#![feature(iter_array_chunks)]
+
 extern crate alloc;
 
-use crate::effect::{error, Effect};
-use crate::expression::{Call, Environment, Function, Pattern};
-use crate::Expression::{Integer, NativeFunction, Ratio};
-use crate::{array, evaluate_expressions, extract, map, pattern_match, ratio, Expression};
+use compiler::effect::{error, Effect};
+use compiler::expression::{Call, Environment, Function, Pattern};
+use compiler::Expression::{Integer, NativeFunction, Ratio};
+use compiler::{array, evaluate_expressions, extract, map, pattern_match, ratio, Expression};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::{String, ToString};
@@ -126,8 +130,8 @@ pub fn environment() -> Environment {
           |env, args| {
               Box::pin(async move {
             let (condition, then, otherwise) = (args[0].clone(), args[1].clone(), args[2].clone());
-            let (env, condition) = crate::evaluate(env, condition).await?;
-            crate::evaluate(env, if truthy(&condition) { then } else { otherwise }).await
+            let (env, condition) = compiler::evaluate(env, condition).await?;
+            compiler::evaluate(env, if truthy(&condition) { then } else { otherwise }).await
               })
           }
         ),
@@ -135,7 +139,7 @@ pub fn environment() -> Environment {
           |env, args| {
             Box::pin(async move {
               let (name, value) = (args[0].clone(), args[1].clone());
-              let (env, value) = crate::evaluate(env, value).await?;
+              let (env, value) = compiler::evaluate(env, value).await?;
               let name = extract::symbol(name)?;
               let mut new_env = env.clone();
               new_env.insert(name, value);
@@ -159,7 +163,7 @@ pub fn environment() -> Environment {
                 let Function{mut env, patterns} = function(env, args)?;
                 env.insert("*self*".to_string(), name[0].clone());
                 let f = Function{env, patterns};
-                crate::evaluate(original_env, Expression::Call(Call{
+                compiler::evaluate(original_env, Expression::Call(Call{
                     function: Box::new(Expression::Symbol("def".to_string())),
                     arguments: vector![name[0].clone(), Expression::Function(f)],
                 })).await
@@ -169,18 +173,18 @@ pub fn environment() -> Environment {
         "eval".to_string() => NativeFunction(
           |env, args| {
               Box::pin(async move {
-                let (env, arg) = crate::evaluate(env, args[0].clone()).await?;
-                crate::evaluate(env, arg).await
+                let (env, arg) = compiler::evaluate(env, args[0].clone()).await?;
+                compiler::evaluate(env, arg).await
               })
           }
         ),
         "read-string".to_string() => NativeFunction(
           |env, args| {
               Box::pin(async move {
-            let (env, arg) = crate::evaluate(env, args[0].clone()).await?;
+            let (env, arg) = compiler::evaluate(env, args[0].clone()).await?;
             let s = extract::string(arg)?;
-            let tokens = crate::Tokens::from_str(&s);
-            let expression = crate::parse(tokens);
+            let tokens = compiler::Tokens::from_str(&s);
+            let expression = compiler::parse(tokens);
             Ok((env, expression))
               })
           }
@@ -188,7 +192,7 @@ pub fn environment() -> Environment {
         "assert".to_string() => NativeFunction(
           |env, args| {
               Box::pin(async move {
-            let (env, arg) = crate::evaluate(env, args[0].clone()).await?;
+            let (env, arg) = compiler::evaluate(env, args[0].clone()).await?;
             if truthy(&arg) {
                 Ok((env, Expression::Nil))
             } else {
@@ -205,10 +209,10 @@ pub fn environment() -> Environment {
                 let bindings = extract::array(bindings[0].clone())?;
                 let mut let_env = env;
                 for [pattern, value] in bindings.iter().array_chunks() {
-                    let (e, value) = crate::evaluate(let_env, value.clone()).await?;
+                    let (e, value) = compiler::evaluate(let_env, value.clone()).await?;
                     let_env = pattern_match(e, pattern.clone(), value)?;
                 }
-                let (_, values) = crate::evaluate_expressions(let_env, body).await?;
+                let (_, values) = compiler::evaluate_expressions(let_env, body).await?;
                 Ok((original_env, values.last().unwrap_or(&Expression::Nil).clone()))
               })
           }
@@ -219,7 +223,7 @@ pub fn environment() -> Environment {
                 let (bindings, body) = args.split_at(1);
                 let bindings = extract::array(bindings[0].clone())?;
                 let pattern = bindings[0].clone();
-                let (env, values) = crate::evaluate(env, bindings[1].clone()).await?;
+                let (env, values) = compiler::evaluate(env, bindings[1].clone()).await?;
                 let values = extract::array(values)?;
                 let futures: Vec<_> = values
                     .iter()
@@ -229,7 +233,7 @@ pub fn environment() -> Environment {
                         let env = env.clone();
                         async move {
                             let env = pattern_match(env, pattern, value.clone())?;
-                            let (_, value) = crate::evaluate_expressions(env.clone(), body).await?;
+                            let (_, value) = compiler::evaluate_expressions(env.clone(), body).await?;
                             Ok(value.last().unwrap_or(&Expression::Nil).clone())
                         }
                     })
@@ -283,14 +287,14 @@ pub fn environment() -> Environment {
             |env, args| {
               Box::pin(async move {
                 let (initial, args) = args.split_at(1);
-                let (env, mut result) = crate::evaluate(env, initial[0].clone()).await?;
+                let (env, mut result) = compiler::evaluate(env, initial[0].clone()).await?;
                 let mut env = env;
                 for expression in args.iter() {
                   match expression {
                     Expression::Call(Call{function, arguments}) => {
                       let mut new_arguments = vector![result];
                       new_arguments.append(arguments.clone());
-                      let (new_env, value) = crate::evaluate(env, Expression::Call(Call{
+                      let (new_env, value) = compiler::evaluate(env, Expression::Call(Call{
                         function: function.clone(),
                         arguments: new_arguments,
                       })).await?;
@@ -298,7 +302,7 @@ pub fn environment() -> Environment {
                       result = value;
                     }
                     _ => {
-                      let (new_env, value) = crate::evaluate(env, Expression::Call(Call{
+                      let (new_env, value) = compiler::evaluate(env, Expression::Call(Call{
                         function: Box::new(expression.clone()),
                         arguments: vector![result],
                       })).await?;
@@ -315,9 +319,9 @@ pub fn environment() -> Environment {
             |env, args| {
               Box::pin(async move {
                 let (condition, body) = args.split_at(1);
-                let (env, condition) = crate::evaluate(env, condition[0].clone()).await?;
+                let (env, condition) = compiler::evaluate(env, condition[0].clone()).await?;
                 if truthy(&condition) {
-                    crate::evaluate(env, Expression::Call(Call{
+                    compiler::evaluate(env, Expression::Call(Call{
                         function: Box::new(Expression::Symbol("do".to_string())),
                         arguments: body,
                     })).await
@@ -332,7 +336,7 @@ pub fn environment() -> Environment {
               Box::pin(async move {
                 let name = extract::symbol(args[0].clone())?;
                 let path = format!("{}.yeti", name);
-                let (mut env, source) = crate::evaluate(env, Expression::Call(Call{
+                let (mut env, source) = compiler::evaluate(env, Expression::Call(Call{
                     function: Box::new(Expression::NamespacedSymbol(vec![
                         "io".to_string(),
                         "read-file".to_string()
@@ -340,13 +344,13 @@ pub fn environment() -> Environment {
                     arguments: vector![Expression::String(path)],
                 })).await?;
                 let source = extract::string(source)?;
-                let tokens = crate::Tokens::from_str(&source);
-                let expressions = crate::parse_module(tokens);
+                let tokens = compiler::Tokens::from_str(&source);
+                let expressions = compiler::parse_module(tokens);
                 let mut module = environment();
                 module.insert("*name*".to_string(), Expression::String(name.clone()));
                 module.insert("io".to_string(), env.get("io").unwrap().clone());
                 for expression in expressions.iter() {
-                    let (env, _) = crate::evaluate(module, expression.clone()).await?;
+                    let (env, _) = compiler::evaluate(module, expression.clone()).await?;
                     module = env;
                 }
                 env.insert(name, Expression::Module(module));
@@ -357,7 +361,7 @@ pub fn environment() -> Environment {
         "inc".to_string() => NativeFunction(
           |env, args| {
               Box::pin(async move {
-                crate::evaluate(env, Expression::Call(Call{
+                compiler::evaluate(env, Expression::Call(Call{
                     function: Box::new(Expression::Symbol("+".to_string())),
                     arguments: vector![args[0].clone(), Expression::Integer(rug::Integer::from(1))],
                 })).await
@@ -367,21 +371,21 @@ pub fn environment() -> Environment {
         "atom".to_string() => NativeFunction(
             |env, args| {
                 Box::pin(async move {
-                    let (env, value) = crate::evaluate(env, args[0].clone()).await?;
-                    Ok((env, Expression::Atom(crate::atom::Atom::new(value))))
+                    let (env, value) = compiler::evaluate(env, args[0].clone()).await?;
+                    Ok((env, Expression::Atom(compiler::atom::Atom::new(value))))
                 })
             }
         ),
         "chan".to_string() => NativeFunction(
             |env, args| {
                 Box::pin(async move {
-                    let (env, args) = crate::evaluate_expressions(env, args).await?;
+                    let (env, args) = compiler::evaluate_expressions(env, args).await?;
                     if args.len() == 0 {
-                        Ok((env, Expression::Channel(crate::channel::Channel::new(1))))
+                        Ok((env, Expression::Channel(compiler::channel::Channel::new(1))))
                     } else {
                         let buffer_size = extract::integer(args[0].clone())?;
                         let buffer_size = buffer_size.to_usize().ok_or(error("Expected positive integer"))?;
-                        Ok((env, Expression::Channel(crate::channel::Channel::new(buffer_size))))
+                        Ok((env, Expression::Channel(compiler::channel::Channel::new(buffer_size))))
                     }
                 })
             }
@@ -389,7 +393,7 @@ pub fn environment() -> Environment {
        "put!".to_string() => NativeFunction(
             |env, args| {
                 Box::pin(async move {
-                    let (env, args) = crate::evaluate_expressions(env, args).await?;
+                    let (env, args) = compiler::evaluate_expressions(env, args).await?;
                     let chan = extract::channel(args[0].clone())?;
                     let value = args[1].clone();
                     if Expression::Nil == value {
@@ -404,9 +408,9 @@ pub fn environment() -> Environment {
         "take!".to_string() => NativeFunction(
             |env, args| {
                 Box::pin(async move {
-                    let (env, args) = crate::evaluate_expressions(env, args).await?;
+                    let (env, args) = compiler::evaluate_expressions(env, args).await?;
                     let chan = extract::channel(args[0].clone())?;
-                    let value = crate::channel::take(chan).await;
+                    let value = compiler::channel::take(chan).await;
                     Ok((env, value))
                 })
             }
@@ -414,7 +418,7 @@ pub fn environment() -> Environment {
         "close!".to_string() => NativeFunction(
             |env, args| {
                 Box::pin(async move {
-                    let (env, args) = crate::evaluate_expressions(env, args).await?;
+                    let (env, args) = compiler::evaluate_expressions(env, args).await?;
                     let chan = extract::channel(args[0].clone())?;
                     chan.sender.close();
                     Ok((env, Expression::Nil))
@@ -424,7 +428,7 @@ pub fn environment() -> Environment {
         "closed?".to_string() => NativeFunction(
             |env, args| {
                 Box::pin(async move {
-                    let (env, args) = crate::evaluate_expressions(env, args).await?;
+                    let (env, args) = compiler::evaluate_expressions(env, args).await?;
                     let chan = extract::channel(args[0].clone())?;
                     let result = chan.sender.is_closed();
                     Ok((env, Expression::Bool(result)))
@@ -434,7 +438,7 @@ pub fn environment() -> Environment {
         "reset!".to_string() => NativeFunction(
             |env, args| {
                 Box::pin(async move {
-                    let (env, args) = crate::evaluate_expressions(env, args).await?;
+                    let (env, args) = compiler::evaluate_expressions(env, args).await?;
                     let atom = extract::atom(args[0].clone())?;
                     let value_to_swap = args[1].clone();
                     let mut value = atom.0.lock().await;
@@ -446,11 +450,11 @@ pub fn environment() -> Environment {
         "swap!".to_string() => NativeFunction(
             |env, args| {
                 Box::pin(async move {
-                    let (env, args) = crate::evaluate_expressions(env, args).await?;
+                    let (env, args) = compiler::evaluate_expressions(env, args).await?;
                     let atom = extract::atom(args[0].clone())?;
                     let f = args[1].clone();
                     let mut value = atom.0.lock().await;
-                    let (env, new_value) = crate::evaluate(env, Expression::Call(Call{
+                    let (env, new_value) = compiler::evaluate(env, Expression::Call(Call{
                         function: Box::new(f),
                         arguments: vector![value.clone()],
                     })).await?;
@@ -462,7 +466,7 @@ pub fn environment() -> Environment {
         "range".to_string() => NativeFunction(
             |env, args| {
                 Box::pin(async move {
-                    let (env, args) = crate::evaluate_expressions(env, args).await?;
+                    let (env, args) = compiler::evaluate_expressions(env, args).await?;
                     let mut start = rug::Integer::from(0);
                     let stop = extract::integer(args[0].clone())?;
                     let step = 1;
@@ -480,7 +484,7 @@ pub fn environment() -> Environment {
                 Box::pin(async move {
                     let env_cloned = env.clone();
                     tokio::spawn(async move {
-                        let _ = crate::evaluate_expressions(env, args).await?;
+                        let _ = compiler::evaluate_expressions(env, args).await?;
                         Ok::<(), Effect>(())
                     });
                     Ok((env_cloned, Expression::Nil))

@@ -1,3 +1,4 @@
+use base;
 use compiler;
 use sql;
 
@@ -5,7 +6,7 @@ type Result = std::result::Result<(), compiler::effect::Effect>;
 
 #[tokio::test]
 async fn sql_connect() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "sql".to_string(),
         compiler::Expression::Module(sql::environment()),
@@ -17,7 +18,7 @@ async fn sql_connect() -> Result {
 
 #[tokio::test]
 async fn create_table_string() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "sql".to_string(),
         compiler::Expression::Module(sql::environment()),
@@ -44,7 +45,7 @@ async fn create_table_string() -> Result {
 
 #[tokio::test]
 async fn get_all_table_names() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "sql".to_string(),
         compiler::Expression::Module(sql::environment()),
@@ -69,7 +70,7 @@ async fn get_all_table_names() -> Result {
 
 #[tokio::test]
 async fn insert_into_vector_syntax_string() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "sql".to_string(),
         compiler::Expression::Module(sql::environment()),
@@ -98,7 +99,7 @@ async fn insert_into_vector_syntax_string() -> Result {
 
 #[tokio::test]
 async fn select_string() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "sql".to_string(),
         compiler::Expression::Module(sql::environment()),
@@ -122,7 +123,7 @@ async fn select_string() -> Result {
 
 #[tokio::test]
 async fn select_single_column() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "sql".to_string(),
         compiler::Expression::Module(sql::environment()),
@@ -145,7 +146,7 @@ async fn select_single_column() -> Result {
 
 #[tokio::test]
 async fn select_not_equal() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "sql".to_string(),
         compiler::Expression::Module(sql::environment()),
@@ -168,7 +169,7 @@ async fn select_not_equal() -> Result {
 
 #[tokio::test]
 async fn insert_and_select() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "sql".to_string(),
         compiler::Expression::Module(sql::environment()),

@@ -1,3 +1,4 @@
+use base;
 use compiler;
 use compiler::Expression::Module;
 use crossterm::execute;
@@ -88,7 +89,7 @@ fn print(expression: compiler::Expression) -> io::Result<()> {
 }
 
 fn repl_environment() -> compiler::Environment {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "*name*".to_string(),
         compiler::Expression::String("repl".to_string()),

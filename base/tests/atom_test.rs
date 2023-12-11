@@ -1,3 +1,4 @@
+use base;
 use compiler;
 use rug::Integer;
 
@@ -5,7 +6,7 @@ type Result = std::result::Result<(), compiler::effect::Effect>;
 
 #[tokio::test]
 async fn deref_an_atom() -> Result {
-    let env = compiler::core::environment();
+    let env = base::environment();
     let (env, _) = compiler::evaluate_source(env, "(def x (atom 5))").await?;
     let (_, actual) = compiler::evaluate_source(env, "@x").await?;
     let expected = compiler::Expression::Integer(Integer::from(5));
@@ -15,7 +16,7 @@ async fn deref_an_atom() -> Result {
 
 #[tokio::test]
 async fn reset_an_atom() -> Result {
-    let env = compiler::core::environment();
+    let env = base::environment();
     let (env, _) = compiler::evaluate_source(env, "(def x (atom 5))").await?;
     let (env, previous) = compiler::evaluate_source(env, "@x").await?;
     let (env, _) = compiler::evaluate_source(env, "(reset! x 10)").await?;
@@ -29,7 +30,7 @@ async fn reset_an_atom() -> Result {
 
 #[tokio::test]
 async fn swap_an_atom() -> Result {
-    let env = compiler::core::environment();
+    let env = base::environment();
     let (env, _) = compiler::evaluate_source(env, "(def x (atom 5))").await?;
     let (env, previous) = compiler::evaluate_source(env, "@x").await?;
     let (env, _) = compiler::evaluate_source(env, "(swap! x inc)").await?;

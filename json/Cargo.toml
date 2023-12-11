@@ -8,6 +8,7 @@ im = "15.1.0"
 serde_json = "1.0"
 tokio = { version = "1.33.0", features = ["full"] }
 compiler = { path = "../compiler" }
+base = { path = "../base" }
 
 [lib]
 path = "src/lib.rs"

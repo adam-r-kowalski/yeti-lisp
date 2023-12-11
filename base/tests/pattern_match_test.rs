@@ -5,7 +5,7 @@ type Result = std::result::Result<(), compiler::effect::Effect>;
 
 #[tokio::test]
 async fn pattern_match_array() -> Result {
-    let env = compiler::core::environment();
+    let env = base::environment();
     let (_, actual) = compiler::evaluate_source(env, "((fn [[x y]] x) [1 2])").await?;
     let expected = compiler::Expression::Integer(Integer::from(1));
     assert_eq!(actual, expected);
@@ -14,7 +14,7 @@ async fn pattern_match_array() -> Result {
 
 #[tokio::test]
 async fn pattern_match_map() -> Result {
-    let env = compiler::core::environment();
+    let env = base::environment();
     let (_, actual) = compiler::evaluate_source(env, "((fn [{:a a}] a) {:a 5})").await?;
     let expected = compiler::Expression::Integer(Integer::from(5));
     assert_eq!(actual, expected);
@@ -23,7 +23,7 @@ async fn pattern_match_map() -> Result {
 
 #[tokio::test]
 async fn pattern_match_map_in_array() -> Result {
-    let env = compiler::core::environment();
+    let env = base::environment();
     let (_, actual) = compiler::evaluate_source(env, "((fn [[_ {:a a}]] a) [0 {:a 7}])").await?;
     let expected = compiler::Expression::Integer(Integer::from(7));
     assert_eq!(actual, expected);
@@ -32,7 +32,7 @@ async fn pattern_match_map_in_array() -> Result {
 
 #[tokio::test]
 async fn pattern_match_array_with_literal_keyword() -> Result {
-    let env = compiler::core::environment();
+    let env = base::environment();
     let (_, actual) = compiler::evaluate_source(env, "((fn [[:foo y]] y) [:foo 2])").await?;
     let expected = compiler::Expression::Integer(Integer::from(2));
     assert_eq!(actual, expected);
@@ -41,7 +41,7 @@ async fn pattern_match_array_with_literal_keyword() -> Result {
 
 #[tokio::test]
 async fn pattern_match_array_with_literal_string() -> Result {
-    let env = compiler::core::environment();
+    let env = base::environment();
     let (_, actual) = compiler::evaluate_source(env, r#"((fn [["foo" y]] y) ["foo" 2])"#).await?;
     let expected = compiler::Expression::Integer(Integer::from(2));
     assert_eq!(actual, expected);
@@ -50,7 +50,7 @@ async fn pattern_match_array_with_literal_string() -> Result {
 
 #[tokio::test]
 async fn pattern_match_array_with_literal_integer() -> Result {
-    let env = compiler::core::environment();
+    let env = base::environment();
     let (_, actual) = compiler::evaluate_source(env, r#"((fn [[7 y]] y) [7 2])"#).await?;
     let expected = compiler::Expression::Integer(Integer::from(2));
     assert_eq!(actual, expected);
@@ -59,7 +59,7 @@ async fn pattern_match_array_with_literal_integer() -> Result {
 
 #[tokio::test]
 async fn pattern_match_array_with_literal_nil() -> Result {
-    let env = compiler::core::environment();
+    let env = base::environment();
     let (_, actual) = compiler::evaluate_source(env, "((fn [[nil y]] y) [nil 2])").await?;
     let expected = compiler::Expression::Integer(Integer::from(2));
     assert_eq!(actual, expected);
@@ -68,7 +68,7 @@ async fn pattern_match_array_with_literal_nil() -> Result {
 
 #[tokio::test]
 async fn pattern_match_multiple_patterns_first_taken() -> Result {
-    let env = compiler::core::environment();
+    let env = base::environment();
     let (_, actual) = compiler::evaluate_source(
         env,
         r#"
@@ -86,7 +86,7 @@ async fn pattern_match_multiple_patterns_first_taken() -> Result {
 
 #[tokio::test]
 async fn pattern_match_multiple_patterns_second_taken() -> Result {
-    let env = compiler::core::environment();
+    let env = base::environment();
     let (_, actual) = compiler::evaluate_source(
         env,
         r#"

@@ -1,3 +1,4 @@
+use base;
 use compiler;
 use im::ordmap;
 use rug::Integer;
@@ -6,7 +7,7 @@ type Result = std::result::Result<(), compiler::effect::Effect>;
 
 #[tokio::test]
 async fn import_module_and_use_def_from_it() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "io".to_string(),
         compiler::Expression::Module(ordmap! {
@@ -24,7 +25,7 @@ async fn import_module_and_use_def_from_it() -> Result {
 
 #[tokio::test]
 async fn import_module_with_multiple_definitions() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "io".to_string(),
         compiler::Expression::Module(ordmap! {
@@ -49,7 +50,7 @@ async fn import_module_with_multiple_definitions() -> Result {
 
 #[tokio::test]
 async fn import_module_with_function() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "io".to_string(),
         compiler::Expression::Module(ordmap! {
@@ -69,7 +70,7 @@ async fn import_module_with_function() -> Result {
 
 #[tokio::test]
 async fn import_multiple_modules() -> Result {
-    let mut env = compiler::core::environment();
+    let mut env = base::environment();
     env.insert(
         "io".to_string(),
         compiler::Expression::Module(ordmap! {

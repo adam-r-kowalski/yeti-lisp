@@ -1,11 +1,45 @@
+use base;
 use compiler;
+use compiler::expression::Call;
 use rug::Integer;
+use im::vector;
 
 type Result = std::result::Result<(), compiler::effect::Effect>;
 
 #[tokio::test]
+async fn evaluate_fn() -> Result {
+    let env = base::environment();
+    let (_, actual) = compiler::evaluate_source(env.clone(), "(fn [x] (* x 2))").await?;
+    let expected = compiler::Expression::Function(compiler::expression::Function {
+        env,
+        patterns: vector![compiler::expression::Pattern {
+            parameters: vector![compiler::Expression::Symbol("x".to_string()),],
+            body: vector![compiler::Expression::Call(Call {
+                function: Box::new(compiler::Expression::Symbol("*".to_string())),
+                arguments: vector![
+                    compiler::Expression::Symbol("x".to_string()),
+                    compiler::Expression::Integer(Integer::from(2)),
+                ],
+            })],
+        }],
+    });
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+#[tokio::test]
+async fn evaluate_call_fn() -> Result {
+    let env = base::environment();
+    let (_, actual) = compiler::evaluate_source(env, "((fn [x] (* x 2)) 5)").await?;
+    let expected = compiler::Expression::Integer(Integer::from(10));
+    assert_eq!(actual, expected);
+    Ok(())
+}
+
+
+#[tokio::test]
 async fn function_definition_and_call() -> Result {
-    let env = compiler::core::environment();
+    let env = base::environment();
     let (env, _) = compiler::evaluate_source(env, "(defn double [x] (* x 2))").await?;
     let (env, actual) = compiler::evaluate_source(env, "(double 5)").await?;
     let expected = compiler::Expression::Integer(Integer::from(10));
@@ -17,7 +51,7 @@ async fn function_definition_and_call() -> Result {
 
 #[tokio::test]
 async fn closure() -> Result {
-    let env = compiler::core::environment();
+    let env = base::environment();
     let (env, _) = compiler::evaluate_source(
         env,
         r#"
@@ -35,7 +69,7 @@ async fn closure() -> Result {
 
 #[tokio::test]
 async fn recursion_using_recur() -> Result {
-    let env = compiler::core::environment();
+    let env = base::environment();
     let (env, _) = compiler::evaluate_source(
         env,
         r#"
@@ -66,7 +100,7 @@ async fn recursion_using_recur() -> Result {
 
 #[tokio::test]
 async fn recursion_using_name() -> Result {
-    let env = compiler::core::environment();
+    let env = base::environment();
     let (env, _) = compiler::evaluate_source(
         env,
         r#"
