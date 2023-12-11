@@ -1149,6 +1149,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "repl"
+version = "0.1.0"
+dependencies = [
+ "compiler",
+ "crossterm",
+]
+
+[[package]]
 name = "reqwest"
 version = "0.11.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2173,6 +2181,7 @@ dependencies = [
  "im",
  "io",
  "json",
+ "repl",
  "sql",
  "tokio",
  "toml 0.1.0",
