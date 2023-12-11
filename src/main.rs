@@ -8,9 +8,10 @@ use crossterm::style::{
 };
 use html;
 use http;
-use im::ordmap;
+use io;
 use json;
-use std::io::{self, Write};
+use sql;
+use std::io::{self as std_io, Write};
 use toml;
 use yaml;
 
@@ -35,7 +36,7 @@ impl Iterator for StdinIterator {
         if self.index >= self.buffer.len() {
             self.buffer.clear();
             self.index = 0;
-            io::stdin().read_line(&mut self.buffer).unwrap();
+            std_io::stdin().read_line(&mut self.buffer).unwrap();
         }
         let result = self.buffer.chars().nth(self.index);
         self.index += 1;
@@ -44,7 +45,7 @@ impl Iterator for StdinIterator {
 }
 
 fn print_with_color(color: Color, text: &str) -> () {
-    let mut stdout = io::stdout();
+    let mut stdout = std_io::stdout();
     execute!(
         stdout,
         SetColors(Colors {
@@ -76,14 +77,14 @@ const RED: Color = Color::Rgb {
     b: 47,
 };
 
-fn read(iterator: &mut StdinIterator) -> io::Result<compiler::Expression> {
+fn read(iterator: &mut StdinIterator) -> std_io::Result<compiler::Expression> {
     print_with_color(BLUE, "⛰  ");
     let tokens = compiler::Tokens::new(iterator);
     Ok(compiler::parse(tokens))
 }
 
-fn print(expression: compiler::Expression) -> io::Result<()> {
-    io::stdout().write_all(format!("{}", expression).as_bytes())?;
+fn print(expression: compiler::Expression) -> std_io::Result<()> {
+    std_io::stdout().write_all(format!("{}", expression).as_bytes())?;
     println!("\n");
     Ok(())
 }
@@ -94,55 +95,18 @@ fn repl_environment() -> compiler::Environment {
         "*name*".to_string(),
         compiler::Expression::String("repl".to_string()),
     );
-    env.insert("http".to_string(), Module(http::environment()));
     env.insert("html".to_string(), Module(html::environment()));
+    env.insert("http".to_string(), Module(http::environment()));
+    env.insert("io".to_string(), Module(io::environment()));
     env.insert("json".to_string(), Module(json::environment()));
+    env.insert("sql".to_string(), Module(sql::environment()));
     env.insert("toml".to_string(), Module(toml::environment()));
     env.insert("yaml".to_string(), Module(yaml::environment()));
-    env.insert(
-        "io".to_string(),
-        compiler::Expression::Module(ordmap! {
-            "read-file".to_string() => compiler::Expression::NativeFunction(
-                |env, args| {
-                    Box::pin(async move {
-                        let (env, args) = compiler::evaluate_expressions(env, args).await?;
-                        let path = compiler::extract::string(args[0].clone())?;
-                        let contents = tokio::fs::read_to_string(path).await
-                            .map_err(|_| compiler::effect::error("Could not read file"))?;
-                        Ok((env, compiler::Expression::String(contents)))
-                    })
-                }
-            ),
-            "write-file".to_string() => compiler::Expression::NativeFunction(
-                |env, args| {
-                    Box::pin(async move {
-                        let (env, args) = compiler::evaluate_expressions(env, args).await?;
-                        let path = compiler::extract::string(args[0].clone())?;
-                        let contents = compiler::extract::string(args[1].clone())?;
-                        tokio::fs::write(path, contents).await
-                            .map_err(|_| compiler::effect::error("Could not write file"))?;
-                        Ok((env, compiler::Expression::Nil))
-                    })
-                }
-            ),
-            "sleep".to_string() => compiler::Expression::NativeFunction(
-                |env, args| {
-                    Box::pin(async move {
-                        let (env, args) = compiler::evaluate_expressions(env, args).await?;
-                        let ms = compiler::extract::integer(args[0].clone())?;
-                        let ms = ms.to_u64().ok_or(compiler::effect::error("Could not convert integer to u64"))?;
-                        tokio::time::sleep(tokio::time::Duration::from_millis(ms)).await;
-                        Ok((env, compiler::Expression::Nil))
-                    })
-                }
-            )
-        }),
-    );
     env
 }
 
 #[tokio::main]
-async fn main() -> io::Result<()> {
+async fn main() -> std_io::Result<()> {
     let mut environment = repl_environment();
     let mut iterator = StdinIterator::new();
     loop {

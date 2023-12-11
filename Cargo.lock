@@ -710,6 +710,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "io"
+version = "0.1.0"
+dependencies = [
+ "compiler",
+ "im",
+ "tokio",
+]
+
+[[package]]
 name = "ipnet"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2162,6 +2171,7 @@ dependencies = [
  "html",
  "http 0.1.0",
  "im",
+ "io",
  "json",
  "sql",
  "tokio",

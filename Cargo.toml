@@ -15,6 +15,7 @@ json = { path = "./json" }
 toml = { path = "./toml" }
 yaml = { path = "./yaml" }
 base = { path = "./base" }
+io = { path = "./io" }
 
 [workspace]
 members = [
@@ -25,5 +26,6 @@ members = [
   "json",
   "toml",
   "yaml",
-  "base"
+  "base",
+  "io"
 ]
