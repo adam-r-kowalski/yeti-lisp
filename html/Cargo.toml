@@ -1,0 +1,15 @@
+[package]
+name = "html"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+html5ever = "0.26"
+markup5ever_rcdom = "0.2"
+im = "15.1.0"
+tokio = { version = "1.33.0", features = ["full"] }
+compiler = { path = "../compiler" }
+base = { path = "../base" }
+
+[lib]
+path = "src/lib.rs"
