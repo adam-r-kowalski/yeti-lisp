@@ -1,0 +1,13 @@
+[package]
+name = "json"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+im = "15.1.0"
+serde_json = "1.0"
+tokio = { version = "1.33.0", features = ["full"] }
+compiler = { path = "../compiler" }
+
+[lib]
+path = "src/lib.rs"

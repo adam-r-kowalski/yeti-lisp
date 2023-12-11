@@ -11,11 +11,13 @@ compiler = { path = "./compiler" }
 http = { path = "./http" }
 html = { path = "./html" }
 sql = { path = "./sql" }
+json = { path = "./json" }
 
 [workspace]
 members = [
   "compiler",
   "http",
   "html",
-  "sql"
+  "sql",
+  "json"
 ]

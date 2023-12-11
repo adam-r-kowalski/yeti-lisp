@@ -1,10 +1,13 @@
+#![no_std]
+#![forbid(unsafe_code)]
+
 extern crate alloc;
 
-use crate::effect::error;
-use crate::evaluate_expressions;
-use crate::expression::Environment;
-use crate::extract;
-use crate::Expression::{self, NativeFunction};
+use compiler::effect::error;
+use compiler::evaluate_expressions;
+use compiler::expression::Environment;
+use compiler::extract;
+use compiler::Expression::{self, NativeFunction};
 use alloc::boxed::Box;
 use alloc::string::ToString;
 use im::ordmap;

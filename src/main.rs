@@ -7,6 +7,7 @@ use crossterm::style::{
 use html;
 use http;
 use im::ordmap;
+use json;
 use std::io::{self, Write};
 
 struct StdinIterator {
@@ -96,6 +97,10 @@ fn repl_environment() -> compiler::Environment {
     environment.insert(
         "html".to_string(),
         compiler::Expression::Module(html::environment()),
+    );
+    environment.insert(
+        "json".to_string(),
+        compiler::Expression::Module(json::environment()),
     );
     environment.insert(
         "io".to_string(),
