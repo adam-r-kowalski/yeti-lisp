@@ -1,4 +1,5 @@
 use compiler;
+use compiler::Expression::Module;
 use crossterm::execute;
 use crossterm::style::{
     Color::{self, Reset},
@@ -9,6 +10,7 @@ use http;
 use im::ordmap;
 use json;
 use std::io::{self, Write};
+use toml;
 
 struct StdinIterator {
     buffer: String,
@@ -85,24 +87,16 @@ fn print(expression: compiler::Expression) -> io::Result<()> {
 }
 
 fn repl_environment() -> compiler::Environment {
-    let mut environment = compiler::core::environment();
-    environment.insert(
+    let mut env = compiler::core::environment();
+    env.insert(
         "*name*".to_string(),
         compiler::Expression::String("repl".to_string()),
     );
-    environment.insert(
-        "http".to_string(),
-        compiler::Expression::Module(http::environment()),
-    );
-    environment.insert(
-        "html".to_string(),
-        compiler::Expression::Module(html::environment()),
-    );
-    environment.insert(
-        "json".to_string(),
-        compiler::Expression::Module(json::environment()),
-    );
-    environment.insert(
+    env.insert("http".to_string(), Module(http::environment()));
+    env.insert("html".to_string(), Module(html::environment()));
+    env.insert("json".to_string(), Module(json::environment()));
+    env.insert("toml".to_string(), Module(toml::environment()));
+    env.insert(
         "io".to_string(),
         compiler::Expression::Module(ordmap! {
             "read-file".to_string() => compiler::Expression::NativeFunction(
@@ -141,7 +135,7 @@ fn repl_environment() -> compiler::Environment {
             )
         }),
     );
-    environment
+    env
 }
 
 #[tokio::main]

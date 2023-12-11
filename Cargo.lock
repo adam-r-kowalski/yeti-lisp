@@ -221,7 +221,7 @@ dependencies = [
  "serde_qs",
  "serde_yaml",
  "tokio",
- "toml",
+ "toml 0.8.8",
  "uuid",
 ]
 
@@ -1625,6 +1625,16 @@ dependencies = [
 
 [[package]]
 name = "toml"
+version = "0.1.0"
+dependencies = [
+ "compiler",
+ "im",
+ "tokio",
+ "toml 0.8.8",
+]
+
+[[package]]
+name = "toml"
 version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a1a195ec8c9da26928f773888e0742ca3ca1040c6cd859c919c9f59c1954ab35"
@@ -2127,6 +2137,7 @@ dependencies = [
  "json",
  "sql",
  "tokio",
+ "toml 0.1.0",
 ]
 
 [[package]]

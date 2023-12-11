@@ -12,6 +12,7 @@ http = { path = "./http" }
 html = { path = "./html" }
 sql = { path = "./sql" }
 json = { path = "./json" }
+toml = { path = "./toml" }
 
 [workspace]
 members = [
@@ -19,5 +20,6 @@ members = [
   "http",
   "html",
   "sql",
-  "json"
+  "json",
+  "toml"
 ]
