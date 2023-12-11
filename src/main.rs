@@ -11,6 +11,7 @@ use im::ordmap;
 use json;
 use std::io::{self, Write};
 use toml;
+use yaml;
 
 struct StdinIterator {
     buffer: String,
@@ -96,6 +97,7 @@ fn repl_environment() -> compiler::Environment {
     env.insert("html".to_string(), Module(html::environment()));
     env.insert("json".to_string(), Module(json::environment()));
     env.insert("toml".to_string(), Module(toml::environment()));
+    env.insert("yaml".to_string(), Module(yaml::environment()));
     env.insert(
         "io".to_string(),
         compiler::Expression::Module(ordmap! {

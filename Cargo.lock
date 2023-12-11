@@ -2126,6 +2126,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "yaml"
+version = "0.1.0"
+dependencies = [
+ "compiler",
+ "im",
+ "serde_yaml",
+ "tokio",
+]
+
+[[package]]
 name = "yeti"
 version = "0.1.0"
 dependencies = [
@@ -2138,6 +2148,7 @@ dependencies = [
  "sql",
  "tokio",
  "toml 0.1.0",
+ "yaml",
 ]
 
 [[package]]

@@ -21,7 +21,6 @@ mod numerics;
 mod parser;
 mod peeking_take_while;
 mod tokenizer;
-pub mod yaml;
 
 pub use evaluator::{evaluate, evaluate_expressions, evaluate_source, pattern_match};
 pub use expression::{Environment, Expression};
