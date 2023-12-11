@@ -15,7 +15,6 @@ pub mod effect;
 mod evaluator;
 pub mod expression;
 pub mod extract;
-pub mod html;
 pub mod json;
 pub mod map;
 mod native_type;

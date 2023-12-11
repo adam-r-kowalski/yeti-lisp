@@ -9,10 +9,11 @@ im = "15.1.0"
 tokio = { version = "1.33.0", features = ["full"] }
 compiler = { path = "./compiler" }
 http = { path = "./http" }
+html = { path = "./html" }
 
 [workspace]
 members = [
   "compiler",
-  "http"
+  "http",
+  "html"
 ]
-
