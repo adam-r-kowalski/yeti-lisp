@@ -3,10 +3,9 @@ use rug::{Integer, Rational};
 
 #[test]
 fn tokenize_symbol() {
-    let actual = compiler::Tokens::from_str(
+    let actual = compiler::tokenize(
         "snake_case PascalCase kebab-case camelCase predicate? -> namespaced/symbol",
-    )
-    .collect::<Vec<compiler::Token>>();
+    );
     let expected = vec![
         compiler::Token::Symbol("snake_case".to_string()),
         compiler::Token::Symbol("PascalCase".to_string()),
@@ -21,10 +20,9 @@ fn tokenize_symbol() {
 
 #[test]
 fn tokenize_keyword() {
-    let actual = compiler::Tokens::from_str(
+    let actual = compiler::tokenize(
         ":snake_case :PascalCase :kebab-case :camelCase :predicate? :that's",
-    )
-    .collect::<Vec<compiler::Token>>();
+    );
     let expected = vec![
         compiler::Token::Keyword(":snake_case".to_string()),
         compiler::Token::Keyword(":PascalCase".to_string()),
@@ -38,10 +36,9 @@ fn tokenize_keyword() {
 
 #[test]
 fn tokenize_string_literal() {
-    let actual = compiler::Tokens::from_str(
+    let actual = compiler::tokenize(
         r#""hello" "world" "123" "that's" "that’s" "Quoted \"String\"""#,
-    )
-    .collect::<Vec<compiler::Token>>();
+    );
     let expected = vec![
         compiler::Token::String("hello".to_string()),
         compiler::Token::String("world".to_string()),
@@ -56,7 +53,7 @@ fn tokenize_string_literal() {
 #[test]
 fn tokenize_integer() {
     let actual =
-        compiler::Tokens::from_str("123 456 789 1_000 -321 -456").collect::<Vec<compiler::Token>>();
+        compiler::tokenize("123 456 789 1_000 -321 -456");
     let expected = vec![
         compiler::Token::Integer(Integer::from(123)),
         compiler::Token::Integer(Integer::from(456)),
@@ -70,8 +67,7 @@ fn tokenize_integer() {
 
 #[test]
 fn tokenize_float() {
-    let actual = compiler::Tokens::from_str("1.23 4.56 7.89 1_000.0 -3.23")
-        .collect::<Vec<compiler::Token>>();
+    let actual = compiler::tokenize("1.23 4.56 7.89 1_000.0 -3.23");
     let expected = vec![
         compiler::Token::Float(compiler::Float::from_str("1.23")),
         compiler::Token::Float(compiler::Float::from_str("4.56")),
@@ -84,7 +80,7 @@ fn tokenize_float() {
 
 #[test]
 fn tokenize_delimiters() {
-    let actual = compiler::Tokens::from_str("( { [ ] } )").collect::<Vec<compiler::Token>>();
+    let actual = compiler::tokenize("( { [ ] } )");
     let expected = vec![
         compiler::Token::LeftParen,
         compiler::Token::LeftBrace,
@@ -98,7 +94,7 @@ fn tokenize_delimiters() {
 
 #[test]
 fn tokenize_call_inside_array() {
-    let actual = compiler::Tokens::from_str("[3.14 (+ 2 3)]").collect::<Vec<compiler::Token>>();
+    let actual = compiler::tokenize("[3.14 (+ 2 3)]");
     let expected = vec![
         compiler::Token::LeftBracket,
         compiler::Token::Float(compiler::Float::from_str("3.14")),
@@ -114,7 +110,7 @@ fn tokenize_call_inside_array() {
 
 #[test]
 fn tokenize_quote() {
-    let actual = compiler::Tokens::from_str("'(1 2)").collect::<Vec<compiler::Token>>();
+    let actual = compiler::tokenize("'(1 2)");
     let expected = vec![
         compiler::Token::Quote,
         compiler::Token::LeftParen,
@@ -127,7 +123,7 @@ fn tokenize_quote() {
 
 #[test]
 fn tokenize_ratio() {
-    let actual = compiler::Tokens::from_str("5/3 4/2").collect::<Vec<compiler::Token>>();
+    let actual = compiler::tokenize("5/3 4/2");
     let expected = vec![
         compiler::Token::Ratio(Rational::from((Integer::from(5), Integer::from(3)))),
         compiler::Token::Integer(Integer::from(2)),
@@ -137,7 +133,7 @@ fn tokenize_ratio() {
 
 #[test]
 fn tokenize_deref() {
-    let actual = compiler::Tokens::from_str("@ @x @(atom x)").collect::<Vec<compiler::Token>>();
+    let actual = compiler::tokenize("@ @x @(atom x)");
     let expected = vec![
         compiler::Token::Deref,
         compiler::Token::Deref,
@@ -153,8 +149,7 @@ fn tokenize_deref() {
 
 #[test]
 fn tokenize_comment_after_expression() {
-    let actual = compiler::Tokens::from_str("(+ 1 2) ; comment after expression")
-        .collect::<Vec<compiler::Token>>();
+    let actual = compiler::tokenize("(+ 1 2) ; comment after expression");
     let expected = vec![
         compiler::Token::LeftParen,
         compiler::Token::Symbol("+".to_string()),
@@ -167,13 +162,12 @@ fn tokenize_comment_after_expression() {
 
 #[test]
 fn tokenize_comment_before_expression() {
-    let actual = compiler::Tokens::from_str(
+    let actual = compiler::tokenize(
         r#"
           ; comment before expression
           (+ 1 2)
         "#,
-    )
-    .collect::<Vec<compiler::Token>>();
+    );
     let expected = vec![
         compiler::Token::LeftParen,
         compiler::Token::Symbol("+".to_string()),
@@ -186,18 +180,30 @@ fn tokenize_comment_before_expression() {
 
 #[test]
 fn tokenize_comment_in_between_expression() {
-    let actual = compiler::Tokens::from_str(
+    let actual = compiler::tokenize(
         r#"
           (+ 1 ; comment before expression
              2)
         "#,
-    )
-    .collect::<Vec<compiler::Token>>();
+    );
     let expected = vec![
         compiler::Token::LeftParen,
         compiler::Token::Symbol("+".to_string()),
         compiler::Token::Integer(Integer::from(1)),
         compiler::Token::Integer(Integer::from(2)),
+        compiler::Token::RightParen,
+    ];
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn tokenize_paren_after_keyword() {
+    let actual = compiler::tokenize("(get map :key)");
+    let expected = vec![
+        compiler::Token::LeftParen,
+        compiler::Token::Symbol("get".to_string()),
+        compiler::Token::Symbol("map".to_string()),
+        compiler::Token::Keyword(":key".to_string()),
         compiler::Token::RightParen,
     ];
     assert_eq!(actual, expected);

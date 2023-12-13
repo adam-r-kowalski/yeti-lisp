@@ -1,12 +1,9 @@
 extern crate alloc;
 
 use crate::numerics::Float;
-use crate::peeking_take_while::PeekableExt;
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
-use core::iter::Peekable;
-use core::str::Chars;
 use rug::{Integer, Rational};
 
 #[derive(PartialEq, Debug)]
@@ -46,195 +43,194 @@ fn reserved_character(c: char) -> bool {
     }
 }
 
-pub struct Tokens<I: Iterator<Item = char>> {
-    iterator: Peekable<I>,
+fn push(mut tokens: Vec<Token>, token: Token) -> Vec<Token> {
+    tokens.push(token);
+    tokens
 }
 
-impl<I: Iterator<Item = char>> Tokens<I> {
-    pub fn new(iterator: I) -> Self {
-        Tokens {
-            iterator: iterator.peekable(),
+fn rest(input: &str) -> &str {
+    match input.get(1..) {
+        Some(rest) => rest,
+        None => "",
+    }
+}
+
+fn string(input: &str, tokens: Vec<Token>) -> (&str, Vec<Token>) {
+    let mut chars = input.chars();
+    let mut string = String::new();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => match chars.next() {
+                Some('n') => string.push('\n'),
+                Some('t') => string.push('\t'),
+                Some('r') => string.push('\r'),
+                Some('\\') => string.push('\\'),
+                Some('"') => string.push('"'),
+                Some(other) => string.push_str(&format!("\\{}", other)),
+                None => string.push('\\'),
+            },
+            '"' => break,
+            _ => string.push(c),
         }
     }
+    let remaining_input = chars.as_str();
+    let tokens = push(tokens, Token::String(string));
+    (remaining_input, tokens)
 }
 
-impl<'a> Tokens<Chars<'a>> {
-    pub fn from_str(input: &'a str) -> Self {
-        Tokens {
-            iterator: input.chars().peekable(),
-        }
-    }
-}
-
-impl<I: Iterator<Item = char>> Tokens<I> {
-    fn consume_and_return(&mut self, token: Token) -> Token {
-        self.iterator.next();
-        token
-    }
-
-    fn string(&mut self) -> Token {
-        self.iterator.next();
-        let mut string = String::new();
-        while let Some(&c) = self.iterator.peek() {
-            match c {
-                '\\' => {
-                    self.iterator.next();
-                    match self.iterator.peek() {
-                        Some('n') => {
-                            self.iterator.next();
-                            string.push('\n');
-                        }
-                        Some('t') => {
-                            self.iterator.next();
-                            string.push('\t');
-                        }
-                        Some('r') => {
-                            self.iterator.next();
-                            string.push('\r');
-                        }
-                        Some('\\') => {
-                            self.iterator.next();
-                            string.push('\\');
-                        }
-                        Some('"') => {
-                            self.iterator.next();
-                            string.push('"');
-                        }
-                        Some(_) => {
-                            string.push('\\');
-                        }
-                        None => {
-                            string.push('\\');
-                        }
-                    }
-                }
-                '"' => break,
-                _ => {
-                    string.push(c);
-                    self.iterator.next();
-                }
+fn keyword(input: &str, mut tokens: Vec<Token>) -> (&str, Vec<Token>) {
+    let mut chars = input.chars();
+    let mut keyword = String::new();
+    loop {
+        match chars.clone().next() {
+            None => break,
+            Some(c) if reserved_character(c) => break,
+            Some(c) => {
+                keyword.push(c);
+                chars.next();
             }
         }
-        self.iterator.next();
-        Token::String(string)
     }
+    let token = Token::Keyword(format!(":{}", keyword));
+    tokens.push(token);
+    let remaining_input = chars.as_str();
+    (remaining_input, tokens)
+}
 
-    fn keyword(&mut self) -> Token {
-        self.iterator.next();
-        let keyword: String = self
-            .iterator
-            .peeking_take_while(|&c| !reserved_character(c))
-            .collect();
-        Token::Keyword(format!(":{}", keyword))
+fn comment(input: &str, tokens: Vec<Token>) -> (&str, Vec<Token>) {
+    let mut chars = input.chars();
+    while let Some(c) = chars.next() {
+        if c == '\n' { break; }
     }
+    let remaining_input = chars.as_str();
+    (remaining_input, tokens)
+}
 
-    fn number(&mut self, negative: Negative) -> Token {
-        let mut is_float = false;
-        let mut number: String = self
-            .iterator
-            .peeking_take_while(|&c| {
-                if c == '.' {
-                    is_float = true;
-                }
-                c.is_digit(10) || c == '_' || c == '.'
-            })
-            .filter(|&c| c != '_')
-            .collect();
-        if negative == Negative::Yes {
-            number = format!("-{}", number);
+
+fn symbol(input: &str, mut tokens: Vec<Token>) -> (&str, Vec<Token>) {
+    let mut chars = input.chars();
+    let mut symbol = String::new();
+    loop {
+        match chars.clone().next() {
+            None => break,
+            Some(c) if reserved_character(c) => break,
+            Some(c) => {
+                symbol.push(c);
+                chars.next();
+            }
         }
-        if is_float {
-            Token::Float(Float::from_str(&number))
-        } else {
-            let numerator = number.parse().unwrap();
-            if let Some('/') = self.iterator.peek() {
-                self.iterator.next();
-                let negative = match self.iterator.peek() {
+    }
+    let parts: Vec<String> = symbol.split('/').map(|s| s.to_string()).collect();
+    let token = if parts.len() > 1 {
+        Token::NamespacedSymbol(parts)
+    } else {
+        Token::Symbol(symbol)
+    };
+    tokens.push(token);
+    let remaining_input = chars.as_str();
+    (remaining_input, tokens)
+}
+
+fn number(input: &str, mut tokens: Vec<Token>, negative: Negative) -> (&str, Vec<Token>) {
+    let mut chars = input.chars();
+    let mut number_string = String::new();
+    let mut is_float = false;
+    while let Some(c) = chars.clone().next() {
+        match c {
+            '.' if !is_float => {
+                is_float = true;
+                number_string.push(c);
+                chars.next();
+            }
+            _ if c.is_digit(10) || c == '_' => {
+                if c != '_' { number_string.push(c); }
+                chars.next();
+            }
+            _ => break,
+        }
+    }
+    if negative == Negative::Yes {
+        number_string.insert(0, '-');
+    }
+    let token = if is_float {
+        Token::Float(Float::from_str(&number_string))
+    } else {
+        let numerator = number_string.parse::<Integer>().unwrap();
+        match chars.clone().next() {
+            Some('/') => {
+                chars.next();
+                let negative = match chars.clone().next() {
                     Some('-') => {
-                        self.iterator.next();
+                        chars.next();
                         Negative::Yes
                     }
                     _ => Negative::No,
                 };
-                if let Token::Integer(denominator) = self.number(negative) {
-                    let rational = Rational::from((numerator, denominator));
+                let (input, new_tokens) = number(chars.as_str(), tokens, negative);
+                chars = input.chars();
+                tokens = new_tokens;
+                if let Some(Token::Integer(denominator)) = tokens.pop() {
+                    let rational = Rational::from((numerator, denominator.clone()));
                     if rational.is_integer() {
                         Token::Integer(rational.numer().clone())
                     } else {
                         Token::Ratio(rational)
                     }
                 } else {
-                    panic!("Expected denominator got {:?}", self.iterator.peek());
+                    panic!("Expected denominator after '/'");
                 }
+            }
+            _ => Token::Integer(numerator),
+        }
+    };
+    let remaining_input = chars.as_str();
+    let tokens = push(tokens, token);
+    (remaining_input, tokens)
+}
+
+fn negative_number_or_symbol(input: &str, tokens: Vec<Token>) -> (&str, Vec<Token>) {
+    match input.chars().peekable().peek() {
+        Some(&c) if c.is_digit(10) => number(input, tokens, Negative::Yes),
+        _ => {
+            let (input, mut tokens) = symbol(input, tokens);
+            if let Some(Token::Symbol(symbol)) = tokens.pop() {
+                tokens.push(Token::Symbol(format!("-{}", symbol)));
+                (input, tokens)
             } else {
-                Token::Integer(numerator)
+                panic!("Expected symbol got {:?}", input.chars().peekable().peek());
             }
-        }
-    }
-
-    fn symbol(&mut self) -> Token {
-        let symbol: String = self
-            .iterator
-            .peeking_take_while(|&c| !reserved_character(c))
-            .collect();
-        let parts: Vec<String> = symbol.split('/').map(|s| s.to_string()).collect();
-        if parts.len() > 1 {
-            Token::NamespacedSymbol(parts)
-        } else {
-            Token::Symbol(symbol)
         }
     }
 }
 
-impl<I: Iterator<Item = char>> Iterator for Tokens<I> {
-    type Item = Token;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(&c) = self.iterator.peek() {
-            match c {
-                '@' => Some(self.consume_and_return(Token::Deref)),
-                '(' => Some(self.consume_and_return(Token::LeftParen)),
-                ')' => Some(self.consume_and_return(Token::RightParen)),
-                '{' => Some(self.consume_and_return(Token::LeftBrace)),
-                '}' => Some(self.consume_and_return(Token::RightBrace)),
-                '[' => Some(self.consume_and_return(Token::LeftBracket)),
-                ']' => Some(self.consume_and_return(Token::RightBracket)),
-                '\'' => Some(self.consume_and_return(Token::Quote)),
-                '"' => Some(self.string()),
-                ':' => Some(self.keyword()),
-                ';' => {
-                    self.iterator.next();
-                    while let Some(&c) = self.iterator.peek() {
-                        if c == '\n' {
-                            break;
-                        }
-                        self.iterator.next();
-                    }
-                    self.next()
-                }
-                '/' => Some(self.consume_and_return(Token::Symbol("/".to_string()))),
-                '-' => {
-                    self.iterator.next();
-                    match self.iterator.peek() {
-                        Some(&c) if c.is_digit(10) => Some(self.number(Negative::Yes)),
-                        _ => {
-                            if let Token::Symbol(symbol) = self.symbol() {
-                                Some(Token::Symbol(format!("-{}", symbol)))
-                            } else {
-                                panic!("Expected symbol got {:?}", self.iterator.peek());
-                            }
-                        }
-                    }
-                }
-                _ if is_whitespace(c) => {
-                    self.iterator.next();
-                    self.next()
-                }
-                _ if c.is_digit(10) => Some(self.number(Negative::No)),
-                _ => Some(self.symbol()),
-            }
-        } else {
-            None
-        }
+fn next(input: &str, tokens: Vec<Token>) -> (&str, Vec<Token>) {
+    match input.chars().next() {
+        Some('@') => (rest(input), push(tokens, Token::Deref)),
+        Some('(') => (rest(input), push(tokens, Token::LeftParen)),
+        Some(')') => (rest(input), push(tokens, Token::RightParen)),
+        Some('{') => (rest(input), push(tokens, Token::LeftBrace)),
+        Some('}') => (rest(input), push(tokens, Token::RightBrace)),
+        Some('[') => (rest(input), push(tokens, Token::LeftBracket)),
+        Some(']') => (rest(input), push(tokens, Token::RightBracket)),
+        Some('\'') => (rest(input), push(tokens, Token::Quote)),
+        Some('"') => string(rest(input), tokens),
+        Some(':') => keyword(rest(input), tokens),
+        Some(';') => comment(rest(input), tokens),
+        Some('/') => (rest(input), push(tokens, Token::Symbol("/".to_string()))),
+        Some('-') => negative_number_or_symbol(rest(input), tokens),
+        Some(c) if is_whitespace(c) => (rest(input), tokens),
+        Some(c) if c.is_digit(10) => number(input, tokens, Negative::No),
+        Some(_) => symbol(input, tokens),
+        None => (input, tokens),
     }
 }
+
+pub fn tokenize(input: &str) -> Vec<Token> {
+    let mut tokens = Vec::new();
+    let mut input = input;
+    while !input.is_empty() {
+        (input, tokens) = next(input, tokens);
+    }
+    tokens
+}
+
