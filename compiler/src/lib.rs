@@ -20,6 +20,6 @@ mod tokenizer;
 pub use expression::{Environment, Expression};
 pub use native_type::NativeType;
 pub use numerics::{bits_to_decimal_digits, decimal_digits_to_bits, ratio, Float};
-// pub use parser::{parse, parse_module};
+pub use parser::{parse, parse_all};
 pub use peeking_take_while::PeekableExt;
 pub use tokenizer::{tokenize, Token};
