@@ -73,12 +73,10 @@ fn string(input: &str, tokens: Vec<Token>) -> (&str, Vec<Token>) {
             _ => string.push(c),
         }
     }
-    let remaining_input = chars.as_str();
-    let tokens = push(tokens, Token::String(string));
-    (remaining_input, tokens)
+    (chars.as_str(), push(tokens, Token::String(string)))
 }
 
-fn keyword(input: &str, mut tokens: Vec<Token>) -> (&str, Vec<Token>) {
+fn keyword(input: &str, tokens: Vec<Token>) -> (&str, Vec<Token>) {
     let mut chars = input.chars();
     let mut keyword = String::new();
     loop {
@@ -91,10 +89,7 @@ fn keyword(input: &str, mut tokens: Vec<Token>) -> (&str, Vec<Token>) {
             }
         }
     }
-    let token = Token::Keyword(format!(":{}", keyword));
-    tokens.push(token);
-    let remaining_input = chars.as_str();
-    (remaining_input, tokens)
+    (chars.as_str(), push(tokens, Token::Keyword(format!(":{}", keyword))))
 }
 
 fn comment(input: &str, tokens: Vec<Token>) -> (&str, Vec<Token>) {
@@ -102,12 +97,11 @@ fn comment(input: &str, tokens: Vec<Token>) -> (&str, Vec<Token>) {
     while let Some(c) = chars.next() {
         if c == '\n' { break; }
     }
-    let remaining_input = chars.as_str();
-    (remaining_input, tokens)
+    (chars.as_str(), tokens)
 }
 
 
-fn symbol(input: &str, mut tokens: Vec<Token>) -> (&str, Vec<Token>) {
+fn symbol(input: &str, tokens: Vec<Token>) -> (&str, Vec<Token>) {
     let mut chars = input.chars();
     let mut symbol = String::new();
     loop {
@@ -126,9 +120,7 @@ fn symbol(input: &str, mut tokens: Vec<Token>) -> (&str, Vec<Token>) {
     } else {
         Token::Symbol(symbol)
     };
-    tokens.push(token);
-    let remaining_input = chars.as_str();
-    (remaining_input, tokens)
+    (chars.as_str(), push(tokens, token))
 }
 
 fn number(input: &str, mut tokens: Vec<Token>, negative: Negative) -> (&str, Vec<Token>) {
@@ -183,9 +175,7 @@ fn number(input: &str, mut tokens: Vec<Token>, negative: Negative) -> (&str, Vec
             _ => Token::Integer(numerator),
         }
     };
-    let remaining_input = chars.as_str();
-    let tokens = push(tokens, token);
-    (remaining_input, tokens)
+    (chars.as_str(), push(tokens, token))
 }
 
 fn negative_number_or_symbol(input: &str, tokens: Vec<Token>) -> (&str, Vec<Token>) {
@@ -194,8 +184,7 @@ fn negative_number_or_symbol(input: &str, tokens: Vec<Token>) -> (&str, Vec<Toke
         _ => {
             let (input, mut tokens) = symbol(input, tokens);
             if let Some(Token::Symbol(symbol)) = tokens.pop() {
-                tokens.push(Token::Symbol(format!("-{}", symbol)));
-                (input, tokens)
+                (input, push(tokens, Token::Symbol(format!("-{}", symbol))))
             } else {
                 panic!("Expected symbol got {:?}", input.chars().peekable().peek());
             }
