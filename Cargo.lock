@@ -1583,7 +1583,8 @@ name = "repl"
 version = "0.1.0"
 dependencies = [
  "compiler",
- "crossterm",
+ "im",
+ "tokio",
 ]
 
 [[package]]

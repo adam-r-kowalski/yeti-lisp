@@ -4,15 +4,15 @@
 
 extern crate alloc;
 
-use compiler::effect::{error, Effect};
-use compiler::expression::{Call, Environment, Function, Pattern};
-use compiler::Expression::{Integer, NativeFunction, Ratio};
-use compiler::{array, evaluate_expressions, extract, map, pattern_match, ratio, Expression};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec;
 use alloc::vec::Vec;
+use compiler::effect::{error, Effect};
+use compiler::expression::{Call, Environment, Function, Pattern};
+use compiler::Expression::{Integer, NativeFunction, Ratio};
+use compiler::{array, evaluate_expressions, extract, map, pattern_match, ratio, Expression};
 use im::{ordmap, vector, Vector};
 use rug;
 
@@ -181,11 +181,14 @@ pub fn environment() -> Environment {
         "read-string".to_string() => NativeFunction(
           |env, args| {
               Box::pin(async move {
-            let (env, arg) = compiler::evaluate(env, args[0].clone()).await?;
-            let s = extract::string(arg)?;
-            let tokens = compiler::Tokens::from_str(&s);
-            let expression = compiler::parse(tokens);
-            Ok((env, expression))
+                  let (env, arg) = compiler::evaluate(env, args[0].clone()).await?;
+                  let s = extract::string(arg)?;
+                  let tokens = compiler::tokenize(&s);
+                  let (tokens, expression) = compiler::parse(&tokens);
+                  if tokens.len() > 0 {
+                      return Err(error("Could not parse expression"));
+                  }
+                  Ok((env, expression))
               })
           }
         ),
@@ -344,8 +347,8 @@ pub fn environment() -> Environment {
                     arguments: vector![Expression::String(path)],
                 })).await?;
                 let source = extract::string(source)?;
-                let tokens = compiler::Tokens::from_str(&source);
-                let expressions = compiler::parse_module(tokens);
+                let tokens = compiler::tokenize(&source);
+                let expressions = compiler::parse_all(&tokens);
                 let mut module = environment();
                 module.insert("*name*".to_string(), Expression::String(name.clone()));
                 module.insert("io".to_string(), env.get("io").unwrap().clone());

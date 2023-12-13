@@ -263,10 +263,18 @@ pub async fn evaluate_expressions(
 }
 
 pub async fn evaluate_source(
-    env: Environment,
-    source: &str,
+    mut env: Environment,
+    source: &str
 ) -> core::result::Result<(Environment, Expression), Effect> {
-    let tokens = crate::Tokens::from_str(source);
-    let expression = crate::parse(tokens);
-    evaluate(env, expression).await
+    let tokens = crate::tokenize(source);
+    let mut tokens = &tokens[..];
+    let mut result = Expression::Nil;
+    while !tokens.is_empty() {
+        let (new_tokens, expression) = crate::parse(tokens);
+        tokens = new_tokens;
+        let (new_env, new_result) = evaluate(env, expression).await?;
+        result = new_result;
+        env = new_env;
+    }
+    Ok((env, result))
 }

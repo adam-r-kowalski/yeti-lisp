@@ -9,7 +9,7 @@ use sql;
 use toml;
 use yaml;
 use repl;
-use std::io::Result;
+
 
 fn repl_environment() -> compiler::Environment {
     let mut env = base::environment();
@@ -28,17 +28,16 @@ fn repl_environment() -> compiler::Environment {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> core::result::Result<(), compiler::effect::Effect> {
     let mut env = repl_environment();
-    let mut iterator = repl::StdinIterator::new();
     loop {
-        let expression = repl::read(&mut iterator)?;
-        match compiler::evaluate(env.clone(), expression).await {
+        let expressions = repl::read().await?;
+        match repl::evaluate(env.clone(), &expressions).await {
             Ok((next_env, expression)) => {
-                repl::print(expression)?;
+                repl::print(expression).await?;
                 env = next_env;
             }
-            Err(effect) => repl::print_with_color(repl::RED, &format!("{}\n\n", effect)),
+            Err(effect) => repl::print_effect(effect).await?,
         }
     }
 }
