@@ -14,10 +14,8 @@ async fn let_binding() -> Result {
 
 #[tokio::test]
 async fn two_let_binding() -> Result {
-    let tokens = compiler::Tokens::from_str("(let [a 5 b 10] (+ a b))");
-    let expression = compiler::parse(tokens);
-    let environment = base::environment();
-    let (_, actual) = compiler::evaluate(environment, expression).await?;
+    let env = base::environment();
+    let (_, actual) = compiler::evaluate_source(env, "(let [a 5 b 10] (+ a b))").await?;
     let expected = compiler::Expression::Integer(Integer::from(15));
     assert_eq!(actual, expected);
     Ok(())
@@ -25,10 +23,8 @@ async fn two_let_binding() -> Result {
 
 #[tokio::test]
 async fn let_binding_with_pattern_match() -> Result {
-    let tokens = compiler::Tokens::from_str("(let [[x y] [1 2]] (+ x y))");
-    let expression = compiler::parse(tokens);
-    let environment = base::environment();
-    let (_, actual) = compiler::evaluate(environment, expression).await?;
+    let env = base::environment();
+    let (_, actual) = compiler::evaluate_source(env, "(let [[x y] [1 2]] (+ x y))").await?;
     let expected = compiler::Expression::Integer(Integer::from(3));
     assert_eq!(actual, expected);
     Ok(())
