@@ -9,10 +9,6 @@ use sql;
 use toml;
 use yaml;
 use repl;
-use std::io::Result;
-
-use tokio::io::AsyncBufReadExt;
-use std::collections::HashMap;
 
 
 fn repl_environment() -> compiler::Environment {
@@ -31,70 +27,17 @@ fn repl_environment() -> compiler::Environment {
     env
 }
 
-// #[tokio::main]
-// async fn main() -> Result<()> {
-//     let mut env = repl_environment();
-//     let mut iterator = repl::StdinIterator::new();
-//     loop {
-//         let expression = repl::read(&mut iterator)?;
-//         match compiler::evaluate(env.clone(), expression).await {
-//             Ok((next_env, expression)) => {
-//                 repl::print(expression)?;
-//                 env = next_env;
-//             }
-//             Err(effect) => repl::print_with_color(repl::RED, &format!("{}\n\n", effect)),
-//         }
-//     }
-// }
-
-
-async fn read_from_stdin() -> String {
-    let mut input = String::new();
-    let stdin = tokio::io::stdin();
-    let mut reader = tokio::io::BufReader::new(stdin).lines();
-    let delimiters = HashMap::from([
-        ('(', ')'),
-        ('[', ']'),
-        ('{', '}'),
-        ('"', '"'),
-    ]);
-    let mut stack = Vec::new();
-    while let Ok(Some(l)) = reader.next_line().await {
-        if !input.is_empty() {
-            input.push('\n');
-        }
-        input.push_str(&l);
-        for char in l.chars() {
-            match char {
-                '(' | '[' | '{' | '"' => {
-                    if stack.last() == Some(&char) && char == '"' {
-                        stack.pop();
-                    } else {
-                        stack.push(char);
-                    }
-                },
-                ')' | ']' | '}' => {
-                    if let Some(&opening) = stack.last() {
-                        if delimiters.get(&opening) == Some(&char) {
-                            stack.pop();
-                        } else {
-                            break;
-                        }
-                    }
-                },
-                _ => {}
+#[tokio::main]
+async fn main() -> core::result::Result<(), compiler::effect::Effect> {
+    let mut env = repl_environment();
+    loop {
+        let expressions = repl::read().await?;
+        match repl::evaluate(env.clone(), &expressions).await {
+            Ok((next_env, expression)) => {
+                repl::print(expression).await?;
+                env = next_env;
             }
-        }
-        if stack.is_empty() || !delimiters.contains_key(&input.chars().next().unwrap()) {
-            break;
+            Err(effect) => repl::print_effect(effect).await?,
         }
     }
-    input
-}
-
-
-#[tokio::main]
-async fn main() {
-    let input = read_from_stdin().await;
-    println!("Collected input with balanced delimiters: {}", input);
 }
