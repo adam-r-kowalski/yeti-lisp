@@ -3,19 +3,18 @@
 
 extern crate alloc;
 
-use tokio::io::{self, AsyncWriteExt, AsyncBufReadExt};
-use im::ordmap;
+use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
-use alloc::format;
 use compiler;
 use compiler::effect::error;
-
+use im::ordmap;
+use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt};
 
 type Result<T> = core::result::Result<T, compiler::effect::Effect>;
 
-async fn read_from_stdin() -> Result<String> {
-    let delimiters = ordmap!{
+async fn read_from_stdin() -> String {
+    let delimiters = ordmap! {
         '(' => ')',
         '[' => ']',
         '{' => '}',
@@ -38,7 +37,7 @@ async fn read_from_stdin() -> Result<String> {
                     } else {
                         stack.push(char);
                     }
-                },
+                }
                 ')' | ']' | '}' => {
                     if let Some(&opening) = stack.last() {
                         if delimiters.get(&opening) == Some(&char) {
@@ -47,16 +46,16 @@ async fn read_from_stdin() -> Result<String> {
                             break;
                         }
                     }
-                },
+                }
                 _ => {}
             }
         }
-        let next = input.chars().next().ok_or(error("Could not read from stdin"))?;
+        let next = input.chars().next().unwrap_or('\0');
         if stack.is_empty() || !delimiters.contains_key(&next) {
             break;
         }
     }
-    Ok(input)
+    input
 }
 
 pub const BLUE: &str = "\x1b[38;2;58;102;167m";
@@ -65,11 +64,15 @@ pub const RESET: &str = "\x1b[0m";
 
 pub async fn read() -> Result<Vec<compiler::Expression>> {
     let mut stdout = io::stdout();
-    stdout.write_all(BLUE.as_bytes()).await.map_err(|_| error("Could not write to stdout"))?;
-    stdout.write_all("⛰  ".as_bytes()).await.map_err(|_| error("Could not write to stdout"))?;
-    stdout.write_all(RESET.as_bytes()).await.map_err(|_| error("Could not write to stdout"))?;
-    stdout.flush().await.map_err(|_| error("Could not write to stdout"))?;
-    let input = read_from_stdin().await.map_err(|_| error("Could not read from stdin"))?;
+    stdout
+        .write_all(format!("{}⛰  {}", BLUE, RESET).as_bytes())
+        .await
+        .map_err(|_| error("Could not write to stdout"))?;
+    stdout
+        .flush()
+        .await
+        .map_err(|_| error("Could not write to stdout"))?;
+    let input = read_from_stdin().await;
     let tokens = compiler::tokenize(&input);
     let expressions = compiler::parse_all(&tokens);
     Ok(expressions)
@@ -77,7 +80,7 @@ pub async fn read() -> Result<Vec<compiler::Expression>> {
 
 pub async fn evaluate(
     env: compiler::Environment,
-    exprs: &[compiler::Expression]
+    exprs: &[compiler::Expression],
 ) -> Result<(compiler::Environment, compiler::Expression)> {
     let mut env = env;
     let mut result = compiler::Expression::Nil;
@@ -91,20 +94,26 @@ pub async fn evaluate(
 
 pub async fn print(expression: compiler::Expression) -> Result<()> {
     let mut stdout = io::stdout();
-    stdout.write_all(format!("{}\n", expression).as_bytes())
+    stdout
+        .write_all(format!("{}\n", expression).as_bytes())
         .await
         .map_err(|_| error("Could not write to stdout"))?;
-    stdout.flush().await.map_err(|_| error("Could not write to stdout"))?;
+    stdout
+        .flush()
+        .await
+        .map_err(|_| error("Could not write to stdout"))?;
     Ok(())
 }
 
 pub async fn print_effect(effect: compiler::effect::Effect) -> Result<()> {
     let mut stdout = io::stdout();
-    stdout.write_all(RED.as_bytes()).await.map_err(|_| error("Could not write to stdout"))?;
-    stdout.write_all(format!("{}\n", effect).as_bytes())
+    stdout
+        .write_all(format!("{}{}{}\n", RED, effect, RESET).as_bytes())
         .await
         .map_err(|_| error("Could not write to stdout"))?;
-    stdout.write_all(RESET.as_bytes()).await.map_err(|_| error("Could not write to stdout"))?;
-    stdout.flush().await.map_err(|_| error("Could not write to stdout"))?;
+    stdout
+        .flush()
+        .await
+        .map_err(|_| error("Could not write to stdout"))?;
     Ok(())
 }
