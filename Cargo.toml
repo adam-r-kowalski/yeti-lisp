@@ -3,6 +3,9 @@ name = "yeti"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+metal = ["transformer/metal"]
+
 [dependencies]
 crossterm = "0.27"
 im = "15.1.0"
