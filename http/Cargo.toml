@@ -13,7 +13,6 @@ rug = "1.22.0"
 tokio = { version = "1.33.0", features = ["full"] }
 serde_qs = "0.12"
 serde_json = "1.0"
-httpdate = "1.0.3"
 compiler = { path = "../compiler" }
 html = { path = "../html" }
 base = { path = "../base" }
