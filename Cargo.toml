@@ -36,3 +36,6 @@ members = [
   "repl",
   "transformer"
 ]
+
+[profile.dev]
+debug = 1
