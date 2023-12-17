@@ -1,10 +1,24 @@
-use httpdate::fmt_http_date;
-use std::time::SystemTime;
-
 use compiler;
 use http;
 
 type Result = std::result::Result<(), compiler::effect::Effect>;
+
+fn without_date(
+    response: compiler::Expression,
+) -> core::result::Result<compiler::Expression, compiler::effect::Effect> {
+    let mut map = compiler::extract::map(response)?;
+    let headers_keyword = compiler::Expression::Keyword(":headers".to_string());
+    let headers = map
+        .remove(&headers_keyword)
+        .ok_or(compiler::effect::error("Expected headers"))?;
+    let mut headers = compiler::extract::map(headers)?;
+    let date_keyword = compiler::Expression::Keyword(":date".to_string());
+    headers
+        .remove(&date_keyword)
+        .ok_or(compiler::effect::error("Expected date keyword"))?;
+    map.insert(headers_keyword, compiler::Expression::Map(headers));
+    Ok(compiler::Expression::Map(map))
+}
 
 #[tokio::test]
 async fn evaluate_server_with_string_route_and_default_options() -> Result {
@@ -18,20 +32,18 @@ async fn evaluate_server_with_string_route_and_default_options() -> Result {
     assert!(matches!(actual, compiler::Expression::NativeType(_)));
     let (env, actual) =
         compiler::evaluate_source(env, r#"(http/request {:url "http://localhost:3000"})"#).await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(
+    let actual = without_date(actual)?;
+    let (_, expected) = compiler::evaluate_source(
+        env,
         r#"
-        {{:headers {{:content-length "11"
-                     :content-type "text/plain; charset=utf-8"
-                     :date "{}"}}
-          :status 200
-          :url "http://localhost:3000/"
-          :text "Hello World"}}
+        {:headers {:content-length "11"
+                   :content-type "text/plain; charset=utf-8"}
+         :status 200
+         :url "http://localhost:3000/"
+         :text "Hello World"}
         "#,
-        formatted_date
-    );
-    let (_, expected) = compiler::evaluate_source(env, &expected_response_str).await?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     Ok(())
 }
@@ -54,20 +66,18 @@ async fn evaluate_server_with_string_route() -> Result {
         r#"(http/request {:url "http://localhost:3001" :method :get})"#,
     )
     .await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(
+    let actual = without_date(actual)?;
+    let (_, expected) = compiler::evaluate_source(
+        env,
         r#"
-        {{:headers {{:content-length "11"
-                     :content-type "text/plain; charset=utf-8"
-                     :date "{}"}}
-          :status 200
-          :url "http://localhost:3001/"
-          :text "Hello World"}}
+        {:headers {:content-length "11"
+                   :content-type "text/plain; charset=utf-8"}
+         :status 200
+         :url "http://localhost:3001/"
+         :text "Hello World"}
         "#,
-        formatted_date
-    );
-    let (_, expected) = compiler::evaluate_source(env, &expected_response_str).await?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     Ok(())
 }
@@ -90,20 +100,18 @@ async fn evaluate_server_with_html_route() -> Result {
     assert!(matches!(actual, compiler::Expression::NativeType(_)));
     let (env, actual) =
         compiler::evaluate_source(env, r#"(http/request {:url "http://localhost:3002"})"#).await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(
+    let actual = without_date(actual)?;
+    let (_, expected) = compiler::evaluate_source(
+        env,
         r#"
-        {{:headers {{:content-length "38"
-                     :content-type "text/html; charset=utf-8"
-                     :date "{}"}}
-          :status 200
-          :url "http://localhost:3002/"
-          :html [:html [:head] [:body [:ul [:li "first"] [:li "second"]]]]}}
+        {:headers {:content-length "38"
+                   :content-type "text/html; charset=utf-8"}
+         :status 200
+         :url "http://localhost:3002/"
+         :html [:html [:head] [:body [:ul [:li "first"] [:li "second"]]]]}
         "#,
-        formatted_date
-    );
-    let (_, expected) = compiler::evaluate_source(env, &expected_response_str).await?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     Ok(())
 }
@@ -126,20 +134,18 @@ async fn evaluate_server_with_function_route() -> Result {
     assert!(matches!(actual, compiler::Expression::NativeType(_)));
     let (env, actual) =
         compiler::evaluate_source(env, r#"(http/request {:url "http://localhost:3003"})"#).await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(
+    let actual = without_date(actual)?;
+    let (_, expected) = compiler::evaluate_source(
+        env,
         r#"
-        {{:headers {{:content-length "38"
-                     :content-type "text/html; charset=utf-8"
-                     :date "{}"}}
-          :status 200
-          :url "http://localhost:3003/"
-          :html [:html [:head] [:body [:ul [:li "first"] [:li "second"]]]]}}
+        {:headers {:content-length "38"
+                   :content-type "text/html; charset=utf-8"}
+         :status 200
+         :url "http://localhost:3003/"
+         :html [:html [:head] [:body [:ul [:li "first"] [:li "second"]]]]}
         "#,
-        formatted_date
-    );
-    let (_, expected) = compiler::evaluate_source(env, &expected_response_str).await?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     Ok(())
 }
@@ -166,20 +172,18 @@ async fn evaluate_server_show_request_as_str() -> Result {
             .await?;
     let (env, actual) =
         compiler::evaluate_source(env, r#"(http/request {:url "http://localhost:3004"})"#).await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(
+    let actual = without_date(actual)?;
+    let (env, expected) = compiler::evaluate_source(
+        env,
         r#"
-        {{:headers {{:content-length "12"
-                     :content-type "text/html; charset=utf-8"
-                     :date "{}"}}
+        {:headers {:content-length "12"
+                   :content-type "text/html; charset=utf-8"}
           :status 200
           :url "http://localhost:3004/"
-          :html [:html [:head] [:body [:p "hello"]]]}}
+          :html [:html [:head] [:body [:p "hello"]]]}
         "#,
-        formatted_date
-    );
-    let (env, expected) = compiler::evaluate_source(env, &expected_response_str).await?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     let (env, actual) = compiler::evaluate_source(env, "@value").await?;
     let (_, expected) = compiler::evaluate_source(
@@ -220,20 +224,18 @@ async fn evaluate_server_query_parameters_in_url() -> Result {
         r#"(http/request {:url "http://localhost:3005?foo=bar&baz=qux"})"#,
     )
     .await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(
+    let actual = without_date(actual)?;
+    let (env, expected) = compiler::evaluate_source(
+        env,
         r#"
-        {{:headers {{:content-length "12"
-                     :content-type "text/html; charset=utf-8"
-                     :date "{}"}}
-          :status 200
-          :url "http://localhost:3005/?foo=bar&baz=qux"
-          :html [:html [:head] [:body [:p "hello"]]]}}
+        {:headers {:content-length "12"
+                   :content-type "text/html; charset=utf-8"}
+         :status 200
+         :url "http://localhost:3005/?foo=bar&baz=qux"
+         :html [:html [:head] [:body [:p "hello"]]]}
         "#,
-        formatted_date
-    );
-    let (env, expected) = compiler::evaluate_source(env, &expected_response_str).await?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     let (env, actual) = compiler::evaluate_source(env, "@value").await?;
     let (_, expected) = compiler::evaluate_source(
@@ -275,20 +277,18 @@ async fn evaluate_server_query_parameters_in_map() -> Result {
         r#"(http/request {:url "http://localhost:3006" :query {:foo "bar" :baz "qux"}})"#,
     )
     .await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(
+    let actual = without_date(actual)?;
+    let (env, expected) = compiler::evaluate_source(
+        env,
         r#"
-        {{:headers {{:content-length "12"
-                     :content-type "text/html; charset=utf-8"
-                     :date "{}"}}
+        {:headers {:content-length "12"
+                   :content-type "text/html; charset=utf-8"}
           :status 200
           :url "http://localhost:3006/?baz=qux&foo=bar"
-          :html [:html [:head] [:body [:p "hello"]]]}}
+          :html [:html [:head] [:body [:p "hello"]]]}
         "#,
-        formatted_date
-    );
-    let (env, expected) = compiler::evaluate_source(env, &expected_response_str).await?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     let (env, actual) = compiler::evaluate_source(env, "@value").await?;
     let (_, expected) = compiler::evaluate_source(
@@ -332,20 +332,18 @@ async fn evaluate_server_url_parameters() -> Result {
         r#"(http/request {:url "http://localhost:3007/hello/joe"})"#,
     )
     .await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(
+    let actual = without_date(actual)?;
+    let (env, expected) = compiler::evaluate_source(
+        env,
         r#"
-        {{:headers {{:content-length "12"
-                     :content-type "text/html; charset=utf-8"
-                     :date "{}"}}
-          :status 200
-          :url "http://localhost:3007/hello/joe"
-          :html [:html [:head] [:body [:p "hello"]]]}}
+        {:headers {:content-length "12"
+                   :content-type "text/html; charset=utf-8"}
+         :status 200
+         :url "http://localhost:3007/hello/joe"
+         :html [:html [:head] [:body [:p "hello"]]]}
         "#,
-        formatted_date
-    );
-    let (env, expected) = compiler::evaluate_source(env, &expected_response_str).await?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     let (env, actual) = compiler::evaluate_source(env, "@value").await?;
     let (_, expected) = compiler::evaluate_source(
@@ -387,20 +385,18 @@ async fn evaluate_server_form_data() -> Result {
         r#"(http/request {:url "http://localhost:3009" :method :post :form {:foo "bar" :baz "qux"}})"#,
     )
     .await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(
+    let actual = without_date(actual)?;
+    let (env, expected) = compiler::evaluate_source(
+        env,
         r#"
-        {{:headers {{:content-length "12"
-                     :content-type "text/html; charset=utf-8"
-                     :date "{}"}}
-          :status 200
-          :url "http://localhost:3009/"
-          :html [:html [:head] [:body [:p "hello"]]]}}
+        {:headers {:content-length "12"
+                   :content-type "text/html; charset=utf-8"}
+         :status 200
+         :url "http://localhost:3009/"
+         :html [:html [:head] [:body [:p "hello"]]]}
         "#,
-        formatted_date
-    );
-    let (env, expected) = compiler::evaluate_source(env, &expected_response_str).await?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     let (env, actual) = compiler::evaluate_source(env, "@value").await?;
     let (_, expected) = compiler::evaluate_source(
@@ -446,20 +442,18 @@ async fn evaluate_server_post_json_data() -> Result {
         r#"(http/request {:url "http://localhost:3010" :method :post :json {:foo "bar" :baz "qux"}})"#,
     )
     .await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(
+    let actual = without_date(actual)?;
+    let (env, expected) = compiler::evaluate_source(
+        env,
         r#"
-        {{:headers {{:content-length "12"
-                     :content-type "text/html; charset=utf-8"
-                     :date "{}"}}
-          :status 200
-          :url "http://localhost:3010/"
-          :html [:html [:head] [:body [:p "hello"]]]}}
+        {:headers {:content-length "12"
+                   :content-type "text/html; charset=utf-8"}
+         :status 200
+         :url "http://localhost:3010/"
+         :html [:html [:head] [:body [:p "hello"]]]}
         "#,
-        formatted_date
-    );
-    let (env, expected) = compiler::evaluate_source(env, &expected_response_str).await?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     let (env, actual) = compiler::evaluate_source(env, "@value").await?;
     let (_, expected) = compiler::evaluate_source(
@@ -505,20 +499,18 @@ async fn evaluate_server_request_with_headers() -> Result {
         r#"(http/request {:url "http://localhost:3011" :headers {:foo "bar" :baz "qux"}})"#,
     )
     .await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(
+    let actual = without_date(actual)?;
+    let (env, expected) = compiler::evaluate_source(
+        env,
         r#"
-        {{:headers {{:content-length "12"
-                     :content-type "text/html; charset=utf-8"
-                     :date "{}"}}
-          :status 200
-          :url "http://localhost:3011/"
-          :html [:html [:head] [:body [:p "hello"]]]}}
+        {:headers {:content-length "12"
+                   :content-type "text/html; charset=utf-8"}
+         :status 200
+         :url "http://localhost:3011/"
+         :html [:html [:head] [:body [:p "hello"]]]}
         "#,
-        formatted_date
-    );
-    let (env, expected) = compiler::evaluate_source(env, &expected_response_str).await?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     let (env, actual) = compiler::evaluate_source(env, "@value").await?;
     let (_, expected) = compiler::evaluate_source(
@@ -552,20 +544,18 @@ async fn server_route_returns_json() -> Result {
     assert!(matches!(actual, compiler::Expression::NativeType(_)));
     let (env, actual) =
         compiler::evaluate_source(env, r#"(http/request {:url "http://localhost:3012"})"#).await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(
+    let actual = without_date(actual)?;
+    let (_, expected) = compiler::evaluate_source(
+        env,
         r#"
-        {{:headers {{:content-length "13"
-                     :content-type "application/json"
-                     :date "{}"}}
-          :status 200
-          :url "http://localhost:3012/"
-          :json {{:foo "bar"}}}}
+        {:headers {:content-length "13"
+                   :content-type "application/json"}
+         :status 200
+         :url "http://localhost:3012/"
+         :json {:foo "bar"}}
         "#,
-        formatted_date
-    );
-    let (_, expected) = compiler::evaluate_source(env, &expected_response_str).await?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     Ok(())
 }
@@ -592,20 +582,18 @@ async fn server_route_function_which_returns_json() -> Result {
         r#"(http/request {:url "http://localhost:3013" :json {:lhs 1 :rhs 2}})"#,
     )
     .await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(
+    let actual = without_date(actual)?;
+    let (_, expected) = compiler::evaluate_source(
+        env,
         r#"
-        {{:headers {{:content-length "12"
-                     :content-type "application/json"
-                     :date "{}"}}
-          :status 200
-          :url "http://localhost:3013/"
-          :json {{:result 3}}}}
+        {:headers {:content-length "12"
+                   :content-type "application/json"}
+         :status 200
+         :url "http://localhost:3013/"
+         :json {:result 3}}
         "#,
-        formatted_date
-    );
-    let (_, expected) = compiler::evaluate_source(env, &expected_response_str).await?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     Ok(())
 }
@@ -642,20 +630,18 @@ async fn server_route_redirect() -> Result {
     .await?;
     let (env, actual) =
         compiler::evaluate_source(env, r#"(http/request {:url "http://localhost:3014"})"#).await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(
+    let actual = without_date(actual)?;
+    let (_, expected) = compiler::evaluate_source(
+        env,
         r#"
-        {{:headers {{:content-length "20"
-                     :content-type "text/html; charset=utf-8"
-                     :date "{}"}}
-          :status 200
-          :url "http://localhost:3014/other"
-          :html [:html [:head] [:body [:h1 "Hello World"]]]}}
+        {:headers {:content-length "20"
+                   :content-type "text/html; charset=utf-8"}
+         :status 200
+         :url "http://localhost:3014/other"
+         :html [:html [:head] [:body [:h1 "Hello World"]]]}
         "#,
-        formatted_date
-    );
-    let (_, expected) = compiler::evaluate_source(env, &expected_response_str).await?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     Ok(())
 }
@@ -693,20 +679,18 @@ async fn server_route_redirect_with_query_parameters() -> Result {
     .await?;
     let (env, actual) =
         compiler::evaluate_source(env, r#"(http/request {:url "http://localhost:3015"})"#).await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(
+    let actual = without_date(actual)?;
+    let (_, expected) = compiler::evaluate_source(
+        env,
         r#"
-        {{:headers {{:content-length "12"
-                     :content-type "text/html; charset=utf-8"
-                     :date "{}"}}
-          :status 200
-          :url "http://localhost:3015/other?name=Joe"
-          :html [:html [:head] [:body [:h1 "Joe"]]]}}
+        {:headers {:content-length "12"
+                   :content-type "text/html; charset=utf-8"}
+         :status 200
+         :url "http://localhost:3015/other?name=Joe"
+         :html [:html [:head] [:body [:h1 "Joe"]]]}
         "#,
-        formatted_date
-    );
-    let (_, expected) = compiler::evaluate_source(env, &expected_response_str).await?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     Ok(())
 }
@@ -753,20 +737,18 @@ async fn evaluate_redefine_server() -> Result {
     .await?;
     let (env, actual) =
         compiler::evaluate_source(env, r#"(http/request {:url "http://localhost:3018"})"#).await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(
+    let actual = without_date(actual)?;
+    let (env, expected) = compiler::evaluate_source(
+        env,
         r#"
-        {{:headers {{:content-length "11"
-                     :content-type "text/plain; charset=utf-8"
-                     :date "{}"}}
-          :status 200
-          :url "http://localhost:3018/"
-          :text "Hello World"}}
+        {:headers {:content-length "11"
+                   :content-type "text/plain; charset=utf-8"}
+         :status 200
+         :url "http://localhost:3018/"
+         :text "Hello World"}
         "#,
-        formatted_date
-    );
-    let (env, expected) = compiler::evaluate_source(env, &expected_response_str).await?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     let (env, _) = compiler::evaluate_source(
         env,
@@ -775,20 +757,18 @@ async fn evaluate_redefine_server() -> Result {
     .await?;
     let (env, actual) =
         compiler::evaluate_source(env, r#"(http/request {:url "http://localhost:3018"})"#).await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_response_str = format!(
+    let actual = without_date(actual)?;
+    let (_, expected) = compiler::evaluate_source(
+        env,
         r#"
-        {{:headers {{:content-length "13"
-                     :content-type "text/plain; charset=utf-8"
-                     :date "{}"}}
-          :status 200
-          :url "http://localhost:3018/"
-          :text "Goodbye World"}}
+        {:headers {:content-length "13"
+                   :content-type "text/plain; charset=utf-8"}
+         :status 200
+         :url "http://localhost:3018/"
+         :text "Goodbye World"}
         "#,
-        formatted_date
-    );
-    let (_, expected) = compiler::evaluate_source(env, &expected_response_str).await?;
+    )
+    .await?;
     assert_eq!(actual, expected);
     Ok(())
 }
@@ -822,20 +802,18 @@ async fn streaming_response_from_endpoint() -> Result {
         r#"(def response (http/request {:url "http://localhost:3019"}))"#,
     )
     .await?;
-    let now = SystemTime::now();
-    let formatted_date = fmt_http_date(now);
-    let expected_headers_str = format!(
+    let (env, expected_headers) = compiler::evaluate_source(
+        env,
         r#"
-        {{:transfer-encoding "chunked"
-          :content-type "text/event-stream"
-          :cache-control "no-cache"
-          :connection "keep-alive"
-          :date "{}"}}
+        {:transfer-encoding "chunked"
+         :content-type "text/event-stream"
+         :cache-control "no-cache"
+         :connection "keep-alive"}
         "#,
-        formatted_date
-    );
-    let (env, expected_headers) = compiler::evaluate_source(env, &expected_headers_str).await?;
-    let (env, actual_headers) = compiler::evaluate_source(env, "(:headers response)").await?;
+    )
+    .await?;
+    let (env, actual_headers) =
+        compiler::evaluate_source(env, "(dissoc (:headers response) :date)").await?;
     assert_eq!(actual_headers, expected_headers);
     let (env, actual_status) = compiler::evaluate_source(env, "(:status response)").await?;
     assert_eq!(
