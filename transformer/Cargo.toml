@@ -6,10 +6,19 @@ edition = "2021"
 [features]
 metal = ["candle-core/metal"]
 
+[dependencies]
+tokenizers = "0.15.0"
+
 [dependencies.candle-core]
 git = "https://github.com/huggingface/candle.git"
-branch = "metal4"
+branch = "metal4-m3"
+default-features = false
+
+[dependencies.candle-transformers]
+git = "https://github.com/huggingface/candle.git"
+branch = "metal4-m3"
 default-features = false
 
 [lib]
 path = "src/lib.rs"
+
